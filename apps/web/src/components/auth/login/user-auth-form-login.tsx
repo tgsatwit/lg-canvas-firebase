@@ -28,16 +28,34 @@ export function UserAuthForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPasswordField, setShowPasswordField] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const isLoading =
     isEmailPasswordLoading || isGoogleLoading || isGithubLoading;
 
   async function onSubmit(event: React.SyntheticEvent) {
     event.preventDefault();
-    setEmailPasswordIsLoading(true);
-
-    await onLoginWithEmail({ email, password });
-    setEmailPasswordIsLoading(false);
+    setFormError(null);
+    
+    if (!email) {
+      setFormError("Email is required");
+      return;
+    }
+    
+    if (!password) {
+      setFormError("Password is required");
+      return;
+    }
+    
+    try {
+      setEmailPasswordIsLoading(true);
+      console.log("Submitting login form with email:", email);
+      await onLoginWithEmail({ email, password });
+    } catch (error) {
+      console.error("Form submission error:", error);
+    } finally {
+      setEmailPasswordIsLoading(false);
+    }
   }
 
   return (
@@ -78,7 +96,7 @@ export function UserAuthForm({
               </Label>
               <PasswordInput
                 id="password"
-                autoComplete="new-password"
+                autoComplete="current-password"
                 autoCorrect="off"
                 disabled={isLoading}
                 value={password}
@@ -86,8 +104,11 @@ export function UserAuthForm({
               />
             </div>
           </div>
-          <Button disabled={isLoading}>
-            {isLoading && (
+          {formError && (
+            <p className="text-sm text-red-500 mt-1">{formError}</p>
+          )}
+          <Button disabled={isLoading} type="submit">
+            {isEmailPasswordLoading && (
               <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
             )}
             Login with Email
@@ -106,15 +127,21 @@ export function UserAuthForm({
       </div>
       <Button
         onClick={async () => {
-          setGoogleIsLoading(true);
-          await onLoginWithOauth("google");
-          setGoogleIsLoading(false);
+          try {
+            setGoogleIsLoading(true);
+            console.log("Starting Google OAuth login");
+            await onLoginWithOauth("google");
+          } catch (error) {
+            console.error("Google OAuth button error:", error);
+          } finally {
+            setGoogleIsLoading(false);
+          }
         }}
         variant="outline"
         type="button"
         disabled={isLoading}
       >
-        {isLoading ? (
+        {isGoogleLoading ? (
           <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
         ) : (
           <Icons.google className="mr-2 h-4 w-4" />
@@ -123,15 +150,21 @@ export function UserAuthForm({
       </Button>
       <Button
         onClick={async () => {
-          setGithubIsLoading(true);
-          await onLoginWithOauth("github");
-          setGithubIsLoading(false);
+          try {
+            setGithubIsLoading(true);
+            console.log("Starting GitHub OAuth login");
+            await onLoginWithOauth("github");
+          } catch (error) {
+            console.error("GitHub OAuth button error:", error);
+          } finally {
+            setGithubIsLoading(false);
+          }
         }}
         variant="outline"
         type="button"
         disabled={isLoading}
       >
-        {isLoading ? (
+        {isGithubLoading ? (
           <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
         ) : (
           <Icons.gitHub className="mr-2 h-4 w-4" />

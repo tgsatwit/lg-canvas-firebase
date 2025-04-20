@@ -20,6 +20,7 @@ export interface LoginWithEmailInput {
 
 export function Login() {
   const [isError, setIsError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -37,36 +38,59 @@ export function Login() {
   }, [searchParams, router]);
 
   const createSession = async (idToken: string) => {
-    const response = await fetch("/api/auth/sessionLogin", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ idToken }),
-    });
-    return response.ok;
+    console.log("Creating session with ID token");
+    try {
+      const response = await fetch("/api/auth/sessionLogin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ idToken }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error("Session creation failed:", response.status, errorData);
+        return false;
+      }
+      
+      console.log("Session created successfully");
+      return true;
+    } catch (error) {
+      console.error("Error creating session:", error);
+      return false;
+    }
   };
 
   const onLoginWithEmail = async (
     input: LoginWithEmailInput
   ): Promise<void> => {
     setIsError(false);
+    setErrorMessage("");
+    
     try {
+      console.log("Attempting email login for:", input.email);
       const userCredential = await signInWithEmailAndPassword(
         auth,
         input.email,
         input.password
       );
+      
+      console.log("Email login successful, getting ID token");
       const idToken = await userCredential.user.getIdToken();
       const success = await createSession(idToken);
+      
       if (success) {
-        router.push("/");
+        console.log("Redirecting to home page");
+        // Force full page navigation to ensure middleware processes the request
+        window.location.href = "/";
       } else {
         throw new Error("Failed to create session.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Email/Password login error:", error);
       setIsError(true);
+      setErrorMessage(error.message || "Login failed. Please check your credentials.");
     }
   };
 
@@ -74,22 +98,30 @@ export function Login() {
     providerName: "google" | "github"
   ): Promise<void> => {
     setIsError(false);
+    setErrorMessage("");
+    
+    console.log(`Attempting ${providerName} login`);
     const provider = providerName === "google"
       ? new GoogleAuthProvider()
       : new GithubAuthProvider();
 
     try {
       const userCredential = await signInWithPopup(auth, provider);
+      console.log(`${providerName} login successful, getting ID token`);
       const idToken = await userCredential.user.getIdToken();
       const success = await createSession(idToken);
+      
       if (success) {
-        router.push("/");
+        console.log("Redirecting to home page");
+        // Force full page navigation to ensure middleware processes the request
+        window.location.href = "/";
       } else {
         throw new Error("Failed to create session.");
       }
-    } catch (error) {
-      console.error("OAuth login error:", error);
+    } catch (error: any) {
+      console.error(`${providerName} login error:`, error);
       setIsError(true);
+      setErrorMessage(error.message || `${providerName} login failed.`);
     }
   };
 
@@ -137,7 +169,7 @@ export function Login() {
           />
           {isError && (
             <p className="text-red-500 text-sm text-center">
-              There was an error signing into your account. Please try again.
+              {errorMessage || "There was an error signing into your account. Please try again."}
             </p>
           )}
         </div>
