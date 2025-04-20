@@ -41,7 +41,7 @@ function NoReflections(props: NoReflectionsProps) {
   };
 
   return (
-    <div className="flex flex-col items-center mt-6 mb-[-24px] gap-3">
+    <span className="flex flex-col items-center mt-6 mb-[-24px] gap-3">
       <TighterText>No reflections have been generated yet.</TighterText>
       <TighterText className="text-sm text-gray-500">
         Reflections generate after 30s of inactivity. If none appear, try again
@@ -50,7 +50,7 @@ function NoReflections(props: NoReflectionsProps) {
       <Button onClick={getReflections} variant="secondary" size="sm">
         <TighterText>Search for reflections</TighterText>
       </Button>
-    </div>
+    </span>
   );
 }
 
