@@ -33,6 +33,7 @@ type ThreadContentType = {
   createThread: () => Promise<Thread>;
   deleteThread: (threadId: string) => Promise<void>;
   getAllThreads: () => Promise<void>;
+  getUserThreads: () => Promise<void>;
   getThread: (threadId: string) => Promise<Thread | null>;
   setModelName: (modelName: ALL_MODEL_NAMES) => void;
   setModelConfig: (
@@ -280,8 +281,14 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
     _setModelName(DEFAULT_MODEL_NAME);
   };
 
-  const contextValue: ThreadContentType = {
-    threadId: threadId ?? null,
+  // Add an alias method for getAllThreads for better API naming clarity
+  const getUserThreads = async (): Promise<void> => {
+    return getAllThreads();
+  };
+
+  // Provide the value for the context
+  const value: ThreadContentType = {
+    threadId,
     threads,
     createThreadLoading,
     createNonEmptyThreadLoading: _createNonEmptyThreadLoading,
@@ -294,6 +301,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
     createThread,
     deleteThread,
     getAllThreads,
+    getUserThreads,
     getThread,
     setModelName,
     setModelConfig,
@@ -301,7 +309,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <ThreadContext.Provider value={contextValue}>
+    <ThreadContext.Provider value={value}>
       {children}
     </ThreadContext.Provider>
   );

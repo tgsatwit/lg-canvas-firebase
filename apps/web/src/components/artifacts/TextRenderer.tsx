@@ -2,21 +2,18 @@ import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 import { ArtifactMarkdownV3 } from "@opencanvas/shared/types";
 import "@blocknote/core/fonts/inter.css";
 import {
-  getDefaultReactSlashMenuItems,
-  SuggestionMenuController,
   useCreateBlockNote,
 } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
 import "@blocknote/shadcn/style.css";
-import { isArtifactMarkdownContent } from "@opencanvas/shared/utils/artifacts";
-import { CopyText } from "./components/CopyText";
 import { getArtifactContent } from "@opencanvas/shared/utils/artifacts";
+import { CopyText } from "./components/CopyText";
 import { useGraphContext } from "@/contexts/GraphContext";
 import React from "react";
 import { TooltipIconButton } from "../ui/assistant-ui/tooltip-icon-button";
 import { Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";
-import { Textarea } from "../ui/textarea";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 const cleanText = (text: string) => {
@@ -79,46 +76,33 @@ export function TextRendererComponent(props: TextRendererProps) {
 
   useEffect(() => {
     const selectedText = editor.getSelectedText();
-    const selection = editor.getSelection();
-
-    if (selectedText && selection) {
-      if (!artifact) {
-        console.error("Artifact not found");
-        return;
-      }
-
-      const currentBlockIdx = artifact.currentIndex;
-      const currentContent = artifact.contents.find(
-        (c) => c.index === currentBlockIdx
-      );
-      if (!currentContent) {
-        console.error("Current content not found");
-        return;
-      }
-      if (!isArtifactMarkdownContent(currentContent)) {
-        console.error("Current content is not markdown");
-        return;
-      }
-
-      (async () => {
-        const [markdownBlock, fullMarkdown] = await Promise.all([
-          editor.blocksToMarkdownLossy(selection.blocks),
-          editor.blocksToMarkdownLossy(editor.document),
-        ]);
-        setSelectedBlocks({
-          fullMarkdown: cleanText(fullMarkdown),
-          markdownBlock: cleanText(markdownBlock),
-          selectedText: cleanText(selectedText),
-        });
-      })();
+    if (!selectedText?.length || !artifact) {
+      return;
     }
-  }, [editor.getSelectedText()]);
+
+    const selection = editor.getSelection();
+    if (!selection?.blocks?.length) {
+      return;
+    }
+
+    (async () => {
+      const [markdownBlock, fullMarkdown] = await Promise.all([
+        editor.blocksToMarkdownLossy(selection.blocks),
+        editor.blocksToMarkdownLossy(editor.document),
+      ]);
+      setSelectedBlocks({
+        fullMarkdown: cleanText(fullMarkdown),
+        markdownBlock: cleanText(markdownBlock),
+        selectedText: cleanText(selectedText),
+      });
+    })();
+  }, [editor, artifact, setSelectedBlocks]);
 
   useEffect(() => {
     if (!props.isInputVisible) {
       setSelectedBlocks(undefined);
     }
-  }, [props.isInputVisible]);
+  }, [props.isInputVisible, setSelectedBlocks]);
 
   useEffect(() => {
     if (!artifact) {
@@ -152,7 +136,7 @@ export function TextRendererComponent(props: TextRendererProps) {
       setManuallyUpdatingArtifact(false);
       setUpdateRenderedArtifactRequired(false);
     }
-  }, [artifact, updateRenderedArtifactRequired]);
+  }, [artifact, updateRenderedArtifactRequired, editor, isStreaming, manuallyUpdatingArtifact, setUpdateRenderedArtifactRequired]);
 
   useEffect(() => {
     if (isRawView) {
@@ -170,7 +154,7 @@ export function TextRendererComponent(props: TextRendererProps) {
         setManuallyUpdatingArtifact(false);
       }
     }
-  }, [isRawView, editor]);
+  }, [isRawView, editor, rawMarkdown]);
 
   const isComposition = useRef(false);
 
@@ -292,16 +276,7 @@ export function TextRendererComponent(props: TextRendererProps) {
               isStreaming && !firstTokenReceived ? "pulse-text" : "",
               "custom-blocknote-theme"
             )}
-          >
-            <SuggestionMenuController
-              getItems={async () =>
-                getDefaultReactSlashMenuItems(editor).filter(
-                  (z) => z.group !== "Media"
-                )
-              }
-              triggerCharacter={"/"}
-            />
-          </BlockNoteView>
+          />
         </>
       )}
     </div>

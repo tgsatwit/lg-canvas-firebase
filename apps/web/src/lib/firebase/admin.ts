@@ -1,11 +1,15 @@
 // Only import firebase-admin when running in Node.js environment
 // This file is structured to work in both Edge and Node.js environments
 
+// Import types for proper typing
+import type { Auth } from 'firebase-admin/auth';
+import type { Storage } from 'firebase-admin/storage';
+
 // Default empty implementations for Edge environment
 let admin: any = null;
-let adminAuth = () => null;
+let adminAuth = (): Auth | null => null;
 let adminFirestore = () => null;
-let adminStorage = () => null;
+let adminStorage = (): Storage | null => null;
 
 // Track initialization state to prevent redundant logging
 let initializationAttempted = false;
@@ -64,6 +68,9 @@ declare global {
     __firebaseAdmin: any;
     __firebaseAdminInitialized: boolean;
   }
+  
+  // Extend NodeJS namespace properly
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace NodeJS {
     interface Global {
       __firebaseAdmin: any;
@@ -85,7 +92,9 @@ if (typeof window === 'undefined' && typeof process !== 'undefined' && process.v
     initializationAttempted = true;
     
     // Check if already initialized globally
+    // @ts-expect-error - global may not have these properties but they're used safely
     if (global.__firebaseAdminInitialized) {
+      // @ts-expect-error - using dynamically added property on global
       admin = global.__firebaseAdmin;
       adminAuth = () => admin.auth();
       adminFirestore = () => admin.firestore();
@@ -108,7 +117,9 @@ if (typeof window === 'undefined' && typeof process !== 'undefined' && process.v
       adminStorage = () => admin.storage();
       
       // Store in global to prevent re-initialization
+      // @ts-expect-error - global doesn't have this property by default
       global.__firebaseAdmin = admin;
+      // @ts-expect-error - global doesn't have this property by default
       global.__firebaseAdminInitialized = true;
       return;
     }
@@ -131,7 +142,9 @@ if (typeof window === 'undefined' && typeof process !== 'undefined' && process.v
         adminStorage = () => admin.storage();
         
         // Store in global to prevent re-initialization
+        // @ts-expect-error - global doesn't have this property by default
         global.__firebaseAdmin = admin;
+        // @ts-expect-error - global doesn't have this property by default
         global.__firebaseAdminInitialized = true;
       } catch (error) {
         console.error("Firebase Admin SDK initialization failed:", error);
