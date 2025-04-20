@@ -156,7 +156,7 @@ export function GraphProvider({ children }: { children: ReactNode }) {
       !assistantsData.selectedAssistant &&
       !assistantsData.isLoadingAllAssistants
     ) {
-      assistantsData.getOrCreateAssistant(userData.user.id);
+      assistantsData.getOrCreateAssistant(userData.user.uid);
     }
   }, [userData.user]);
 

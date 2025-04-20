@@ -39,7 +39,7 @@ class ScopedLogger {
     this.log('info', message, context);
   }
 
-  log(message: string, context?: LogContext) {
+  logMessage(message: string, context?: LogContext) {
     this.log('log', message, context);
   }
 
