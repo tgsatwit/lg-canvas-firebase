@@ -4,9 +4,14 @@ import NextImage from "next/image";
 import Link from "next/link";
 import { buttonVariants } from "../../ui/button";
 import { UserAuthForm } from "./user-auth-form-signup";
-import { signup } from "./actions";
-import { createSupabaseClient } from "@/lib/supabase/client";
 import { useSearchParams, useRouter } from "next/navigation";
+import {
+    createUserWithEmailAndPassword,
+    signInWithPopup,
+    GoogleAuthProvider,
+    GithubAuthProvider,
+} from "firebase/auth";
+import { auth } from "@/lib/firebase/client";
 
 export interface SignupWithEmailInput {
   email: string;
@@ -20,9 +25,8 @@ export function Signup() {
 
   useEffect(() => {
     const error = searchParams.get("error");
-    if (error === "true") {
+    if (error) {
       setIsError(true);
-      // Remove the error parameter from the URL
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete("error");
       router.replace(
@@ -32,26 +36,63 @@ export function Signup() {
     }
   }, [searchParams, router]);
 
+  const createSession = async (idToken: string) => {
+    const response = await fetch("/api/auth/sessionLogin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ idToken }),
+    });
+    return response.ok;
+  };
+
   const onSignupWithEmail = async (
     input: SignupWithEmailInput
   ): Promise<void> => {
     setIsError(false);
-    await signup(input, window.location.origin);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        input.email,
+        input.password
+      );
+
+      const idToken = await userCredential.user.getIdToken();
+      const success = await createSession(idToken);
+
+      if (success) {
+        router.push("/");
+      } else {
+        throw new Error("Signup succeeded, but failed to create server session.");
+      }
+    } catch (error) {
+      console.error("Email/Password signup error:", error);
+      setIsError(true);
+    }
   };
 
   const onSignupWithOauth = async (
-    provider: "google" | "github"
+    providerName: "google" | "github"
   ): Promise<void> => {
     setIsError(false);
-    const client = createSupabaseClient();
-    const currentOrigin =
-      typeof window !== "undefined" ? window.location.origin : "";
-    await client.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${currentOrigin}/auth/callback`,
-      },
-    });
+    const provider = providerName === "google"
+        ? new GoogleAuthProvider()
+        : new GithubAuthProvider();
+
+    try {
+      const userCredential = await signInWithPopup(auth, provider);
+      const idToken = await userCredential.user.getIdToken();
+      const success = await createSession(idToken);
+      if (success) {
+        router.push("/");
+      } else {
+        throw new Error("OAuth sign-in succeeded, but failed to create server session.");
+      }
+    } catch (error) {
+      console.error("OAuth signup/login error:", error);
+      setIsError(true);
+    }
   };
 
   return (

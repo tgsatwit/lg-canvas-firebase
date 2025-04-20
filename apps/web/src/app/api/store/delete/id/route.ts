@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Client } from "@langchain/langgraph-sdk";
 import { LANGGRAPH_API_URL } from "@/constants";
-import { verifyUserAuthenticated } from "../../../../../lib/supabase/verify_user_server";
+import { verifyUserAuthenticated } from "@/lib/firebase/verify_user_server";
 
 export async function POST(req: NextRequest) {
   try {
-    const authRes = await verifyUserAuthenticated();
-    if (!authRes?.user) {
+    const decodedToken = await verifyUserAuthenticated();
+    if (!decodedToken) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   } catch (e) {

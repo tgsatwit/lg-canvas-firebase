@@ -11,6 +11,7 @@ import {
   ALL_MODEL_NAMES,
   ALL_MODELS,
   LANGCHAIN_USER_ONLY_MODELS,
+  DEFAULT_MODEL_CONFIG,
 } from "@opencanvas/shared/models";
 import {
   Dispatch,
@@ -72,7 +73,7 @@ function CommandModelItem({
   return (
     <CommandItem
       value={model.name}
-      onSelect={handleModelChange}
+      onSelect={() => handleModelChange(model.name as ALL_MODEL_NAMES)}
       className="flex items-center"
     >
       <Check
@@ -122,6 +123,17 @@ export default function ModelSelector({
   const [isLangChainUser, setIsLangChainUser] = useState(false);
   const [open, setOpen] = useState(false);
   const [openConfigModelId, setOpenConfigModelId] = useState<ALL_MODEL_NAMES>();
+
+  // Create a safe version of modelConfigs with fallbacks
+  const safeModelConfigs = modelConfigs || {};
+
+  // Helper function to safely get model config
+  const getModelConfig = (modelName: string): CustomModelConfig => {
+    // Try to get from provided configs, fallback to defaults
+    const foundModel = ALL_MODELS.find(m => m.name === modelName);
+    return safeModelConfigs[modelName] || 
+           (foundModel ? foundModel.config : DEFAULT_MODEL_CONFIG);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -247,15 +259,15 @@ export default function ModelSelector({
             {openaiModelGroup.length > 0 && (
               <CommandGroup heading="OpenAI" className="w-full">
                 {openaiModelGroup.map((model) => {
-                  const config = modelConfigs[model.name];
+                  const config = getModelConfig(model.name);
                   return (
                     <CommandModelItem
                       key={model.name}
                       model={model}
                       handleModelChange={handleModelChange}
-                      config={config}
                       selectedModelName={modelName}
                       openConfigModelId={openConfigModelId}
+                      config={config}
                       setOpenConfigModelId={setOpenConfigModelId}
                       setModelConfig={setModelConfig}
                     />
@@ -267,15 +279,15 @@ export default function ModelSelector({
             {azureModelGroup.length > 0 && (
               <CommandGroup heading="Azure OpenAI" className="w-full">
                 {azureModelGroup.map((model) => {
-                  const config = modelConfigs[model.name.replace("azure/", "")];
+                  const config = getModelConfig(model.name);
                   return (
                     <CommandModelItem
                       key={model.name}
                       model={model}
                       handleModelChange={handleModelChange}
-                      config={config}
                       selectedModelName={modelName}
                       openConfigModelId={openConfigModelId}
+                      config={config}
                       setOpenConfigModelId={setOpenConfigModelId}
                       setModelConfig={setModelConfig}
                     />
@@ -287,15 +299,15 @@ export default function ModelSelector({
             {anthropicModelGroup.length > 0 && (
               <CommandGroup heading="Anthropic" className="w-full">
                 {anthropicModelGroup.map((model) => {
-                  const config = modelConfigs[model.name];
+                  const config = getModelConfig(model.name);
                   return (
                     <CommandModelItem
                       key={model.name}
                       model={model}
                       handleModelChange={handleModelChange}
-                      config={config}
                       selectedModelName={modelName}
                       openConfigModelId={openConfigModelId}
+                      config={config}
                       setOpenConfigModelId={setOpenConfigModelId}
                       setModelConfig={setModelConfig}
                     />
@@ -305,37 +317,17 @@ export default function ModelSelector({
             )}
 
             {genAiModelGroup.length > 0 && (
-              <CommandGroup heading="Google GenAI" className="w-full">
+              <CommandGroup heading="Google Gemini" className="w-full">
                 {genAiModelGroup.map((model) => {
-                  const config = modelConfigs[model.name];
+                  const config = getModelConfig(model.name);
                   return (
                     <CommandModelItem
                       key={model.name}
                       model={model}
                       handleModelChange={handleModelChange}
-                      config={config}
                       selectedModelName={modelName}
                       openConfigModelId={openConfigModelId}
-                      setOpenConfigModelId={setOpenConfigModelId}
-                      setModelConfig={setModelConfig}
-                    />
-                  );
-                })}
-              </CommandGroup>
-            )}
-
-            {groqModelGroup.length > 0 && (
-              <CommandGroup heading="Groq" className="w-full">
-                {groqModelGroup.map((model) => {
-                  const config = modelConfigs[model.name];
-                  return (
-                    <CommandModelItem
-                      key={model.name}
-                      model={model}
-                      handleModelChange={handleModelChange}
                       config={config}
-                      selectedModelName={modelName}
-                      openConfigModelId={openConfigModelId}
                       setOpenConfigModelId={setOpenConfigModelId}
                       setModelConfig={setModelConfig}
                     />
@@ -347,15 +339,35 @@ export default function ModelSelector({
             {fireworksModelGroup.length > 0 && (
               <CommandGroup heading="Fireworks" className="w-full">
                 {fireworksModelGroup.map((model) => {
-                  const config = modelConfigs[model.name];
+                  const config = getModelConfig(model.name);
                   return (
                     <CommandModelItem
                       key={model.name}
                       model={model}
                       handleModelChange={handleModelChange}
-                      config={config}
                       selectedModelName={modelName}
                       openConfigModelId={openConfigModelId}
+                      config={config}
+                      setOpenConfigModelId={setOpenConfigModelId}
+                      setModelConfig={setModelConfig}
+                    />
+                  );
+                })}
+              </CommandGroup>
+            )}
+
+            {groqModelGroup.length > 0 && (
+              <CommandGroup heading="Groq" className="w-full">
+                {groqModelGroup.map((model) => {
+                  const config = getModelConfig(model.name);
+                  return (
+                    <CommandModelItem
+                      key={model.name}
+                      model={model}
+                      handleModelChange={handleModelChange}
+                      selectedModelName={modelName}
+                      openConfigModelId={openConfigModelId}
+                      config={config}
                       setOpenConfigModelId={setOpenConfigModelId}
                       setModelConfig={setModelConfig}
                     />
@@ -367,15 +379,15 @@ export default function ModelSelector({
             {ollamaModelGroup.length > 0 && (
               <CommandGroup heading="Ollama" className="w-full">
                 {ollamaModelGroup.map((model) => {
-                  const config = modelConfigs[model.name];
+                  const config = getModelConfig(model.name);
                   return (
                     <CommandModelItem
                       key={model.name}
                       model={model}
                       handleModelChange={handleModelChange}
-                      config={config}
                       selectedModelName={modelName}
                       openConfigModelId={openConfigModelId}
+                      config={config}
                       setOpenConfigModelId={setOpenConfigModelId}
                       setModelConfig={setModelConfig}
                     />
