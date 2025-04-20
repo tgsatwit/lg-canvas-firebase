@@ -3,10 +3,15 @@ import NextImage from "next/image";
 import Link from "next/link";
 import { buttonVariants } from "../../ui/button";
 import { UserAuthForm } from "./user-auth-form-login";
-import { login } from "./actions";
-import { createSupabaseClient } from "@/lib/supabase/client";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import {
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  GithubAuthProvider,
+} from "firebase/auth";
+import { auth } from "@/lib/firebase/client";
 
 export interface LoginWithEmailInput {
   email: string;
@@ -20,9 +25,8 @@ export function Login() {
 
   useEffect(() => {
     const error = searchParams.get("error");
-    if (error === "true") {
+    if (error) {
       setIsError(true);
-      // Remove the error parameter from the URL
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete("error");
       router.replace(
@@ -32,26 +36,61 @@ export function Login() {
     }
   }, [searchParams, router]);
 
+  const createSession = async (idToken: string) => {
+    const response = await fetch("/api/auth/sessionLogin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ idToken }),
+    });
+    return response.ok;
+  };
+
   const onLoginWithEmail = async (
     input: LoginWithEmailInput
   ): Promise<void> => {
     setIsError(false);
-    await login(input);
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        input.email,
+        input.password
+      );
+      const idToken = await userCredential.user.getIdToken();
+      const success = await createSession(idToken);
+      if (success) {
+        router.push("/");
+      } else {
+        throw new Error("Failed to create session.");
+      }
+    } catch (error) {
+      console.error("Email/Password login error:", error);
+      setIsError(true);
+    }
   };
 
   const onLoginWithOauth = async (
-    provider: "google" | "github"
+    providerName: "google" | "github"
   ): Promise<void> => {
     setIsError(false);
-    const client = createSupabaseClient();
-    const currentOrigin =
-      typeof window !== "undefined" ? window.location.origin : "";
-    await client.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${currentOrigin}/auth/callback`,
-      },
-    });
+    const provider = providerName === "google"
+      ? new GoogleAuthProvider()
+      : new GithubAuthProvider();
+
+    try {
+      const userCredential = await signInWithPopup(auth, provider);
+      const idToken = await userCredential.user.getIdToken();
+      const success = await createSession(idToken);
+      if (success) {
+        router.push("/");
+      } else {
+        throw new Error("Failed to create session.");
+      }
+    } catch (error) {
+      console.error("OAuth login error:", error);
+      setIsError(true);
+    }
   };
 
   return (

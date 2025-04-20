@@ -4,7 +4,7 @@ import { Button } from "../ui/button";
 import { Trash2 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "../ui/sheet";
 import { Skeleton } from "../ui/skeleton";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Thread } from "@langchain/langgraph-sdk";
 import { PiChatsCircleLight } from "react-icons/pi";
 import { TighterText } from "../ui/header";
@@ -80,10 +80,20 @@ const convertThreadActualToThreadProps = (
 });
 
 const groupThreads = (
-  threads: Thread[],
+  threads: Thread[] | undefined | null,
   switchSelectedThreadCallback: (thread: Thread) => void,
   deleteThread: (id: string) => void
 ) => {
+  // Handle undefined threads array gracefully
+  if (!threads || threads.length === 0) {
+    return {
+      today: [],
+      yesterday: [],
+      lastSevenDays: [],
+      older: [],
+    };
+  }
+
   const today = new Date();
   const yesterday = subDays(today, 1);
   const sevenDaysAgo = subDays(today, 7);
@@ -199,18 +209,13 @@ export function ThreadHistoryComponent(props: ThreadHistoryProps) {
   const {
     graphData: { setMessages, switchSelectedThread },
   } = useGraphContext();
-  const { deleteThread, getUserThreads, userThreads, isUserThreadsLoading } =
+  const { deleteThread, getAllThreads, threads, threadsLoading } =
     useThreadContext();
   const { user } = useUserContext();
   const [open, setOpen] = useState(false);
+  const [hasTriedLoadingThreads, setHasTriedLoadingThreads] = useState(false);
 
-  useEffect(() => {
-    if (typeof window == "undefined" || userThreads.length || !user) return;
-
-    getUserThreads();
-  }, [user]);
-
-  const handleDeleteThread = async (id: string) => {
+  const handleDeleteThread = useCallback(async (id: string) => {
     if (!user) {
       toast({
         title: "Failed to delete thread",
@@ -221,18 +226,29 @@ export function ThreadHistoryComponent(props: ThreadHistoryProps) {
       return;
     }
 
-    await deleteThread(id, () => setMessages([]));
-  };
+    await deleteThread(id);
+    setMessages([]);
+  }, [user, deleteThread, toast, setMessages]);
 
-  const groupedThreads = groupThreads(
-    userThreads,
-    (thread) => {
-      switchSelectedThread(thread);
-      props.switchSelectedThreadCallback(thread);
-      setOpen(false);
-    },
-    handleDeleteThread
-  );
+  // Only run once when user is available and threads haven't been loaded
+  useEffect(() => {
+    if (typeof window === "undefined" || !user || hasTriedLoadingThreads) return;
+
+    getAllThreads();
+    setHasTriedLoadingThreads(true);
+  }, [user, hasTriedLoadingThreads]); // getAllThreads is intentionally omitted from deps
+
+  const groupedThreads = React.useMemo(() => {
+    return groupThreads(
+      threads,
+      (thread) => {
+        switchSelectedThread(thread);
+        props.switchSelectedThreadCallback(thread);
+        setOpen(false);
+      },
+      handleDeleteThread
+    );
+  }, [threads, switchSelectedThread, props.switchSelectedThreadCallback, handleDeleteThread]);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -248,27 +264,20 @@ export function ThreadHistoryComponent(props: ThreadHistoryProps) {
           />
         </TooltipIconButton>
       </SheetTrigger>
-      <SheetContent
-        side="left"
-        className="border-none overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
-        aria-describedby={undefined}
-      >
-        <SheetTitle>
-          <TighterText className="px-2 text-lg text-gray-600">
-            Chat History
-          </TighterText>
-        </SheetTitle>
-
-        {isUserThreadsLoading && !userThreads.length ? (
-          <div className="flex flex-col gap-1 px-2 pt-3">
-            {Array.from({ length: 25 }).map((_, i) => (
-              <LoadingThread key={`loading-thread-${i}`} />
-            ))}
+      <SheetContent>
+        <SheetTitle className="text-left">Thread History</SheetTitle>
+        {threadsLoading ? (
+          <div className="flex flex-col gap-2 mt-4">
+            <LoadingThread />
+            <LoadingThread />
+            <LoadingThread />
           </div>
-        ) : !userThreads.length ? (
-          <p className="px-3 text-gray-500">No items found in history.</p>
-        ) : (
+        ) : threads && threads.length > 0 ? (
           <ThreadsList groupedThreads={groupedThreads} />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full">
+            <TighterText className="text-gray-400">No threads found</TighterText>
+          </div>
         )}
       </SheetContent>
     </Sheet>

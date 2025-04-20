@@ -3,9 +3,12 @@ import { cn } from "@/lib/utils";
 export function TighterText({
   className,
   children,
+  as = "span",
 }: {
   className?: string;
   children: React.ReactNode;
+  as?: "p" | "span";
 }) {
-  return <p className={cn("tracking-tighter", className)}>{children}</p>;
+  const Component = as;
+  return <Component className={cn("tracking-tighter", className)}>{children}</Component>;
 }

@@ -11,25 +11,35 @@ import { createContext, ReactNode, useContext, useMemo, useState } from "react";
 import { useUserContext } from "./UserContext";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryState } from "nuqs";
+import { useDebouncedCallback } from "use-debounce";
+
+// Operation timeout in milliseconds (15 seconds)
+const OPERATION_TIMEOUT = 15000;
+
+// Query parameter name for thread ID
+const THREAD_ID_QUERY_PARAM = "threadId";
 
 type ThreadContentType = {
   threadId: string | null;
-  userThreads: Thread[];
-  isUserThreadsLoading: boolean;
+  threads: Thread[];
+  createThreadLoading: boolean;
+  createNonEmptyThreadLoading: boolean;
+  threadsLoading: boolean;
   modelName: ALL_MODEL_NAMES;
   modelConfig: CustomModelConfig;
   modelConfigs: Record<ALL_MODEL_NAMES, CustomModelConfig>;
-  createThreadLoading: boolean;
-  getThread: (id: string) => Promise<Thread | undefined>;
-  createThread: () => Promise<Thread | undefined>;
-  getUserThreads: () => Promise<void>;
-  deleteThread: (id: string, clearMessages: () => void) => Promise<void>;
-  setThreadId: (id: string | null) => void;
-  setModelName: (name: ALL_MODEL_NAMES) => void;
+  setThreadId: (threadId: string | null) => void;
+  setThreads: React.Dispatch<React.SetStateAction<Thread[]>>;
+  createThread: () => Promise<Thread>;
+  deleteThread: (threadId: string) => Promise<void>;
+  getAllThreads: () => Promise<void>;
+  getThread: (threadId: string) => Promise<Thread | null>;
+  setModelName: (modelName: ALL_MODEL_NAMES) => void;
   setModelConfig: (
     modelName: ALL_MODEL_NAMES,
-    config: CustomModelConfig
+    modelConfig: CustomModelConfig
   ) => void;
+  clearState: () => void;
 };
 
 const ThreadContext = createContext<ThreadContentType | undefined>(undefined);
@@ -37,12 +47,13 @@ const ThreadContext = createContext<ThreadContentType | undefined>(undefined);
 export function ThreadProvider({ children }: { children: ReactNode }) {
   const { user } = useUserContext();
   const { toast } = useToast();
-  const [threadId, setThreadId] = useQueryState("threadId");
-  const [userThreads, setUserThreads] = useState<Thread[]>([]);
-  const [isUserThreadsLoading, setIsUserThreadsLoading] = useState(false);
-  const [modelName, setModelName] =
-    useState<ALL_MODEL_NAMES>(DEFAULT_MODEL_NAME);
+  const [threads, setThreads] = useState<Thread[]>([]);
   const [createThreadLoading, setCreateThreadLoading] = useState(false);
+  const [_createNonEmptyThreadLoading, _setCreateNonEmptyThreadLoading] =
+    useState(false);
+  const [threadsLoading, setThreadsLoading] = useState(false);
+  const [modelName, _setModelName] = useState<ALL_MODEL_NAMES>(DEFAULT_MODEL_NAME);
+  const [threadId, setQueryThreadId] = useQueryState(THREAD_ID_QUERY_PARAM);
 
   const [modelConfigs, setModelConfigs] = useState<
     Record<ALL_MODEL_NAMES, CustomModelConfig>
@@ -81,91 +92,85 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
     return initialConfigs;
   });
 
-  const modelConfig = useMemo(() => {
+  // Define the computed model config
+  const activeModelConfig = useMemo(() => {
     // Try exact match first, then try without "azure/" or "groq/" prefixes
     return (
       modelConfigs[modelName] || modelConfigs[modelName.replace("azure/", "")]
     );
   }, [modelName, modelConfigs]);
 
-  const setModelConfig = (
-    modelName: ALL_MODEL_NAMES,
-    config: CustomModelConfig
-  ) => {
-    setModelConfigs((prevConfigs) => {
-      if (!config || !modelName) {
-        return prevConfigs;
-      }
-      return {
-        ...prevConfigs,
-        [modelName]: {
-          ...config,
-          provider: config.provider,
-          temperatureRange: {
-            ...(config.temperatureRange ||
-              DEFAULT_MODEL_CONFIG.temperatureRange),
-          },
-          maxTokens: {
-            ...(config.maxTokens || DEFAULT_MODEL_CONFIG.maxTokens),
-          },
-          ...(config.provider === "azure_openai" && {
-            azureConfig: {
-              ...config.azureConfig,
-              azureOpenAIApiKey:
-                config.azureConfig?.azureOpenAIApiKey ||
-                process.env._AZURE_OPENAI_API_KEY ||
-                "",
-              azureOpenAIApiInstanceName:
-                config.azureConfig?.azureOpenAIApiInstanceName ||
-                process.env._AZURE_OPENAI_API_INSTANCE_NAME ||
-                "",
-              azureOpenAIApiDeploymentName:
-                config.azureConfig?.azureOpenAIApiDeploymentName ||
-                process.env._AZURE_OPENAI_API_DEPLOYMENT_NAME ||
-                "",
-              azureOpenAIApiVersion:
-                config.azureConfig?.azureOpenAIApiVersion ||
-                "2024-08-01-preview",
-              azureOpenAIBasePath:
-                config.azureConfig?.azureOpenAIBasePath ||
-                process.env._AZURE_OPENAI_API_BASE_PATH,
-            },
-          }),
-        },
-      };
+  // Helper function to gracefully timeout async operations
+  const withTimeout = async <T,>(
+    promise: Promise<T>,
+    timeoutMs: number = OPERATION_TIMEOUT,
+    operation: string
+  ): Promise<T> => {
+    let timeoutId: NodeJS.Timeout;
+    
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error(`Operation '${operation}' timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
     });
+    
+    try {
+      const result = await Promise.race([promise, timeoutPromise]);
+      clearTimeout(timeoutId!);
+      return result as T;
+    } catch (error) {
+      console.error(`Error in ${operation}:`, error);
+      throw error;
+    }
   };
 
-  const createThread = async (): Promise<Thread | undefined> => {
+  const setModelConfig = useDebouncedCallback(
+    (modelName: ALL_MODEL_NAMES, newModelConfig: CustomModelConfig) => {
+      setModelConfigs(prev => ({
+        ...prev,
+        [modelName]: newModelConfig
+      }));
+    },
+    300
+  );
+
+  const setThreadId = useDebouncedCallback((newThreadId: string | null) => {
+    setQueryThreadId(newThreadId);
+  }, 300);
+
+  const setModelName = useDebouncedCallback((newModelName: ALL_MODEL_NAMES) => {
+    _setModelName(newModelName);
+  }, 300);
+
+  const createThread = async (): Promise<Thread> => {
     if (!user) {
       toast({
         title: "Failed to create thread",
-        description: "User not found",
+        description: "User not authenticated",
         duration: 5000,
         variant: "destructive",
       });
-      return;
+      throw new Error("User not authenticated");
     }
-    const client = createClient();
+
     setCreateThreadLoading(true);
 
     try {
-      const thread = await client.threads.create({
-        metadata: {
-          supabase_user_id: user.id,
-          customModelName: modelName,
-          modelConfig: {
-            ...modelConfig,
-            // Ensure Azure config is included if needed
-            ...(modelConfig.provider === "azure_openai" && {
-              azureConfig: modelConfig.azureConfig,
-            }),
+      const client = createClient();
+
+      const thread = await withTimeout(
+        client.threads.create({
+          metadata: {
+            firebase_user_id: user.uid,
+            customModelName: modelName,
+            modelConfig: activeModelConfig,
           },
-        },
-      });
+        }),
+        OPERATION_TIMEOUT,
+        "createThread"
+      );
+      
       setThreadId(thread.thread_id);
-      // Fetch updated threads so the new thread is included.
-      await getUserThreads();
       return thread;
     } catch (e) {
       console.error("Failed to create thread", e);
@@ -176,100 +181,123 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
         duration: 5000,
         variant: "destructive",
       });
+      throw e;
     } finally {
       setCreateThreadLoading(false);
     }
   };
 
-  const getUserThreads = async () => {
+  const deleteThread = async (threadId: string): Promise<void> => {
     if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    try {
+      const client = createClient();
+
+      await withTimeout(
+        client.threads.delete(threadId),
+        OPERATION_TIMEOUT,
+        "deleteThread"
+      );
+
+      setThreads((prev) => prev.filter((t) => t.thread_id !== threadId));
+
+      if (threadId === threadId) {
+        setThreadId(null);
+      }
+    } catch (e) {
+      console.error("Failed to delete thread", e);
       toast({
-        title: "Failed to create thread",
-        description: "User not found",
+        title: "Failed to delete thread",
+        description: "An error occurred while trying to delete the thread.",
         duration: 5000,
         variant: "destructive",
       });
+    }
+  };
+
+  const getAllThreads = async (): Promise<void> => {
+    if (!user) {
       return;
     }
 
-    setIsUserThreadsLoading(true);
+    setThreadsLoading(true);
     try {
       const client = createClient();
 
-      const userThreads = await client.threads.search({
-        metadata: {
-          supabase_user_id: user.id,
-        },
-        limit: 100,
-      });
-
-      if (userThreads.length > 0) {
-        const lastInArray = userThreads[0];
-        const allButLast = userThreads.slice(1, userThreads.length);
-        const filteredThreads = allButLast.filter(
-          (thread) => thread.values && Object.keys(thread.values).length > 0
-        );
-        setUserThreads([...filteredThreads, lastInArray]);
-      }
-    } finally {
-      setIsUserThreadsLoading(false);
-    }
-  };
-
-  const deleteThread = async (id: string, clearMessages: () => void) => {
-    setUserThreads((prevThreads) => {
-      const newThreads = prevThreads.filter(
-        (thread) => thread.thread_id !== id
+      const res = await withTimeout(
+        client.threads.search({
+          metadata: {
+            firebase_user_id: user.uid,
+          },
+        }),
+        OPERATION_TIMEOUT,
+        "getAllThreads"
       );
-      return newThreads;
-    });
-    if (id === threadId) {
-      clearMessages();
-      // Create a new thread. Use .then to avoid blocking the UI.
-      // Once completed, `createThread` will re-fetch all user
-      // threads to update UI.
-      void createThread();
-    }
-    const client = createClient();
-    try {
-      await client.threads.delete(id);
-    } catch (e) {
-      console.error(`Failed to delete thread with ID ${id}`, e);
-    }
-  };
 
-  const getThread = async (id: string): Promise<Thread | undefined> => {
-    try {
-      const client = createClient();
-      return client.threads.get(id);
+      setThreads(res);
     } catch (e) {
-      console.error("Failed to get thread by ID.", id, e);
+      console.error("Failed to get threads", e);
       toast({
-        title: "Failed to get thread",
-        description: "An error occurred while trying to get a thread.",
+        title: "Failed to get threads",
+        description: "An error occurred while trying to get threads.",
         duration: 5000,
         variant: "destructive",
       });
+    } finally {
+      setThreadsLoading(false);
     }
+  };
 
-    return undefined;
+  const getThread = async (threadId: string): Promise<Thread | null> => {
+    if (!user) {
+      return null;
+    }
+    
+    try {
+      const client = createClient();
+
+      return await withTimeout(
+        client.threads.get(threadId),
+        OPERATION_TIMEOUT,
+        "getThread"
+      );
+    } catch (e) {
+      console.error("Failed to get thread", e);
+      toast({
+        title: "Failed to get thread",
+        description: "An error occurred while trying to get the thread.",
+        duration: 5000,
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
+  const clearState = () => {
+    setThreadId(null);
+    _setModelName(DEFAULT_MODEL_NAME);
   };
 
   const contextValue: ThreadContentType = {
-    threadId,
-    userThreads,
-    isUserThreadsLoading,
-    modelName,
-    modelConfig,
-    modelConfigs,
+    threadId: threadId ?? null,
+    threads,
     createThreadLoading,
-    getThread,
-    createThread,
-    getUserThreads,
-    deleteThread,
+    createNonEmptyThreadLoading: _createNonEmptyThreadLoading,
+    threadsLoading,
+    modelName,
+    modelConfig: activeModelConfig,
+    modelConfigs,
     setThreadId,
+    setThreads,
+    createThread,
+    deleteThread,
+    getAllThreads,
+    getThread,
     setModelName,
     setModelConfig,
+    clearState,
   };
 
   return (

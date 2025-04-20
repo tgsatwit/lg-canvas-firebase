@@ -1,5 +1,6 @@
-import { createSupabaseClient } from "@/lib/supabase/client";
-import { User } from "@supabase/supabase-js";
+import { User } from "firebase/auth";
+import { auth } from "@/lib/firebase/client";
+import { onAuthStateChanged } from "firebase/auth";
 import {
   createContext,
   ReactNode,
@@ -9,43 +10,62 @@ import {
 } from "react";
 
 type UserContentType = {
-  getUser: () => Promise<User | undefined>;
-  user: User | undefined;
+  user: User | null | undefined;
   loading: boolean;
+  getUser: () => Promise<User | null>;
 };
 
 const UserContext = createContext<UserContentType | undefined>(undefined);
 
+// Auth timeout in milliseconds (10 seconds)
+const AUTH_TIMEOUT = 10000;
+
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User>();
+  const [user, setUser] = useState<User | null | undefined>(undefined);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user || typeof window === "undefined") return;
+  // Function to refresh the current user state
+  const getUser = async (): Promise<User | null> => {
+    try {
+      // Force auth state refresh
+      await auth.currentUser?.reload();
+      // Get the current user after reload
+      const currentUser = auth.currentUser;
+      // Update state
+      setUser(currentUser);
+      return currentUser;
+    } catch (error) {
+      console.error("Error refreshing user:", error);
+      return null;
+    }
+  };
 
-    getUser();
+  useEffect(() => {
+    // Set a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.warn("Auth state change timed out, assuming not logged in");
+        setUser(null);
+        setLoading(false);
+      }
+    }, AUTH_TIMEOUT);
+
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+        setUser(firebaseUser);
+        setLoading(false);
+        clearTimeout(timeoutId);
+    });
+
+    return () => {
+      unsubscribe();
+      clearTimeout(timeoutId);
+    };
   }, []);
 
-  async function getUser() {
-    if (user) {
-      setLoading(false);
-      return user;
-    }
-
-    const supabase = createSupabaseClient();
-
-    const {
-      data: { user: supabaseUser },
-    } = await supabase.auth.getUser();
-    setUser(supabaseUser || undefined);
-    setLoading(false);
-    return supabaseUser || undefined;
-  }
-
   const contextValue: UserContentType = {
-    getUser,
     user,
     loading,
+    getUser,
   };
 
   return (

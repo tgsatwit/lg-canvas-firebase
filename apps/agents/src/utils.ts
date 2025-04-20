@@ -26,7 +26,8 @@ import {
   TEMPERATURE_EXCLUDED_MODELS,
   LANGCHAIN_USER_ONLY_MODELS,
 } from "@opencanvas/shared/models";
-import { createClient, Session, User } from "@supabase/supabase-js";
+import { adminAuth } from "./lib/firebase/admin.js";
+import { DecodedIdToken } from "firebase-admin/auth";
 
 export const formatReflections = (
   reflections: Reflections,
@@ -307,30 +308,24 @@ export function optionallyGetSystemPromptFromConfig(
   return config.configurable?.systemPrompt as string | undefined;
 }
 
+async function verifyTokenFromConfig(
+  config: LangGraphRunnableConfig
+): Promise<DecodedIdToken | undefined> {
+  const token = config.configurable?.token as string;
+  if (!token) return undefined;
+  try {
+    const auth = adminAuth;
+    return await auth.verifyIdToken(token);
+  } catch (e) {
+    console.error("Error verifying token:", e);
+    return undefined;
+  }
+}
+
 async function getUserFromConfig(
   config: LangGraphRunnableConfig
-): Promise<User | undefined> {
-  if (
-    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    !process.env.SUPABASE_SERVICE_ROLE
-  ) {
-    return undefined;
-  }
-
-  const accessToken = (
-    config.configurable?.supabase_session as Session | undefined
-  )?.access_token;
-  if (!accessToken) {
-    return undefined;
-  }
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE
-  );
-
-  const authRes = await supabase.auth.getUser(accessToken);
-  return authRes.data.user || undefined;
+): Promise<DecodedIdToken | undefined> {
+  return verifyTokenFromConfig(config);
 }
 
 export function isUsingO1MiniModel(config: LangGraphRunnableConfig) {
@@ -366,13 +361,13 @@ export async function getModelFromConfig(
     (m) => m === modelName
   );
   if (isLangChainUserModel) {
-    const user = await getUserFromConfig(config);
-    if (!user) {
+    const decodedToken = await getUserFromConfig(config);
+    if (!decodedToken) {
       throw new Error(
-        "Unauthorized. Can not use LangChain only models without a user."
+        "Unauthorized. Can not use LangChain only models without a verified user token."
       );
     }
-    if (!user.email?.endsWith("@langchain.dev")) {
+    if (!decodedToken.email?.endsWith("@langchain.dev")) {
       throw new Error(
         "Unauthorized. Can not use LangChain only models without a user with a @langchain.dev email."
       );
@@ -385,13 +380,10 @@ export async function getModelFromConfig(
 
   return await initChatModel(modelName, {
     modelProvider,
-    // Certain models (e.g., OpenAI o1) do not support passing the temperature param.
     ...(includeStandardParams
       ? { maxTokens, temperature }
       : {
           max_completion_tokens: maxTokens,
-          // streaming: false,
-          // disableStreaming: true,
         }),
     ...(baseUrl ? { baseUrl } : {}),
     ...(apiKey ? { apiKey } : {}),
@@ -414,16 +406,12 @@ const cleanBase64 = (base64String: string): string => {
 
 export async function convertPDFToText(base64PDF: string) {
   try {
-    // Clean the base64 input first
     const cleanedBase64 = cleanBase64(base64PDF);
 
-    // Convert cleaned base64 to buffer
     const pdfBuffer = Buffer.from(cleanedBase64, "base64");
 
-    // Parse PDF
     const data = await pdfParse(pdfBuffer);
 
-    // Get text content
     return data.text;
   } catch (error) {
     console.error("Error converting PDF to text:", error);

@@ -22,12 +22,12 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { TighterText } from "@/components/ui/header";
 import { GraphInput } from "@opencanvas/shared/types";
-import { User } from "@supabase/supabase-js";
+import { User } from "firebase/auth";
 
 export interface CustomQuickActionsProps {
   isTextSelected: boolean;
   assistantId: string | undefined;
-  user: User | undefined;
+  user: User | null | undefined;
   streamMessage: (params: GraphInput) => Promise<void>;
 }
 
@@ -109,7 +109,7 @@ export function CustomQuickActions(props: CustomQuickActionsProps) {
 
   useEffect(() => {
     if (typeof window === undefined || !assistantId || !user) return;
-    getAndSetCustomQuickActions(user.id);
+    getAndSetCustomQuickActions(user.uid);
   }, [assistantId, user]);
 
   const handleNewActionClick = (e: Event) => {
@@ -143,7 +143,7 @@ export function CustomQuickActions(props: CustomQuickActionsProps) {
       const deletionSuccess = await deleteCustomQuickAction(
         id,
         customQuickActions || [],
-        user.id
+        user.uid
       );
       if (deletionSuccess) {
         toast({

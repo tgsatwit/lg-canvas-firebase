@@ -35,7 +35,6 @@
     "@langchain/openai": "^0.4.2",
     "@mendable/firecrawl-js": "1.10.1",
     "@opencanvas/shared": "*",
-    "@supabase/supabase-js": "^2.45.5",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.5",
     "exa-js": "^1.4.10",
@@ -46,6 +45,7 @@
     "lodash": "^4.17.21",
     "pdf-parse": "^1.1.1",
     "uuid": "^10.0.0",
+    "ws": "^8.18.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {

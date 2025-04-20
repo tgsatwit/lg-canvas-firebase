@@ -49,12 +49,12 @@ export const customAction = async (
 
   const store = ensureStoreInConfig(config);
   const assistantId = config.configurable?.assistant_id;
-  const userId = config.configurable?.supabase_user_id;
+  const userId = config.configurable?.firebase_user_id;
   if (!assistantId) {
     throw new Error("`assistant_id` not found in configurable");
   }
   if (!userId) {
-    throw new Error("`user.id` not found in configurable");
+    throw new Error("`firebase_user_id` not found in configurable");
   }
   const customActionsNamespace = ["custom_actions", userId];
   const actionsKey = "actions";

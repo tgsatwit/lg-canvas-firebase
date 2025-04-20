@@ -1,7 +1,7 @@
 import { LANGGRAPH_API_URL } from "../../../constants";
 import { NextRequest, NextResponse } from "next/server";
-import { Session, User } from "@supabase/supabase-js";
-import { verifyUserAuthenticated } from "../../../lib/supabase/verify_user_server";
+import { verifyUserAuthenticated } from "@/lib/firebase/verify_user_server";
+import { DecodedIdToken } from "firebase-admin/auth";
 
 function getCorsHeaders() {
   return {
@@ -12,13 +12,10 @@ function getCorsHeaders() {
 }
 
 async function handleRequest(req: NextRequest, method: string) {
-  let session: Session | undefined;
-  let user: User | undefined;
+  let decodedToken: DecodedIdToken | null = null;
   try {
-    const authRes = await verifyUserAuthenticated();
-    session = authRes?.session;
-    user = authRes?.user;
-    if (!session || !user) {
+    decodedToken = await verifyUserAuthenticated();
+    if (!decodedToken) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
   } catch (e) {
@@ -55,8 +52,7 @@ async function handleRequest(req: NextRequest, method: string) {
         parsedBody.config = parsedBody.config || {};
         parsedBody.config.configurable = {
           ...parsedBody.config.configurable,
-          supabase_session: session,
-          supabase_user_id: user.id,
+          firebase_user_id: decodedToken.uid,
         };
         options.body = JSON.stringify(parsedBody);
       } else {

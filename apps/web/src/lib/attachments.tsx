@@ -4,7 +4,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ContextDocument } from "@opencanvas/shared/types";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL } from "@ffmpeg/util";
-import { createClient } from "@supabase/supabase-js";
+import { storage } from "@/lib/firebase/client";
+import { ref, uploadBytes } from "firebase/storage";
 
 export function arrayToFileList(files: File[] | undefined) {
   if (!files || !files.length) return undefined;
@@ -56,43 +57,39 @@ export function contextDocumentToFile(document: ContextDocument): File {
 }
 
 export async function transcribeAudio(file: File, userId: string) {
-  if (
-    !process.env.NEXT_PUBLIC_SUPABASE_URL_DOCUMENTS ||
-    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_DOCUMENTS
-  ) {
-    throw new Error(
-      "Supabase credentials for uploading context documents are missing"
-    );
-  }
-  const client = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL_DOCUMENTS,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY_DOCUMENTS
-  );
+  // Define the storage path in Firebase Cloud Storage
+  const sanitizedFileName = file.name.replaceAll("/", "-").replaceAll(" ", "-");
+  const storagePath = `documents/${userId}/${new Date().getTime()}-${sanitizedFileName}`;
 
-  const res = await client.storage
-    .from("documents")
-    .upload(
-      `${userId}/${new Date().getTime()}-${file.name.replaceAll("/", "-").replaceAll(" ", "-")}`,
-      file,
-      {
-        upsert: true,
-      }
-    );
-  if (res.error) {
-    throw new Error(`Failed to upload context document: ${res.error.message}`);
-  }
+  try {
+    // Get a reference to the storage location
+    const storageRef = ref(storage, storagePath);
 
-  const result = await fetch("/api/whisper/audio", {
-    method: "POST",
-    body: JSON.stringify({
-      path: res.data.path,
-    }),
-  });
-  if (!result.ok) {
-    throw new Error("Failed to transcribe audio");
+    // Upload the file
+    const uploadResult = await uploadBytes(storageRef, file);
+    console.log("File uploaded successfully to Firebase:", uploadResult.metadata.fullPath);
+
+    // Use the full path for the API call
+    const firebasePath = uploadResult.metadata.fullPath;
+
+    const result = await fetch("/api/whisper/audio", {
+      method: "POST",
+      body: JSON.stringify({
+        path: firebasePath, // Send the Firebase Storage full path
+      }),
+    });
+    if (!result.ok) {
+        const errorBody = await result.text();
+        throw new Error(`Failed to transcribe audio. API responded with ${result.status}: ${errorBody}`);
+    }
+    const data = await result.json();
+    return data.text;
+
+  } catch (error: any) {
+      console.error("Error during transcription process (upload or API call):", error);
+      // Re-throw the error to be caught by the caller (e.g., convertDocuments)
+      throw new Error(`Transcription process failed: ${error.message}`);
   }
-  const data = await result.json();
-  return data.text;
 }
 
 export function fileToBase64(file: File): Promise<string> {
