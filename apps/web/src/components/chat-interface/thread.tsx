@@ -94,9 +94,6 @@ export const Thread: FC<ThreadProps> = (props: ThreadProps) => {
     <ThreadPrimitive.Root className="flex flex-col h-full w-full">
       <div className="pr-3 pl-6 pt-3 pb-2 flex flex-row gap-4 items-center justify-between">
         <div className="flex items-center justify-start gap-2 text-gray-600">
-          <ThreadHistory
-            switchSelectedThreadCallback={switchSelectedThreadCallback}
-          />
           <TighterText className="text-xl">Open Canvas</TighterText>
           {!hasChatStarted && (
             <ModelSelector
@@ -110,6 +107,9 @@ export const Thread: FC<ThreadProps> = (props: ThreadProps) => {
         </div>
         {hasChatStarted ? (
           <div className="flex flex-row flex-1 gap-2 items-center justify-end">
+            <ThreadHistory
+              switchSelectedThreadCallback={switchSelectedThreadCallback}
+            />
             <TooltipIconButton
               tooltip="Collapse Chat"
               variant="ghost"
@@ -131,6 +131,9 @@ export const Thread: FC<ThreadProps> = (props: ThreadProps) => {
           </div>
         ) : (
           <div className="flex flex-row gap-2 items-center">
+            <ThreadHistory
+              switchSelectedThreadCallback={switchSelectedThreadCallback}
+            />
             <ReflectionsDialog selectedAssistant={selectedAssistant} />
           </div>
         )}
