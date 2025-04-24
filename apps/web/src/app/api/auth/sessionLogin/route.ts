@@ -47,7 +47,8 @@ export async function POST(request: NextRequest) {
 
     // Set cookie policy for session cookie.
     console.log("Setting cookie in response");
-    cookies().set("__session", sessionCookie, {
+    const response = NextResponse.json({ status: "success", userId: decodedToken.uid }, { status: 200 });
+    response.cookies.set("__session", sessionCookie, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       maxAge: expiresIn / 1000, // maxAge is in seconds
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
       sameSite: "lax",
     });
 
-    return NextResponse.json({ status: "success", userId: decodedToken.uid }, { status: 200 });
+    return response;
   } catch (error: any) {
     console.error("Error creating session cookie:", error);
     // Return more specific error message for debugging
