@@ -1,10 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // Define paths that don't require authentication
-const PUBLIC_PATHS = ["/auth/login", "/auth/signup", "/auth/confirm", "/auth/signout"]; // Add other public paths if needed
+const PUBLIC_PATHS = [
+  "/login", 
+  "/auth/login", 
+  "/auth/signup", 
+  "/auth/confirm", 
+  "/auth/signout"
+]; // Add other public paths if needed
 
 // Define paths related to authentication flow itself
-const AUTH_PATHS = ["/auth/login", "/auth/signup", "/auth/confirm", "/auth/callback", "/auth/signout"]; // Add others like password reset if they exist
+const AUTH_PATHS = [
+  "/login",
+  "/auth/login", 
+  "/auth/signup", 
+  "/auth/confirm", 
+  "/auth/callback", 
+  "/auth/signout"
+]; // Add others like password reset if they exist
 
 // Helper function to add CORS headers to a response
 function addCorsHeaders(response: NextResponse) {
@@ -96,9 +109,14 @@ export async function middleware(request: NextRequest) {
 
   // If user is authenticated
   if (isAuthenticated) {    
-    // If accessing an auth page (like login/signup) while logged in, redirect to home
+    // If accessing an auth page (like login/signup) while logged in, redirect to dashboard
     if (isAuthPath(requestedPath)) {
-      return NextResponse.redirect(new URL('/', request.url));
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+    
+    // If accessing root, redirect to dashboard
+    if (requestedPath === '/') {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
     }
     
     // Otherwise, allow access to the requested page
@@ -113,7 +131,7 @@ export async function middleware(request: NextRequest) {
   }
   
   // If accessing any other path (protected), redirect to login
-  return NextResponse.redirect(new URL('/auth/login', request.url));
+  return NextResponse.redirect(new URL('/login', request.url));
 }
 
 export const config = {

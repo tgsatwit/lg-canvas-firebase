@@ -75,9 +75,9 @@ export function Login() {
       const success = await createSession(idToken);
       
       if (success) {
-        console.log("Redirecting to home page");
+        console.log("Redirecting to dashboard page");
         // Force full page navigation to ensure middleware processes the request
-        window.location.href = "/";
+        window.location.href = "/dashboard";
       } else {
         throw new Error("Failed to create session.");
       }
@@ -89,26 +89,56 @@ export function Login() {
   };
 
   return (
-    <div className="container relative h-full flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
-      <div className="relative hidden h-full flex-col bg-muted p-10 text-white dark:border-r lg:flex">
-        <div className="absolute inset-0 bg-zinc-900" />
-        <div className="relative z-20 flex gap-1 items-center text-lg font-medium">
-          Open Canvas
+    <div className="relative min-h-screen w-full flex">
+      {/* Full-width background with grid and gradient */}
+      <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-zinc-900 to-blue-900" 
+             style={{
+               backgroundImage: 'radial-gradient(circle at top right, rgba(67, 56, 202, 0.7), transparent 60%), radial-gradient(circle at bottom left, rgba(63, 0, 237, 0.8), transparent 60%)'
+             }}
+        />
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage:
+              `linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)`,
+            backgroundSize: '40px 40px',
+            opacity: 1,
+          }}
+        />
+      </div>
+      {/* Left column: Centered logo */}
+      <div className="relative flex flex-col justify-center items-center w-1/2 z-10 pr-16">
+        <div className="flex flex-col items-center justify-center w-full h-full">
+          <div className="flex gap-2 items-center text-7xl font-extrabold tracking-tight drop-shadow-xl mb-8">
+            <span className="bg-gradient-to-r from-indigo-700 via-indigo-600 to-indigo-700/50 bg-clip-text text-transparent">Riskalytics.</span>
+          </div>
         </div>
       </div>
-      <div className="lg:p-8">
-        <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-          <div className="flex flex-col space-y-2 text-center">
-            <h1 className="text-2xl font-semibold tracking-tight">Login</h1>
+      {/* Right column: Login overlay */}
+      <div className="relative flex flex-col justify-center items-center w-1/2 z-20">
+        <div 
+          className="rounded-xl w-full max-w-md px-10 py-12 mx-auto flex flex-col gap-6" 
+          style={{ 
+            backgroundColor: 'rgba(255, 255, 255, 0.15)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            border: '2px solid rgba(255, 255, 255, 0.2)',
+            boxShadow: '0 4px 30px rgba(0, 0, 0, 0.2)'
+          }}>
+          <div className="flex flex-col space-y-6 text-center">
+            <h1 className="text-3xl font-semibold text-indigo-700">Login</h1>
           </div>
-          <UserAuthForm
-            onLoginWithEmail={onLoginWithEmail}
-          />
-          {isError && (
-            <p className="text-red-500 text-sm text-center">
-              {errorMessage || "There was an error signing into your account. Please try again."}
-            </p>
-          )}
+          <div className="flex flex-col gap-5">
+            <UserAuthForm
+              onLoginWithEmail={onLoginWithEmail}
+            />
+            {isError && (
+              <p className="text-red-500 text-sm text-center mt-2">
+                {errorMessage || "There was an error signing into your account. Please try again."}
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>

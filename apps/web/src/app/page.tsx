@@ -1,24 +1,21 @@
 "use client";
 
-import { Canvas } from "@/components/canvas";
-import { AssistantProvider } from "@/contexts/AssistantContext";
-import { GraphProvider } from "@/contexts/GraphContext";
-import { ThreadProvider } from "@/contexts/ThreadProvider";
-import { UserProvider } from "@/contexts/UserContext";
-import { Suspense } from "react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-export default function Home() {
+export default function HomePage() {
+  const router = useRouter();
+  
+  useEffect(() => {
+    // Redirect to the dashboard route
+    router.push("/dashboard");
+  }, [router]);
+
   return (
-    <Suspense>
-      <UserProvider>
-        <ThreadProvider>
-          <AssistantProvider>
-            <GraphProvider>
-              <Canvas />
-            </GraphProvider>
-          </AssistantProvider>
-        </ThreadProvider>
-      </UserProvider>
-    </Suspense>
+    <div className="flex items-center justify-center h-screen">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold">Redirecting to Dashboard...</h1>
+      </div>
+    </div>
   );
 }

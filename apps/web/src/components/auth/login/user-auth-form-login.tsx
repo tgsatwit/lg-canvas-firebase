@@ -100,7 +100,7 @@ export function UserAuthForm({
           {formError && (
             <p className="text-sm text-red-500 mt-1">{formError}</p>
           )}
-          <Button disabled={isLoading} type="submit">
+          <Button disabled={isLoading} type="submit" className="mt-4 bg-indigo-700 text-white hover:bg-indigo-800">
             {isLoading && (
               <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
             )}
