@@ -1,38 +1,27 @@
-import { adminAuth } from "@/lib/firebase/admin";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
+import { adminAuth } from '@/lib/firebase/admin';
 
 export async function POST(request: NextRequest) {
-  console.log("[Verify API] Session verification request received");
-  
-  const auth = adminAuth();
-  if (!auth) {
-    console.error("[Verify API] Firebase Admin SDK not initialized");
-    return NextResponse.json({ isAuthenticated: false, error: "Firebase Admin SDK not initialized" }, { status: 500 });
-  }
-
-  const sessionCookie = request.cookies.get("__session")?.value;
-  if (!sessionCookie) {
-    console.log("[Verify API] No session cookie found");
-    return NextResponse.json({ isAuthenticated: false }, { status: 401 });
-  }
-
   try {
-    console.log("[Verify API] Verifying session cookie");
-    const decodedToken = await auth.verifySessionCookie(sessionCookie, true);
-    console.log(`[Verify API] Session verified successfully for user: ${decodedToken.uid}`);
+    const sessionCookie = request.cookies.get('__session')?.value;
     
-    return NextResponse.json({
-      isAuthenticated: true,
-      userId: decodedToken.uid,
-    });
-  } catch (error: any) {
-    console.error("[Verify API] Session verification failed:", error?.message || error);
-    
-    // Return more detailed error for debugging
+    if (!sessionCookie) {
+      return NextResponse.json({ isAuthenticated: false }, { status: 401 });
+    }
+
+    const auth = adminAuth();
+    if (!auth) {
+      console.error('[Auth API] Firebase Admin SDK not initialized');
+      return NextResponse.json({ isAuthenticated: false }, { status: 500 });
+    }
+
+    const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
     return NextResponse.json({ 
-      isAuthenticated: false, 
-      error: error?.message || "Unknown error",
-      code: error?.code
-    }, { status: 401 });
+      isAuthenticated: true, 
+      userId: decodedClaims.uid 
+    });
+  } catch (error) {
+    console.error('[Auth API] Session verification failed:', error);
+    return NextResponse.json({ isAuthenticated: false }, { status: 401 });
   }
 } 
