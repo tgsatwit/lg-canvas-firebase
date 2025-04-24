@@ -1,16 +1,10 @@
 import { cn } from "@/lib/utils";
-import NextImage from "next/image";
 import Link from "next/link";
 import { buttonVariants } from "../../ui/button";
 import { UserAuthForm } from "./user-auth-form-login";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import {
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  GoogleAuthProvider,
-  GithubAuthProvider,
-} from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
 
 export interface LoginWithEmailInput {
@@ -94,58 +88,11 @@ export function Login() {
     }
   };
 
-  const onLoginWithOauth = async (
-    providerName: "google" | "github"
-  ): Promise<void> => {
-    setIsError(false);
-    setErrorMessage("");
-    
-    console.log(`Attempting ${providerName} login`);
-    const provider = providerName === "google"
-      ? new GoogleAuthProvider()
-      : new GithubAuthProvider();
-
-    try {
-      const userCredential = await signInWithPopup(auth, provider);
-      console.log(`${providerName} login successful, getting ID token`);
-      const idToken = await userCredential.user.getIdToken();
-      const success = await createSession(idToken);
-      
-      if (success) {
-        console.log("Redirecting to home page");
-        // Force full page navigation to ensure middleware processes the request
-        window.location.href = "/";
-      } else {
-        throw new Error("Failed to create session.");
-      }
-    } catch (error: any) {
-      console.error(`${providerName} login error:`, error);
-      setIsError(true);
-      setErrorMessage(error.message || `${providerName} login failed.`);
-    }
-  };
-
   return (
     <div className="container relative h-full flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
-      <Link
-        href="/auth/signup"
-        className={cn(
-          buttonVariants({ variant: "ghost" }),
-          "absolute md:flex hidden right-4 top-4 md:right-8 md:top-8"
-        )}
-      >
-        Signup
-      </Link>
       <div className="relative hidden h-full flex-col bg-muted p-10 text-white dark:border-r lg:flex">
         <div className="absolute inset-0 bg-zinc-900" />
         <div className="relative z-20 flex gap-1 items-center text-lg font-medium">
-          <NextImage
-            src="/lc_logo.jpg"
-            width={36}
-            height={36}
-            alt="LangChain Logo"
-            className="rounded-full"
-          />
           Open Canvas
         </div>
       </div>
@@ -153,19 +100,9 @@ export function Login() {
         <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
           <div className="flex flex-col space-y-2 text-center">
             <h1 className="text-2xl font-semibold tracking-tight">Login</h1>
-            <Link
-              href="/auth/signup"
-              className={cn(
-                buttonVariants({ variant: "ghost" }),
-                "md:hidden flex"
-              )}
-            >
-              Signup
-            </Link>
           </div>
           <UserAuthForm
             onLoginWithEmail={onLoginWithEmail}
-            onLoginWithOauth={onLoginWithOauth}
           />
           {isError && (
             <p className="text-red-500 text-sm text-center">

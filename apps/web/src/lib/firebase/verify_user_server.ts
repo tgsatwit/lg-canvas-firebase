@@ -9,7 +9,8 @@ import { DecodedIdToken } from "firebase-admin/auth";
  */
 export async function verifyUserAuthenticated(): Promise<DecodedIdToken | null> {
   // Get the session cookie
-  const sessionCookie = cookies().get("__session")?.value;
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get("__session")?.value;
   if (!sessionCookie) {
     return null;
   }
