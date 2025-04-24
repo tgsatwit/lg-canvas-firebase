@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/resizable";
 import { CHAT_COLLAPSED_QUERY_PARAM } from "@/constants";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Header } from "@/components/layout/header";
 
 export function CanvasComponent() {
   const { graphData } = useGraphContext();
@@ -100,8 +99,7 @@ export function CanvasComponent() {
 
   return (
     <div className="flex flex-col h-screen">
-      <Header />
-      <div className="flex-1 pt-14"> {/* Add padding top to account for header height */}
+      <div className="flex-1"> {/* Remove the padding top since header is removed */}
         <ResizablePanelGroup direction="horizontal" className="h-full">
           {!chatStarted && (
             <NoSSRWrapper>

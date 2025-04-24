@@ -12,7 +12,7 @@ export function SidebarToggle() {
       variant="ghost"
       size="icon"
       onClick={() => setIsOpen(!isOpen)}
-      className="hover:bg-muted"
+      className="text-indigo-700 hover:bg-indigo-100/50 hover:text-indigo-900 relative z-10"
     >
       {isOpen ? (
         <PanelLeftClose className="h-5 w-5" />
