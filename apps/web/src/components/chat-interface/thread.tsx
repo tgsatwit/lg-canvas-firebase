@@ -17,6 +17,7 @@ import { ThreadWelcome } from "./welcome";
 import { useUserContext } from "@/contexts/UserContext";
 import { useThreadContext } from "@/contexts/ThreadProvider";
 import { useAssistantContext } from "@/contexts/AssistantContext";
+import { ProfileMenu } from "@/components/ui/profile-menu";
 
 const ThreadScrollToBottom: FC = () => {
   return (
@@ -185,6 +186,16 @@ export const Thread: FC<ThreadProps> = (props: ThreadProps) => {
               />
             </div>
           )}
+        </div>
+        
+        {/* Profile menu at bottom of sidebar */}
+        <div className="w-full pt-4 border-t mt-4">
+          <div className="flex items-center justify-between px-2">
+            <span className="text-sm text-muted-foreground">
+              {user?.displayName || user?.email || "User"}
+            </span>
+            <ProfileMenu user={user} />
+          </div>
         </div>
       </div>
     </ThreadPrimitive.Root>

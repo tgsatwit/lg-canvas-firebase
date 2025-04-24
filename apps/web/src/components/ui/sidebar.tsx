@@ -44,9 +44,15 @@ export function Sidebar({ children, className }: SidebarProps) {
         exit={{ width: 0 }}
         transition={{ duration: 0.2 }}
         className={cn(
-          "h-screen bg-background border-r overflow-hidden",
+          "h-screen overflow-hidden",
           className
         )}
+        style={{ 
+          backgroundColor: 'rgba(255, 255, 255, 0.25)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          borderRight: '1px solid rgba(255, 255, 255, 0.5)'
+        }}
       >
         {children}
       </motion.div>
@@ -85,10 +91,10 @@ export function SidebarLink({
     <a
       href={href}
       className={cn(
-        "flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors",
+        "flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors font-medium",
         isActive
-          ? "bg-primary/10 text-primary"
-          : "hover:bg-muted text-muted-foreground hover:text-foreground"
+          ? "bg-indigo-600/80 text-white shadow-md border border-indigo-500/50"
+          : "hover:bg-indigo-300/50 text-slate-700 hover:text-indigo-900"
       )}
     >
       <Icon className="w-5 h-5" />
