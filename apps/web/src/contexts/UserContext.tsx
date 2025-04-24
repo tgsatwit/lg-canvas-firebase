@@ -9,16 +9,16 @@ import {
   useState,
 } from "react";
 
-type UserContentType = {
+type UserContextType = {
   user: User | null | undefined;
   loading: boolean;
   getUser: () => Promise<User | null>;
 };
 
-const UserContext = createContext<UserContentType | undefined>(undefined);
+const UserContext = createContext<UserContextType | undefined>(undefined);
 
-// Auth timeout in milliseconds (10 seconds)
-const AUTH_TIMEOUT = 10000;
+// Auth timeout reduced to 5 seconds (most modern auth flows complete faster)
+const AUTH_TIMEOUT = 5000;
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null | undefined>(undefined);
@@ -27,13 +27,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Function to refresh the current user state
   const getUser = async (): Promise<User | null> => {
     try {
-      // Force auth state refresh
-      await auth.currentUser?.reload();
-      // Get the current user after reload
+      // Get the current user first before trying to reload
       const currentUser = auth.currentUser;
-      // Update state
-      setUser(currentUser);
-      return currentUser;
+      if (currentUser) {
+        // Only reload if we have a user to reload
+        await currentUser.reload();
+      }
+      // Return the current user after reload attempt
+      return auth.currentUser;
     } catch (error) {
       console.error("Error refreshing user:", error);
       return null;
@@ -41,7 +42,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Set a timeout to prevent infinite loading
+    // Set a timeout to prevent long loading states
     const timeoutId = setTimeout(() => {
       if (loading) {
         console.warn("Auth state change timed out, assuming not logged in");
@@ -50,11 +51,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
     }, AUTH_TIMEOUT);
 
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    // Use the persistent observer pattern from Firebase
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (firebaseUser) => {
         setUser(firebaseUser);
         setLoading(false);
         clearTimeout(timeoutId);
-    });
+      },
+      (error) => {
+        console.error("Auth state change error:", error);
+        setUser(null);
+        setLoading(false);
+        clearTimeout(timeoutId);
+      }
+    );
 
     return () => {
       unsubscribe();
@@ -62,7 +73,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const contextValue: UserContentType = {
+  const contextValue: UserContextType = {
     user,
     loading,
     getUser,
