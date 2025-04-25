@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { auth } from "@/lib/firebase/client"; // Added Firebase client
-import { signOut as firebaseSignOut } from "firebase/auth"; // Added Firebase signout function
+import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 export default function Page() {
@@ -13,21 +12,14 @@ export default function Page() {
   useEffect(() => {
     async function performSignOut() {
       try {
-        setMessage("Signing out from Firebase...");
-        await firebaseSignOut(auth); // Sign out from Firebase client
-
-        setMessage("Clearing server session...");
-        // Clear the server-side session cookie
-        const response = await fetch("/api/auth/sessionLogout", { method: "POST" });
-
-        if (!response.ok) {
-            console.error("Failed to clear server session:", await response.text());
-            // Decide if this constitutes an error for the user
-            // setErrorOccurred(true);
-            // setMessage("Partial sign out successful. Please close your browser.");
-            // return;
-        }
-
+        setMessage("Signing out...");
+        
+        // Use NextAuth signOut function
+        await signOut({ 
+          redirect: false,
+          callbackUrl: "/auth/login"
+        });
+        
         setMessage("Redirecting...");
         router.push("/auth/login");
       } catch (error) {
@@ -43,14 +35,26 @@ export default function Page() {
   return (
     <>
       {errorOccurred ? (
-        <div>
-          <h1>Sign out error</h1>
-          <p>
-            {message} Please refresh the page or manually clear your cookies.
-          </p>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
+            <h1 className="text-2xl font-bold text-red-500 mb-4">Sign out error</h1>
+            <p className="text-gray-700 mb-4">
+              {message} Please try again or close your browser.
+            </p>
+            <button 
+              onClick={() => router.push("/auth/login")}
+              className="bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700"
+            >
+              Return to Login
+            </button>
+          </div>
         </div>
       ) : (
-        <p>{message}</p>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
+            <p className="text-gray-700">{message}</p>
+          </div>
+        </div>
       )}
     </>
   );

@@ -64,6 +64,7 @@ export function UserAuthForm({
                     setShowPasswordField(true);
                   }
                 }}
+                suppressHydrationWarning
               />
             </div>
 
@@ -83,6 +84,7 @@ export function UserAuthForm({
                 disabled={isLoading}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                suppressHydrationWarning
               />
             </div>
           </div>

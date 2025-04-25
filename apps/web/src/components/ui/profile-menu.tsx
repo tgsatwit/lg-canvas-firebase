@@ -1,6 +1,6 @@
 "use client";
 
-import { signOut } from "firebase/auth";
+import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -9,63 +9,53 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { auth } from "@/lib/firebase/client";
-import { User } from "firebase/auth";
 import { LogOut, User as UserIcon } from "lucide-react";
+import { UserInfo } from "@/contexts/UserContext";
 
 interface ProfileMenuProps {
-  user: User | null | undefined;
+  user: UserInfo | null | undefined;
 }
 
 export function ProfileMenu({ user }: ProfileMenuProps) {
   const router = useRouter();
 
-  if (!user) return null;
-
-  const handleLogout = async () => {
+  const handleSignOut = async () => {
     try {
-      // Sign out from Firebase client
-      await signOut(auth);
-      
-      // Clear the server-side session cookie
-      await fetch("/api/auth/sessionLogout", { method: "POST" });
-      
-      // Redirect to login page
+      await signOut({ 
+        redirect: false,
+        callbackUrl: "/auth/login"
+      });
       router.push("/auth/login");
     } catch (error) {
-      console.error("Logout error:", error);
+      console.error("Error signing out:", error);
     }
   };
 
-  // Get user initials for avatar fallback
-  const getInitials = () => {
-    if (!user?.displayName) return "U";
-    return user.displayName
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .substring(0, 2);
-  };
+  if (!user) return null;
+
+  const userInitial = user.name?.charAt(0) || user.email?.charAt(0) || "U";
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Avatar className="h-8 w-8 cursor-pointer">
-          <AvatarImage src={user.photoURL || ""} alt={user.displayName || "User"} />
-          <AvatarFallback>{getInitials()}</AvatarFallback>
-        </Avatar>
+        <button className="flex items-center space-x-1 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Avatar className="h-8 w-8">
+            {user.image ? (
+              <AvatarImage src={user.image} alt={user.name || "User"} />
+            ) : (
+              <AvatarFallback>{userInitial}</AvatarFallback>
+            )}
+          </Avatar>
+        </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <div className="flex items-center justify-start gap-2 p-2">
-          <div className="flex flex-col space-y-0.5">
-            <p className="text-sm font-medium">{user.displayName || user.email}</p>
-            {user.displayName && <p className="text-xs text-muted-foreground">{user.email}</p>}
-          </div>
-        </div>
-        <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Log out</span>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem disabled className="flex items-center gap-2">
+          <UserIcon className="h-4 w-4" />
+          <span>{user.name || user.email || "User"}</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleSignOut} className="flex items-center gap-2 text-red-500">
+          <LogOut className="h-4 w-4" />
+          <span>Sign out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

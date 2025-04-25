@@ -8,14 +8,7 @@ import { UserProvider } from "@/contexts/UserContext";
 
 export default function CanvasPage() {
   return (
-    <div className="h-full space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Canvas</h1>
-        <p className="text-muted-foreground mt-2">
-          Create and visualize your AI-powered workflows
-        </p>
-      </div>
-      
+    <div className="h-full space-y-6">     
       <div className="h-[calc(100%-100px)]">
         <UserProvider>
           <ThreadProvider>
