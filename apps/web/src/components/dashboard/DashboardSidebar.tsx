@@ -9,24 +9,11 @@ import {
   SwatchIcon
 } from "@heroicons/react/24/outline";
 import { ProfileMenu } from "@/components/ui/profile-menu";
-import { User } from "firebase/auth";
-import { useEffect, useState } from "react";
-import { auth } from "@/lib/firebase/client";
+import { useUserContext } from "@/contexts/UserContext";
 
 export function DashboardSidebar() {
   const pathname = usePathname();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  // Directly use auth to get the current user
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
-      setUser(firebaseUser);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+  const { user, loading } = useUserContext();
 
   return (
     <Sidebar className="border-r border-indigo-200/50">
