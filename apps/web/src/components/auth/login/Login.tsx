@@ -64,7 +64,7 @@ export function Login() {
       {/* Left side - illustration or brand messaging */}
       <div className="w-1/2 flex flex-col justify-center items-center p-12 relative z-10 hidden md:flex">
         <div className="max-w-md text-center space-y-6">
-          <h1 className="text-7xl font-bold px-3 bg-gradient-to-r from-indigo-700 via-indigo-600 to-indigo-700/50 bg-clip-text text-transparent">Riskalytics.</h1>
+          <h1 className="text-7xl font-bold px-3 bg-gradient-to-r from-indigo-700 via-indigo-600 to-indigo-700/50 bg-clip-text text-transparent">PBL.ai</h1>
         </div>
       </div>
       
