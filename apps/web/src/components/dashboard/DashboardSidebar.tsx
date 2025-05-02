@@ -4,9 +4,11 @@ import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { usePathname } from "next/navigation";
 import { 
   HomeIcon, 
-  UserGroupIcon, 
-  Cog6ToothIcon,
-  SwatchIcon
+  SwatchIcon,
+  ChatBubbleLeftRightIcon,
+  FilmIcon,
+  QueueListIcon,
+  ClipboardDocumentListIcon
 } from "@heroicons/react/24/outline";
 import { ProfileMenu } from "@/components/ui/profile-menu";
 import { useUserContext } from "@/contexts/UserContext";
@@ -16,11 +18,11 @@ export function DashboardSidebar() {
   const { user, loading } = useUserContext();
 
   return (
-    <Sidebar className="border-r border-indigo-200/50">
+    <Sidebar className="border-r border-indigo-200/70 shadow-lg">
       <div className="flex flex-col h-full">
         <SidebarBody>
           <div className="mb-6">
-            <h2 className="text-2xl font-bold px-3 bg-gradient-to-r from-indigo-700 via-indigo-600 to-indigo-700/50 bg-clip-text text-transparent">Riskalytics</h2>
+            <h2 className="text-2xl font-bold px-3 bg-gradient-to-r from-indigo-700 via-indigo-600 to-indigo-700/50 bg-clip-text text-transparent">PBL.ai</h2>
           </div>
           <SidebarLink 
             href="/dashboard" 
@@ -37,18 +39,32 @@ export function DashboardSidebar() {
             Canvas
           </SidebarLink>
           <SidebarLink 
-            href="/users" 
-            icon={UserGroupIcon}
-            isActive={pathname === "/users"}
+            href="/dashboard/tasks" 
+            icon={ClipboardDocumentListIcon}
+            isActive={pathname === "/dashboard/tasks"}
           >
-            Users
+            Tasks
           </SidebarLink>
           <SidebarLink 
-            href="/settings" 
-            icon={Cog6ToothIcon}
-            isActive={pathname === "/settings"}
+            href="/dashboard/social-monitor" 
+            icon={ChatBubbleLeftRightIcon}
+            isActive={pathname === "/dashboard/social-monitor"}
           >
-            Settings
+            Social Monitor
+          </SidebarLink>
+          <SidebarLink 
+            href="/dashboard/videos" 
+            icon={FilmIcon}
+            isActive={pathname === "/dashboard/videos"}
+          >
+            Video Library
+          </SidebarLink>
+          <SidebarLink 
+            href="/dashboard/playlists" 
+            icon={QueueListIcon}
+            isActive={pathname === "/dashboard/playlists"}
+          >
+            Create Playlists
           </SidebarLink>
         </SidebarBody>
         

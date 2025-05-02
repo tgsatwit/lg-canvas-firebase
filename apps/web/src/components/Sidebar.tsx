@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { HomeIcon, UsersIcon } from "@heroicons/react/24/outline";
+import { HomeIcon, UsersIcon, ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
 
 const navigation = [
   { name: "Home", href: "/", icon: HomeIcon },
+  { name: "Social Monitor", href: "/dashboard/social-monitor", icon: ChatBubbleLeftRightIcon },
   { name: "Users", href: "/users", icon: UsersIcon },
 ];
 
