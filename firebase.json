@@ -1,0 +1,23 @@
+{
+  "firestore": [
+    {
+      "rules": "firestore.rules",
+      "indexes": "firestore.indexes.json",
+      "database": "pbl-backend"
+    }
+  ],
+  "hosting": {
+    "public": "apps/web/out",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+} 

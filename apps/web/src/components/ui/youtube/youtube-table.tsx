@@ -3,15 +3,11 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  // Remove AlertDialog imports since we're not using them anymore
+  // AlertDialog,
+  // AlertDialogCancel,
+  // AlertDialogContent,
+  // AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,15 +16,8 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuPortal,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -73,26 +62,19 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
-  CircleAlert,
   CircleX,
   Columns3,
-  Ellipsis,
   Eye,
   Filter,
   ListFilter,
   MoreVertical,
   Pencil,
   Plus,
-  Share2,
-  Trash,
   Upload,
   Copy,
   ExternalLink,
   FileText,
-  Link,
   MessageSquare,
-  Tag,
-  ThumbsUp,
   Video as VideoIcon,
   Youtube,
   Zap,
@@ -103,7 +85,9 @@ import {
   Twitter,
   Linkedin,
   Instagram,
-  MoreHorizontal,
+  Check,
+  Download,
+  Play,
 } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { 
@@ -114,25 +98,56 @@ import {
 } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { 
-  Calendar as CalendarIcon,
-  Check,
-  Download,
-  User,
-  Play,
-} from "lucide-react";
+
+// Add utility function to format time
+const formatTime = (duration: string | number | undefined | null): string => {
+  // Return empty string if no duration
+  if (duration === undefined || duration === null) return "";
+  
+  // If already in "MM:SS" or "HH:MM:SS" format, return as is
+  if (typeof duration === 'string' && duration.includes(':')) {
+    return duration;
+  }
+  
+  // Try to convert to seconds
+  let seconds: number;
+  try {
+    seconds = typeof duration === 'string' ? parseInt(duration) : duration as number;
+    if (isNaN(seconds)) return "";
+  } catch (e) {
+    return "";
+  }
+  
+  // Format seconds to MM:SS or HH:MM:SS
+  if (seconds >= 3600) {
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  } else {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+};
+
+// Helper to extract duration from video data, looking at multiple possible locations
+const extractVideoDuration = (video: any): string => {
+  // Try to find duration in multiple places
+  const duration = 
+    // Direct duration field
+    video.duration ||
+    // Nested in vimeo_metadata
+    (video.videoMetadata?.duration || 
+     video.vimeoMetadata?.duration || 
+     video.vimeo_metadata?.duration) ||
+    // Nested in vimeo_ott_metadata
+    (video.vimeoOttMetadata?.duration || 
+     video.vimeo_ott_metadata?.duration);
+     
+  return formatTime(duration);
+};
 
 type Video = {
   id: string;
@@ -145,19 +160,70 @@ type Video = {
   comments: number;
   duration: string;
   status: "Published" | "Draft" | "Processing";
+  
+  // Vimeo metadata
+  vimeoId?: string;
+  vimeoOttId?: string;
+  
+  // File details
+  fileType?: string;
+  fileSize?: string;
+  
+  // Download info
+  downloadUrl?: string;
+  downloadInfo?: any;
+  
+  // Links
+  link?: string;
+  gcpLink?: string;
+  
+  // Descriptions
   description?: string;
+  vimeoDescription?: string;
+  transcript?: string;
+  
+  // Thumbnails
+  thumbnails?: Array<{
+    uri?: string;
+    height?: number;
+    width?: number;
+  }>;
+  
+  // Tags
+  tags?: string[];
+  
+  // Created dates
+  createdAt?: string;
+  
+  // Video metadata
+  videoMetadata?: {
+    created_time?: string;
+    description?: string;
+    duration?: number;
+  } | null;
+  
+  // Vimeo OTT metadata
+  vimeoOttMetadata?: {
+    created_at?: string;
+    description?: string;
+    duration?: number;
+    files_href?: string;
+    id?: string;
+    link?: string;
+  } | null;
+  
+  // Raw data for debugging
+  rawData?: any;
+  
+  // Legacy YouTube fields (kept for backward compatibility)
   youtubeDescription?: string;
   youtubeUploaded?: boolean;
   youtubeUrl?: string;
   youtubeUploadDate?: string;
   scheduledUploadDate?: string;
-  vimeoId?: string;
   vimeoTags?: string[];
   vimeoCategories?: string[];
   storageUrl?: string;
-  fileType?: string;
-  fileSize?: string;
-  transcript?: string;
 };
 
 // Custom filter function for multi-column searching
@@ -184,9 +250,13 @@ const statusFilterFn: FilterFn<Video> = (row, columnId, filterValue) => {
 export function YouTubeTable({
   onCreateVideo,
   onEditVideo,
+  videos = [],
+  isLoading = false,
 }: {
   onCreateVideo?: () => void;
   onEditVideo?: (video: Video) => void;
+  videos?: Video[];
+  isLoading?: boolean;
 }) {
   const id = useId();
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -196,8 +266,9 @@ export function YouTubeTable({
     pageSize: 10,
   });
   const inputRef = useRef<HTMLInputElement>(null);
-  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Remove unused state
+  // const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+  // const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [sorting, setSorting] = useState<SortingState>([
     {
@@ -206,104 +277,15 @@ export function YouTubeTable({
     },
   ]);
 
-  const [data, setData] = useState<Video[]>([
-    {
-      id: "v1d3o-001",
-      title: "How to Build a React Component Library",
-      thumbnail: "https://images.unsplash.com/photo-1633356122102-3fe601e05bd2?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-      visibility: "Public",
-      uploadDate: "2023-10-15",
-      views: 12543,
-      likes: 1243,
-      comments: 89,
-      duration: "12:34",
-      status: "Published",
-    },
-    {
-      id: "v1d3o-002",
-      title: "Advanced TypeScript Tips for React Developers",
-      thumbnail: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-      visibility: "Public",
-      uploadDate: "2023-11-02",
-      views: 8765,
-      likes: 765,
-      comments: 42,
-      duration: "18:22",
-      status: "Published",
-    },
-    {
-      id: "v1d3o-003",
-      title: "Building a SaaS Application from Scratch",
-      thumbnail: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-      visibility: "Private",
-      uploadDate: "2023-12-01",
-      views: 0,
-      likes: 0,
-      comments: 0,
-      duration: "32:10",
-      status: "Draft",
-    },
-    {
-      id: "v1d3o-004",
-      title: "Next.js 14 Full Course - Server Components, App Router, and More",
-      thumbnail: "https://images.unsplash.com/photo-1627398242454-45a1465c2479?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-      visibility: "Unlisted",
-      uploadDate: "2023-12-10",
-      views: 3421,
-      likes: 421,
-      comments: 32,
-      duration: "1:24:56",
-      status: "Published",
-    },
-    {
-      id: "v1d3o-005",
-      title: "Tailwind CSS Masterclass - From Beginner to Expert",
-      thumbnail: "https://images.unsplash.com/photo-1587620962725-abab7fe55159?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-      visibility: "Public",
-      uploadDate: "2024-01-05",
-      views: 7654,
-      likes: 876,
-      comments: 54,
-      duration: "45:21",
-      status: "Published",
-    },
-    {
-      id: "v1d3o-006",
-      title: "State Management in 2024 - Redux vs. Context vs. Zustand",
-      thumbnail: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-      visibility: "Public",
-      uploadDate: "2024-01-20",
-      views: 5432,
-      likes: 432,
-      comments: 21,
-      duration: "28:45",
-      status: "Published",
-    },
-    {
-      id: "v1d3o-007",
-      title: "Building a Custom Video Player with React",
-      thumbnail: "https://images.unsplash.com/photo-1536240478700-b869070f9279?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-      visibility: "Unlisted",
-      uploadDate: "2024-02-01",
-      views: 2134,
-      likes: 187,
-      comments: 14,
-      duration: "22:18",
-      status: "Published",
-    },
-    {
-      id: "v1d3o-008",
-      title: "Introduction to Web3 Development",
-      thumbnail: "https://images.unsplash.com/photo-1639762681057-408e52192e55?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-      visibility: "Private",
-      uploadDate: "2024-02-15",
-      views: 0,
-      likes: 0,
-      comments: 0,
-      duration: "15:42",
-      status: "Processing",
-    },
-  ]);
+  // Use the videos from props instead of mock data
+  const [data, setData] = useState<Video[]>([]);
+  
+  // Update data when videos prop changes
+  useEffect(() => {
+    if (videos && videos.length > 0) {
+      setData(videos);
+    }
+  }, [videos]);
 
   const handleDeleteRows = () => {
     const selectedRows = table.getSelectedRowModel().rows;
@@ -315,8 +297,7 @@ export function YouTubeTable({
   };
 
   const handleRowAction = (row: Row<Video>) => {
-    setSelectedVideo(row.original);
-    setIsModalOpen(true);
+    // Only call onEditVideo but don't open local modal
     onEditVideo?.(row.original);
   };
 
@@ -403,7 +384,7 @@ export function YouTubeTable({
               className="h-full w-full object-cover"
             />
             <div className="absolute bottom-1 right-1 rounded bg-black/70 px-1 text-xs text-white">
-              {row.original.duration}
+              {extractVideoDuration(row.original)}
             </div>
           </div>
           <div className="flex flex-col">
@@ -929,617 +910,6 @@ export function YouTubeTable({
           </Pagination>
         </div>
       </div>
-      
-      {/* Video Details Modal */}
-      <AlertDialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <AlertDialogContent className="max-w-[1200px] h-[90vh] p-0 overflow-hidden">
-          {selectedVideo && (
-            <div className="flex flex-col h-full">
-              <div className="flex justify-between items-center p-6">
-                <div className="flex flex-col">
-                  <AlertDialogTitle className="text-xl font-semibold">
-                    {selectedVideo.title}
-                  </AlertDialogTitle>
-                  <p className="text-sm text-muted-foreground">Last modified: {selectedVideo.uploadDate}</p>
-                </div>
-                <AlertDialogCancel className="h-8 w-8 p-0">×</AlertDialogCancel>
-              </div>
-
-              <Tabs defaultValue="overview" className="flex-1">
-                <div className="px-2 flex flex-col h-full">
-                  <TabsList className="w-full justify-start rounded-none p-0 h-12 bg-transparent">
-                    <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 transition-all duration-300">Overview</TabsTrigger>
-                    <TabsTrigger value="thumbnails" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 transition-all duration-300">Thumbnails</TabsTrigger>
-                    <TabsTrigger value="content" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 transition-all duration-300">Content</TabsTrigger>
-                    <TabsTrigger value="analytics" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 transition-all duration-300">Analytics</TabsTrigger>
-                    <TabsTrigger value="ai-tools" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 transition-all duration-300">AI Tools</TabsTrigger>
-                  </TabsList>
-                  <ScrollArea className="flex-1">
-                    <div className="p-6">
-                      {/* Overview Tab */}
-                      <TabsContent value="overview" className="mt-0 space-y-6 animate-in fade-in-50 duration-500">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          {/* Video Preview Section */}
-                          <div className="space-y-4">
-                            <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
-                              <img 
-                                src={selectedVideo.thumbnail} 
-                                alt={selectedVideo.title} 
-                                className="h-full w-full object-cover"
-                              />
-                              <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                                <Button variant="outline" className="bg-background/90">
-                                  <Play className="h-4 w-4 mr-2" />
-                                  Preview Video
-                                </Button>
-                              </div>
-                              <div className="absolute bottom-2 right-2 rounded bg-black/70 px-2 py-1 text-xs text-white">
-                                {selectedVideo.duration}
-                              </div>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <h3 className="text-sm font-medium text-muted-foreground">File Details</h3>
-                                <div className="space-y-1">
-                                  <div className="text-sm">Type: {selectedVideo.fileType || "MP4"}</div>
-                                  <div className="text-sm">Size: {selectedVideo.fileSize || "Unknown"}</div>
-                                  <div className="text-sm">Duration: {selectedVideo.duration}</div>
-                                </div>
-                              </div>
-                              <div className="space-y-2">
-                                <h3 className="text-sm font-medium text-muted-foreground">Storage</h3>
-                                <div className="space-y-1">
-                                  <div className="text-sm">ID: {selectedVideo.id}</div>
-                                  <div className="text-sm flex items-center gap-1">
-                                    Status: <Badge variant="outline" className={getStatusBadgeClass(selectedVideo.status)}>{selectedVideo.status}</Badge>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Video Details Section */}
-                          <div className="space-y-6">
-                            <div className="space-y-4">
-                              <div className="flex items-center justify-between">
-                                <h3 className="text-lg font-medium">Video Details</h3>
-                                <Button variant="outline" size="sm">
-                                  <Pencil className="h-4 w-4 mr-2" />
-                                  Edit Details
-                                </Button>
-                              </div>
-                              
-                              <div className="space-y-4">
-                                <div className="relative group">
-                                  <Label>Title</Label>
-                                  <Input value={selectedVideo.title} readOnly className="mt-1.5" />
-                                  <CopyButton text={selectedVideo.title} />
-                                </div>
-                                
-                                <div className="relative group">
-                                  <Label>Description</Label>
-                                  <Textarea 
-                                    value={selectedVideo.description || "No description available."} 
-                                    readOnly 
-                                    className="mt-1.5 min-h-[100px]"
-                                  />
-                                  <CopyButton text={selectedVideo.description || "No description available."} />
-                                </div>
-                                
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <Label>Visibility</Label>
-                                    <Select defaultValue={selectedVideo.visibility.toLowerCase()}>
-                                      <SelectTrigger className="mt-1.5">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="public">Public</SelectItem>
-                                        <SelectItem value="private">Private</SelectItem>
-                                        <SelectItem value="unlisted">Unlisted</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div>
-                                    <Label>Upload Date</Label>
-                                    <Input value={selectedVideo.uploadDate} readOnly className="mt-1.5" />
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <Separator />
-
-                            <div className="space-y-4">
-                              <h3 className="text-lg font-medium">Analytics Overview</h3>
-                              <div className="grid grid-cols-3 gap-4">
-                                <div className="bg-muted/30 p-4 rounded-lg">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="text-sm text-muted-foreground">Views</span>
-                                    <Eye className="h-4 w-4 text-muted-foreground" />
-                                  </div>
-                                  <div className="text-2xl font-semibold">{selectedVideo.views.toLocaleString()}</div>
-                                </div>
-                                <div className="bg-muted/30 p-4 rounded-lg">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="text-sm text-muted-foreground">Likes</span>
-                                    <ThumbsUp className="h-4 w-4 text-muted-foreground" />
-                                  </div>
-                                  <div className="text-2xl font-semibold">{selectedVideo.likes.toLocaleString()}</div>
-                                </div>
-                                <div className="bg-muted/30 p-4 rounded-lg">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="text-sm text-muted-foreground">Comments</span>
-                                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                                  </div>
-                                  <div className="text-2xl font-semibold">{selectedVideo.comments.toLocaleString()}</div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </TabsContent>
-
-                      {/* Content Tab */}
-                      <TabsContent value="content" className="mt-0 space-y-6 animate-in fade-in-50 duration-500">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          {/* Transcript Section */}
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                              <h3 className="text-lg font-medium">Transcript</h3>
-                              <Button variant="outline" size="sm">
-                                <Download className="h-4 w-4 mr-2" />
-                                Download
-                              </Button>
-                            </div>
-                            
-                            <div className="border rounded-lg p-4">
-                              <ScrollArea className="h-[400px] pr-4">
-                                <div className="space-y-4">
-                                  {selectedVideo.transcript ? (
-                                    <p className="whitespace-pre-line text-sm">
-                                      {selectedVideo.transcript}
-                                    </p>
-                                  ) : (
-                                    <div className="text-center py-8 text-muted-foreground">
-                                      <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                      <p>No transcript available</p>
-                                    </div>
-                                  )}
-                                </div>
-                              </ScrollArea>
-                            </div>
-                          </div>
-
-                          {/* Content Management */}
-                          <div className="space-y-6">
-                            <div>
-                              <h3 className="text-lg font-medium mb-4">Content Management</h3>
-                              <div className="space-y-4">
-                                <div className="border rounded-lg p-4">
-                                  <h4 className="text-sm font-medium mb-2">Chapters</h4>
-                                  <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                      <Input placeholder="00:00" className="w-24" />
-                                      <Input placeholder="Chapter title" />
-                                      <Button variant="ghost" size="icon">
-                                        <Plus className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="border rounded-lg p-4">
-                                  <h4 className="text-sm font-medium mb-2">Cards</h4>
-                                  <div className="space-y-2">
-                                    <Button variant="outline" className="w-full justify-start">
-                                      <Plus className="h-4 w-4 mr-2" />
-                                      Add Card
-                                    </Button>
-                                  </div>
-                                </div>
-
-                                <div className="border rounded-lg p-4">
-                                  <h4 className="text-sm font-medium mb-2">End Screen</h4>
-                                  <div className="space-y-2">
-                                    <Button variant="outline" className="w-full justify-start">
-                                      <Plus className="h-4 w-4 mr-2" />
-                                      Add End Screen Element
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div>
-                              <h3 className="text-lg font-medium mb-4">Captions</h3>
-                              <div className="border rounded-lg p-4">
-                                <div className="flex items-center justify-between mb-4">
-                                  <h4 className="text-sm font-medium">Available Languages</h4>
-                                  <Button variant="outline" size="sm">
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Add Language
-                                  </Button>
-                                </div>
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between py-2 border-b">
-                                    <div className="flex items-center gap-2">
-                                      <Badge variant="outline">EN</Badge>
-                                      <span className="text-sm">English</span>
-                                    </div>
-                                    <Button variant="ghost" size="sm">Edit</Button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </TabsContent>
-
-                      {/* Thumbnails Tab */}
-                      <TabsContent value="thumbnails" className="mt-0 space-y-6 animate-in fade-in-50 duration-500">
-                        <div className="space-y-6">
-                          <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-medium">Thumbnail Management</h3>
-                            <Button>
-                              <Upload className="h-4 w-4 mr-2" />
-                              Upload Source Image
-                            </Button>
-                          </div>
-
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            {/* Source Image */}
-                            <div className="space-y-4">
-                              <h4 className="text-sm font-medium">Source Image</h4>
-                              <div className="border rounded-lg p-4">
-                                <div className="aspect-[16/9] bg-muted rounded-lg overflow-hidden">
-                                  <img 
-                                    src={selectedVideo.thumbnail} 
-                                    alt="Source thumbnail" 
-                                    className="h-full w-full object-cover"
-                                  />
-                                </div>
-                                <div className="mt-4 flex items-center justify-between">
-                                  <div className="text-sm text-muted-foreground">
-                                    Original size: 1920x1080
-                                  </div>
-                                  <Button variant="outline" size="sm">
-                                    <Download className="h-4 w-4 mr-2" />
-                                    Download
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Generated Thumbnails */}
-                            <div className="space-y-4">
-                              <div className="flex items-center justify-between">
-                                <h4 className="text-sm font-medium">Generated Thumbnails</h4>
-                                <Button variant="outline" size="sm">
-                                  <Zap className="h-4 w-4 mr-2" />
-                                  Generate All
-                                </Button>
-                              </div>
-                              <div className="space-y-2">
-                                {/* YouTube */}
-                                <div className="border rounded-lg p-3">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      <Youtube className="h-4 w-4" />
-                                      <span className="text-sm font-medium">YouTube (1280x720)</span>
-                                    </div>
-                                    <Button variant="outline" size="sm">Generate</Button>
-                                  </div>
-                                </div>
-
-                                {/* Twitter */}
-                                <div className="border rounded-lg p-3">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      <Twitter className="h-4 w-4" />
-                                      <span className="text-sm font-medium">Twitter (1200x675)</span>
-                                    </div>
-                                    <Button variant="outline" size="sm">Generate</Button>
-                                  </div>
-                                </div>
-
-                                {/* LinkedIn */}
-                                <div className="border rounded-lg p-3">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      <Linkedin className="h-4 w-4" />
-                                      <span className="text-sm font-medium">LinkedIn (1200x627)</span>
-                                    </div>
-                                    <Button variant="outline" size="sm">Generate</Button>
-                                  </div>
-                                </div>
-
-                                {/* Instagram */}
-                                <div className="border rounded-lg p-3">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      <Instagram className="h-4 w-4" />
-                                      <span className="text-sm font-medium">Instagram (1080x1080)</span>
-                                    </div>
-                                    <Button variant="outline" size="sm">Generate</Button>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </TabsContent>
-
-                      {/* Analytics Tab */}
-                      <TabsContent value="analytics" className="mt-0 space-y-6 animate-in fade-in-50 duration-500">
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                          {/* Overview Cards */}
-                          <div className="col-span-full grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="bg-muted/30 p-4 rounded-lg">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-muted-foreground">Total Views</span>
-                                <Eye className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                              <div className="text-2xl font-semibold">{selectedVideo.views.toLocaleString()}</div>
-                              <div className="text-sm text-muted-foreground mt-1">+12% from last month</div>
-                            </div>
-                            <div className="bg-muted/30 p-4 rounded-lg">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-muted-foreground">Engagement Rate</span>
-                                <Target className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                              <div className="text-2xl font-semibold">8.2%</div>
-                              <div className="text-sm text-muted-foreground mt-1">+2.1% from last month</div>
-                            </div>
-                            <div className="bg-muted/30 p-4 rounded-lg">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-muted-foreground">Watch Time</span>
-                                <BarChart className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                              <div className="text-2xl font-semibold">4.5K hrs</div>
-                              <div className="text-sm text-muted-foreground mt-1">+8% from last month</div>
-                            </div>
-                          </div>
-
-                          {/* Detailed Stats */}
-                          <div className="lg:col-span-2 space-y-6">
-                            <div className="border rounded-lg p-4">
-                              <h3 className="text-sm font-medium mb-4">Performance Over Time</h3>
-                              <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
-                                <p className="text-sm text-muted-foreground">Performance chart will be displayed here</p>
-                              </div>
-                            </div>
-                            <div className="border rounded-lg p-4">
-                              <h3 className="text-sm font-medium mb-4">Audience Retention</h3>
-                              <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg">
-                                <p className="text-sm text-muted-foreground">Retention graph will be displayed here</p>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Demographics */}
-                          <div className="space-y-6">
-                            <div className="border rounded-lg p-4">
-                              <h3 className="text-sm font-medium mb-4">Viewer Demographics</h3>
-                              <div className="space-y-4">
-                                <div>
-                                  <div className="flex justify-between text-sm mb-1">
-                                    <span>Age 18-24</span>
-                                    <span>35%</span>
-                                  </div>
-                                  <div className="h-2 bg-muted rounded-full">
-                                    <div className="h-full w-[35%] bg-primary rounded-full"></div>
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="flex justify-between text-sm mb-1">
-                                    <span>Age 25-34</span>
-                                    <span>45%</span>
-                                  </div>
-                                  <div className="h-2 bg-muted rounded-full">
-                                    <div className="h-full w-[45%] bg-primary rounded-full"></div>
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="flex justify-between text-sm mb-1">
-                                    <span>Age 35-44</span>
-                                    <span>20%</span>
-                                  </div>
-                                  <div className="h-2 bg-muted rounded-full">
-                                    <div className="h-full w-[20%] bg-primary rounded-full"></div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="border rounded-lg p-4">
-                              <h3 className="text-sm font-medium mb-4">Top Countries</h3>
-                              <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm">United States</span>
-                                  <span className="text-sm text-muted-foreground">45%</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm">United Kingdom</span>
-                                  <span className="text-sm text-muted-foreground">15%</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm">Canada</span>
-                                  <span className="text-sm text-muted-foreground">12%</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm">Australia</span>
-                                  <span className="text-sm text-muted-foreground">8%</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm">Germany</span>
-                                  <span className="text-sm text-muted-foreground">6%</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </TabsContent>
-
-                      {/* AI Tools Tab */}
-                      <TabsContent value="ai-tools" className="mt-0 space-y-6 animate-in fade-in-50 duration-500">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          {/* AI Generation Tools */}
-                          <div className="space-y-6">
-                            <div>
-                              <h3 className="text-lg font-medium mb-4">Content Generation</h3>
-                              <div className="space-y-4">
-                                <div className="border rounded-lg p-4 transition-colors hover:bg-muted/50">
-                                  <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-2">
-                                      <Youtube className="h-4 w-4" />
-                                      <h4 className="font-medium">YouTube Optimization</h4>
-                                    </div>
-                                    <Button variant="outline" size="sm">Generate</Button>
-                                  </div>
-                                  <p className="text-sm text-muted-foreground">
-                                    Generate SEO-optimized title, description, tags, and thumbnail suggestions.
-                                  </p>
-                                </div>
-
-                                <div className="border rounded-lg p-4 transition-colors hover:bg-muted/50">
-                                  <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-2">
-                                      <MessageSquare className="h-4 w-4" />
-                                      <h4 className="font-medium">Social Media Content</h4>
-                                    </div>
-                                    <Button variant="outline" size="sm">Generate</Button>
-                                  </div>
-                                  <p className="text-sm text-muted-foreground">
-                                    Create engaging posts for Twitter, LinkedIn, and other platforms.
-                                  </p>
-                                </div>
-
-                                <div className="border rounded-lg p-4 transition-colors hover:bg-muted/50">
-                                  <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-2">
-                                      <FileText className="h-4 w-4" />
-                                      <h4 className="font-medium">Blog Post</h4>
-                                    </div>
-                                    <Button variant="outline" size="sm">Generate</Button>
-                                  </div>
-                                  <p className="text-sm text-muted-foreground">
-                                    Convert video content into a well-structured blog post.
-                                  </p>
-                                </div>
-
-                                <div className="border rounded-lg p-4 transition-colors hover:bg-muted/50">
-                                  <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-2">
-                                      <Mail className="h-4 w-4" />
-                                      <h4 className="font-medium">Email Newsletter</h4>
-                                    </div>
-                                    <Button variant="outline" size="sm">Generate</Button>
-                                  </div>
-                                  <p className="text-sm text-muted-foreground">
-                                    Create an email newsletter featuring your video content.
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* AI Output Preview */}
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                              <h3 className="text-lg font-medium">Generated Content</h3>
-                              <Button variant="outline" size="sm">
-                                <Copy className="h-4 w-4 mr-2" />
-                                Copy All
-                              </Button>
-                            </div>
-
-                            <div className="border rounded-lg">
-                              <Tabs defaultValue="preview">
-                                <TabsList className="grid w-full grid-cols-2 bg-transparent">
-                                  <TabsTrigger value="preview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 transition-all duration-300">Preview</TabsTrigger>
-                                  <TabsTrigger value="json" className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 transition-all duration-300">JSON</TabsTrigger>
-                                </TabsList>
-                                <TabsContent value="preview" className="animate-in fade-in-50 duration-500">
-                                  <ScrollArea className="h-[500px]">
-                                    <div className="p-4">
-                                      <div className="space-y-4">
-                                        <div className="space-y-2">
-                                          <Label>Generated Title</Label>
-                                          <div className="text-sm p-2 bg-muted rounded-md">
-                                            How to Build Amazing React Components - Best Practices and Tips
-                                          </div>
-                                        </div>
-                                        
-                                        <div className="space-y-2">
-                                          <Label>Description</Label>
-                                          <div className="text-sm p-2 bg-muted rounded-md whitespace-pre-line">
-                                            Master the art of building React components with our comprehensive guide! In this video, we'll cover:
-
-                                            🔹 Component architecture best practices
-                                            🔹 Performance optimization techniques
-                                            🔹 Reusability patterns
-                                            🔹 State management strategies
-
-                                            Perfect for both beginners and experienced developers looking to level up their React skills.
-                                          </div>
-                                        </div>
-                                        
-                                        <div className="space-y-2">
-                                          <Label>Tags</Label>
-                                          <div className="flex flex-wrap gap-1">
-                                            <Badge variant="outline">react</Badge>
-                                            <Badge variant="outline">javascript</Badge>
-                                            <Badge variant="outline">webdev</Badge>
-                                            <Badge variant="outline">programming</Badge>
-                                            <Badge variant="outline">tutorial</Badge>
-                                          </div>
-                                        </div>
-                                        
-                                        <Separator />
-                                        
-                                        <div className="space-y-2">
-                                          <Label>Social Media Posts</Label>
-                                          <div className="space-y-2">
-                                            <div className="text-sm p-2 bg-muted rounded-md">
-                                              🚀 Just dropped a new video on React component best practices!
-                                              
-                                              Learn how to build scalable, maintainable components that your team will love.
-                                              
-                                              Watch now: [link]
-                                              
-                                              #React #WebDev #JavaScript
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </ScrollArea>
-                                </TabsContent>
-                              </Tabs>
-                            </div>
-                          </div>
-                        </div>
-                      </TabsContent>
-                    </div>
-                  </ScrollArea>
-                </div>
-              </Tabs>
-
-              <div className="border-t p-4 flex justify-between items-center">
-                <div className="text-sm text-muted-foreground">
-                  Last edited: {selectedVideo?.uploadDate}
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setIsModalOpen(false)}>Close</Button>
-                  <Button>Save Changes</Button>
-                </div>
-              </div>
-            </div>
-          )}
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 } 

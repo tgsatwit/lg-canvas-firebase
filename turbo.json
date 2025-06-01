@@ -4,7 +4,11 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "env": [
+        "FIREBASE_VIDEOS_DB",
+        "FIREBASE_VIDEOS_COLLECTION"
+      ]
     },
     "lint": {
       "dependsOn": ["^lint"]
