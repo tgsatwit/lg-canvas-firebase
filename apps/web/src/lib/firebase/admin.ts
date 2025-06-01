@@ -45,16 +45,18 @@ if (typeof window === 'undefined') {
       });
       
       // Set up service accessor functions that will return the services
+      const databaseId = process.env.FIREBASE_VIDEOS_DB || '(default)';
       adminAuth = () => getAuth(app);
-      adminFirestore = () => getFirestore(app);
+      adminFirestore = () => getFirestore(app, databaseId);
       adminStorage = () => getStorage(app);
       
       console.info("Firebase Admin SDK initialized successfully");
     } else if (getApps().length > 0) {
       // If already initialized, just set up the service accessors
       const app = getApps()[0];
+      const databaseIdExisting = process.env.FIREBASE_VIDEOS_DB || '(default)';
       adminAuth = () => getAuth(app);
-      adminFirestore = () => getFirestore(app);
+      adminFirestore = () => getFirestore(app, databaseIdExisting);
       adminStorage = () => getStorage(app);
     }
   } catch (error) {

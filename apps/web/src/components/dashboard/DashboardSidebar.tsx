@@ -10,6 +10,7 @@ import {
   QueueListIcon,
   ClipboardDocumentListIcon
 } from "@heroicons/react/24/outline";
+import { MessageSquare } from "lucide-react";
 import { ProfileMenu } from "@/components/ui/profile-menu";
 import { useUserContext } from "@/contexts/UserContext";
 
@@ -37,6 +38,13 @@ export function DashboardSidebar() {
             isActive={pathname === "/dashboard/canvas"}
           >
             Canvas
+          </SidebarLink>
+          <SidebarLink 
+            href="/dashboard/chat" 
+            icon={MessageSquare}
+            isActive={pathname === "/dashboard/chat"}
+          >
+            Chat
           </SidebarLink>
           <SidebarLink 
             href="/dashboard/tasks" 

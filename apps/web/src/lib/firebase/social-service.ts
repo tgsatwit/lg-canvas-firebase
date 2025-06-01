@@ -15,7 +15,7 @@ import {
   onSnapshot,
   DocumentData
 } from 'firebase/firestore';
-import { db } from './config';
+import { chatDb } from './config';
 import { 
   SocialAccount, 
   SocialComment, 
@@ -48,7 +48,7 @@ const convertTimestamps = (data: DocumentData): any => {
 // Social Accounts
 export const getSocialAccounts = async (userId: string): Promise<SocialAccount[]> => {
   const q = query(
-    collection(db, ACCOUNTS_COLLECTION),
+    collection(chatDb, ACCOUNTS_COLLECTION),
     where('userId', '==', userId)
   );
   
@@ -67,7 +67,7 @@ export const getSocialAccountsByPlatform = async (
   platform: SocialPlatform
 ): Promise<SocialAccount[]> => {
   const q = query(
-    collection(db, ACCOUNTS_COLLECTION),
+    collection(chatDb, ACCOUNTS_COLLECTION),
     where('userId', '==', userId),
     where('platform', '==', platform)
   );
@@ -84,7 +84,7 @@ export const getSocialAccountsByPlatform = async (
 
 export const addSocialAccount = async (account: Omit<SocialAccount, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
   const now = Date.now();
-  const docRef = await addDoc(collection(db, ACCOUNTS_COLLECTION), {
+  const docRef = await addDoc(collection(chatDb, ACCOUNTS_COLLECTION), {
     ...account,
     createdAt: now,
     updatedAt: now
@@ -93,7 +93,7 @@ export const addSocialAccount = async (account: Omit<SocialAccount, 'id' | 'crea
 };
 
 export const updateSocialAccount = async (id: string, data: Partial<SocialAccount>): Promise<void> => {
-  const docRef = doc(db, ACCOUNTS_COLLECTION, id);
+  const docRef = doc(chatDb, ACCOUNTS_COLLECTION, id);
   await updateDoc(docRef, {
     ...data,
     updatedAt: Date.now()
@@ -101,7 +101,7 @@ export const updateSocialAccount = async (id: string, data: Partial<SocialAccoun
 };
 
 export const deleteSocialAccount = async (id: string): Promise<void> => {
-  await deleteDoc(doc(db, ACCOUNTS_COLLECTION, id));
+  await deleteDoc(doc(chatDb, ACCOUNTS_COLLECTION, id));
 };
 
 // Social Comments
@@ -115,7 +115,7 @@ export const getSocialComments = async (
   } = {}
 ): Promise<SocialComment[]> => {
   let q = query(
-    collection(db, COMMENTS_COLLECTION),
+    collection(chatDb, COMMENTS_COLLECTION),
     where('accountId', '==', accountId)
   );
   
@@ -152,7 +152,7 @@ export const markCommentAsAnswered = async (
   answered: boolean = true,
   replyId?: string
 ): Promise<void> => {
-  const docRef = doc(db, COMMENTS_COLLECTION, commentId);
+  const docRef = doc(chatDb, COMMENTS_COLLECTION, commentId);
   const updateData: Partial<SocialComment> = {
     answered,
     updatedAt: Date.now()
@@ -167,7 +167,7 @@ export const markCommentAsAnswered = async (
 
 export const addComment = async (comment: Omit<SocialComment, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> => {
   const now = Date.now();
-  const docRef = await addDoc(collection(db, COMMENTS_COLLECTION), {
+  const docRef = await addDoc(collection(chatDb, COMMENTS_COLLECTION), {
     ...comment,
     createdAt: now,
     updatedAt: now
@@ -185,7 +185,7 @@ export const subscribeToComments = (
   } = {}
 ) => {
   let q = query(
-    collection(db, COMMENTS_COLLECTION),
+    collection(chatDb, COMMENTS_COLLECTION),
     where('accountId', '==', accountId)
   );
   
@@ -214,7 +214,7 @@ export const subscribeToComments = (
 // Reply Templates
 export const getReplyTemplates = async (userId: string): Promise<ReplyTemplate[]> => {
   const q = query(
-    collection(db, TEMPLATES_COLLECTION),
+    collection(chatDb, TEMPLATES_COLLECTION),
     where('userId', '==', userId),
     orderBy('useCount', 'desc')
   );
@@ -233,7 +233,7 @@ export const addReplyTemplate = async (
   template: Omit<ReplyTemplate, 'id' | 'useCount' | 'createdAt' | 'updatedAt'>
 ): Promise<string> => {
   const now = Date.now();
-  const docRef = await addDoc(collection(db, TEMPLATES_COLLECTION), {
+  const docRef = await addDoc(collection(chatDb, TEMPLATES_COLLECTION), {
     ...template,
     useCount: 0,
     createdAt: now,
@@ -246,7 +246,7 @@ export const updateReplyTemplate = async (
   id: string, 
   data: Partial<ReplyTemplate>
 ): Promise<void> => {
-  const docRef = doc(db, TEMPLATES_COLLECTION, id);
+  const docRef = doc(chatDb, TEMPLATES_COLLECTION, id);
   await updateDoc(docRef, {
     ...data,
     updatedAt: Date.now()
@@ -254,7 +254,7 @@ export const updateReplyTemplate = async (
 };
 
 export const incrementTemplateUseCount = async (id: string): Promise<void> => {
-  const docRef = doc(db, TEMPLATES_COLLECTION, id);
+  const docRef = doc(chatDb, TEMPLATES_COLLECTION, id);
   const templateDoc = await getDoc(docRef);
   if (templateDoc.exists()) {
     const template = templateDoc.data() as ReplyTemplate;
@@ -266,13 +266,13 @@ export const incrementTemplateUseCount = async (id: string): Promise<void> => {
 };
 
 export const deleteReplyTemplate = async (id: string): Promise<void> => {
-  await deleteDoc(doc(db, TEMPLATES_COLLECTION, id));
+  await deleteDoc(doc(chatDb, TEMPLATES_COLLECTION, id));
 };
 
 // User Preferences
 export const getUserPreferences = async (userId: string): Promise<UserPreferences | null> => {
   const q = query(
-    collection(db, PREFERENCES_COLLECTION),
+    collection(chatDb, PREFERENCES_COLLECTION),
     where('userId', '==', userId),
     limit(1)
   );
@@ -295,7 +295,7 @@ export const createOrUpdateUserPreferences = async (
   preferences: Partial<Omit<UserPreferences, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>
 ): Promise<void> => {
   const q = query(
-    collection(db, PREFERENCES_COLLECTION),
+    collection(chatDb, PREFERENCES_COLLECTION),
     where('userId', '==', userId),
     limit(1)
   );
@@ -320,13 +320,13 @@ export const createOrUpdateUserPreferences = async (
       updatedAt: now
     };
     
-    await addDoc(collection(db, PREFERENCES_COLLECTION), {
+    await addDoc(collection(chatDb, PREFERENCES_COLLECTION), {
       ...defaultPreferences,
       ...preferences
     });
   } else {
     // Update existing preferences
-    const docRef = doc(db, PREFERENCES_COLLECTION, querySnapshot.docs[0].id);
+    const docRef = doc(chatDb, PREFERENCES_COLLECTION, querySnapshot.docs[0].id);
     await updateDoc(docRef, {
       ...preferences,
       updatedAt: now

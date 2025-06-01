@@ -164,7 +164,11 @@ export function VideoModal({
                     <img 
                       src={video.thumbnailUrl} 
                       alt={video.title}
-                      className="h-full w-full object-cover" 
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        // Fallback if the thumbnail fails to load
+                        e.currentTarget.src = "https://placehold.co/640x360?text=No+Preview";
+                      }}
                     />
                   </div>
                   

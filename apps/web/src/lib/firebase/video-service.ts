@@ -14,7 +14,7 @@ import {
   serverTimestamp,
   DocumentData
 } from 'firebase/firestore';
-import { db } from './config';
+import { chatDb } from './config'; // Use chatDb for pbl-backend database
 
 // Collection name
 const VIDEOS_COLLECTION = 'videos';
@@ -54,7 +54,7 @@ const convertTimestamps = (data: DocumentData): any => {
 // Get all videos
 export const getAllVideos = async (): Promise<VideoItem[]> => {
   const q = query(
-    collection(db, VIDEOS_COLLECTION),
+    collection(chatDb, VIDEOS_COLLECTION),
     orderBy('createdAt', 'desc')
   );
   
@@ -67,7 +67,7 @@ export const getAllVideos = async (): Promise<VideoItem[]> => {
 
 // Get a single video by ID
 export const getVideoById = async (videoId: string): Promise<VideoItem | null> => {
-  const docRef = doc(db, VIDEOS_COLLECTION, videoId);
+  const docRef = doc(chatDb, VIDEOS_COLLECTION, videoId);
   const docSnap = await getDoc(docRef);
   
   if (docSnap.exists()) {
@@ -82,7 +82,7 @@ export const getVideoById = async (videoId: string): Promise<VideoItem | null> =
 
 // Update a video
 export const updateVideo = async (videoId: string, data: Partial<VideoItem>): Promise<void> => {
-  const docRef = doc(db, VIDEOS_COLLECTION, videoId);
+  const docRef = doc(chatDb, VIDEOS_COLLECTION, videoId);
   await updateDoc(docRef, {
     ...data,
     updatedAt: serverTimestamp()
