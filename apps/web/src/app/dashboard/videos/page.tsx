@@ -8,6 +8,7 @@ import {
   DialogContent,
   VideoEditorModal
 } from '@/components/ui/youtube/youtube-modal';
+import { VideoUploadModal } from "@/components/videos/video-upload-modal";
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { useVideos } from '@/hooks/use-videos';
 
@@ -77,30 +78,51 @@ type Video = {
   
   // Raw data for debugging
   rawData?: any;
+  
+  // Legacy YouTube fields (kept for backward compatibility)
+  youtubeDescription?: string;
+  youtubeUploaded?: boolean;
+  youtubeUrl?: string;
+  youtubeLink?: string;
+  youtubeUploadDate?: string;
+  youtubeStatus?: string;
+  scheduledUploadDate?: string;
+  vimeoTags?: string[];
+  vimeoCategories?: string[];
+  storageUrl?: string;
 };
 
 export default function VideosPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const { videos, loading, error } = useVideos();
   
   const handleEditVideo = (video: Video) => {
-    console.log("Selected video data:", {
-      id: video.id,
-      title: video.title,
-      vimeoId: video.vimeoId,
-      vimeoOttId: video.vimeoOttId,
-      gcpLink: video.gcpLink,
-      hasVimeoMetadata: !!video.videoMetadata,
-      hasVimeoOttMetadata: !!video.vimeoOttMetadata
-    });
+    // Only log when editing a video (not on every load)
+    // console.log("Selected video data:", {
+    //   id: video.id,
+    //   title: video.title,
+    //   vimeoId: video.vimeoId,
+    //   vimeoOttId: video.vimeoOttId,
+    //   gcpLink: video.gcpLink,
+    //   hasVimeoMetadata: !!video.videoMetadata,
+    //   hasVimeoOttMetadata: !!video.vimeoOttMetadata
+    // });
     setSelectedVideo(video);
     setIsModalOpen(true);
   };
 
   const handleCreateVideo = () => {
-    setSelectedVideo(null);
-    setIsModalOpen(true);
+    setIsUploadModalOpen(true);
+  };
+
+  const handleUploadComplete = (videoId: string) => {
+    console.log('Video uploaded successfully:', videoId);
+    setIsUploadModalOpen(false);
+    // Optionally refresh the videos list or show a success message
+    // The useVideos hook should automatically refresh the list
+    window.location.reload(); // Simple refresh for now
   };
 
   if (error) {
@@ -147,6 +169,12 @@ export default function VideosPage() {
               {selectedVideo ? `Edit Video: ${selectedVideo.title}` : 'Create New Video'}
             </DialogPrimitive.Title>
           </VideoEditorModal>
+          
+          <VideoUploadModal
+            isOpen={isUploadModalOpen}
+            onClose={() => setIsUploadModalOpen(false)}
+            onUploadComplete={handleUploadComplete}
+          />
         </div>
       </div>
     </DashboardShell>

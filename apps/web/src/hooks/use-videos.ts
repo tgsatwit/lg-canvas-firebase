@@ -88,26 +88,16 @@ export const useVideos = () => {
         const data = await response.json();
         
         if (isMounted) {
+          console.log(`✅ Loaded ${data.length} videos`);
+          
+          // Count videos with OTT IDs (minimal summary)
+          const videosWithOttId = data.filter((video: Video) => video.vimeoOttId);
+          if (videosWithOttId.length > 0) {
+            console.log(`📹 ${videosWithOttId.length} videos have Vimeo OTT metadata`);
+          }
+          
           setVideos(data);
           setError(null);
-          
-          // Debug logging for development
-          if (process.env.NODE_ENV === 'development') {
-            console.log(`Loaded ${data.length} videos`);
-            // Check for vimeoOttId in the data
-            const videosWithOttId = data.filter((video: Video) => video.vimeoOttId);
-            if (videosWithOttId.length > 0) {
-              console.log(`Found ${videosWithOttId.length} videos with Vimeo OTT IDs:`, 
-                videosWithOttId.map((v: Video) => ({ 
-                  id: v.id, 
-                  title: v.title, 
-                  vimeoOttId: v.vimeoOttId 
-                }))
-              );
-            } else {
-              console.log('No videos found with Vimeo OTT IDs');
-            }
-          }
         }
       } catch (err) {
         if (isMounted) {

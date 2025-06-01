@@ -17,7 +17,7 @@ import {
   Youtube, Globe, X, Info, FileVideo, Clock,
   Video, Copy, Check, Download, ExternalLink, Database, 
   ImageIcon, Tag, Calendar, AlertCircle, PlayCircle,
-  Zap
+  Zap, Loader2, Upload, Edit
 } from "lucide-react"
 
 // Define interfaces for our metadata
@@ -73,6 +73,16 @@ interface VideoData {
   // Additional fields that are needed for fallback display
   duration?: number | string;
   thumbnail?: string;
+  // New YouTube scheduling fields
+  youtube_link?: string;
+  upload_scheduled?: string;
+  upload_time?: string;
+  // New YouTube metadata fields
+  yt_title?: string;
+  yt_description?: string;
+  yt_tags?: string[];
+  yt_privacyStatus?: string;
+  details_confirmed?: string;
 }
 
 interface VideoEditorModalProps {
@@ -158,12 +168,333 @@ interface TabData {
   content: React.ReactNode
 }
 
+// YouTube Status Card Component
+interface YoutubeStatusCardProps {
+  status: 'Uploaded' | 'Scheduled' | 'Confirm Details' | 'Not Scheduled';
+  styles: {
+    bg: string;
+    border: string;
+    text: string;
+    icon: string;
+  };
+  videoId: string;
+  uploadTime?: string;
+  youtubeLink?: string;
+  ytTitle?: string;
+  ytDescription?: string;
+  ytTags?: string[];
+  ytPrivacyStatus?: string;
+}
+
+const YoutubeStatusCard = ({ 
+  status, 
+  styles, 
+  videoId, 
+  uploadTime, 
+  youtubeLink,
+  ytTitle,
+  ytDescription,
+  ytTags,
+  ytPrivacyStatus
+}: YoutubeStatusCardProps) => {
+  const [scheduledDateTime, setScheduledDateTime] = React.useState('');
+  const [isScheduling, setIsScheduling] = React.useState(false);
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [isConfirming, setIsConfirming] = React.useState(false);
+
+  // Convert scheduled time to local datetime input format (GMT+10)
+  React.useEffect(() => {
+    if (uploadTime) {
+      // Convert the stored time to local input format
+      const date = new Date(uploadTime);
+      const localDate = new Date(date.getTime() + (10 * 60 * 60 * 1000)); // Add 10 hours for GMT+10
+      const isoString = localDate.toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm format
+      setScheduledDateTime(isoString);
+    }
+  }, [uploadTime]);
+
+  const handleScheduleUpload = async () => {
+    if (!scheduledDateTime) {
+      alert('Please select a date and time');
+      return;
+    }
+
+    setIsScheduling(true);
+    try {
+      // Convert local time to UTC for storage
+      const localDate = new Date(scheduledDateTime);
+      const utcDate = new Date(localDate.getTime() - (10 * 60 * 60 * 1000)); // Subtract 10 hours for GMT+10
+      
+      const response = await fetch(`/api/videos/${videoId}/schedule`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          upload_time: utcDate.toISOString(),
+        }),
+      });
+
+      if (response.ok) {
+        window.location.reload(); // Refresh to show updated status
+      } else {
+        throw new Error('Failed to schedule upload');
+      }
+    } catch (error) {
+      console.error('Error scheduling upload:', error);
+      alert('Failed to schedule upload. Please try again.');
+    } finally {
+      setIsScheduling(false);
+    }
+  };
+
+  const handleUploadNow = async () => {
+    setIsUploading(true);
+    try {
+      const response = await fetch(`/api/videos/${videoId}/upload-now`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        window.location.reload(); // Refresh to show updated status
+      } else {
+        throw new Error('Failed to upload video');
+      }
+    } catch (error) {
+      console.error('Error uploading video:', error);
+      alert('Failed to upload video. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleConfirmDetails = async () => {
+    // Get the current YouTube tab values
+    const ytTitleElement = document.querySelector('#youtube-title') as HTMLInputElement;
+    const ytDescriptionElement = document.querySelector('#youtube-description') as HTMLTextAreaElement;
+    const ytPrivacyElement = document.querySelector('[data-testid="privacy-select"]') as HTMLElement;
+    
+    // Get tags from the current state (this will need to be passed down or managed differently)
+    const currentTitle = ytTitleElement?.value || ytTitle || '';
+    const currentDescription = ytDescriptionElement?.value || ytDescription || '';
+    const currentPrivacy = ytPrivacyStatus || 'unlisted';
+    const currentTags = ytTags || [];
+
+    if (!currentTitle.trim() || !currentDescription.trim()) {
+      alert('Please fill in both title and description before confirming details.');
+      return;
+    }
+
+    setIsConfirming(true);
+    try {
+      const response = await fetch(`/api/videos/${videoId}/confirm-details`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          yt_title: currentTitle,
+          yt_description: currentDescription,
+          yt_tags: currentTags,
+          yt_privacyStatus: currentPrivacy,
+        }),
+      });
+
+      if (response.ok) {
+        // Instead of reloading, wait a moment and then reload to ensure DB has updated
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        throw new Error('Failed to confirm details');
+      }
+    } catch (error) {
+      console.error('Error confirming details:', error);
+      alert('Failed to confirm details. Please try again.');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const handleCancelSchedule = async () => {
+    setIsScheduling(true);
+    try {
+      const response = await fetch(`/api/videos/${videoId}/schedule`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        window.location.reload(); // Refresh to show updated status
+      } else {
+        throw new Error('Failed to cancel scheduled upload');
+      }
+    } catch (error) {
+      console.error('Error cancelling schedule:', error);
+      alert('Failed to cancel scheduled upload. Please try again.');
+    } finally {
+      setIsScheduling(false);
+    }
+  };
+
+  const handleClearDetails = async () => {
+    setIsConfirming(true);
+    try {
+      const response = await fetch(`/api/videos/${videoId}/confirm-details`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        window.location.reload(); // Refresh to show updated status
+      } else {
+        throw new Error('Failed to clear details');
+      }
+    } catch (error) {
+      console.error('Error clearing details:', error);
+      alert('Failed to clear details. Please try again.');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  return (
+    <div className={`rounded-lg p-4 ${styles.bg} border ${styles.border}`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
+          <Youtube className={`h-5 w-5 mr-2 ${styles.icon}`} />
+          <h3 className={`font-medium ${styles.text}`}>YouTube Status</h3>
+        </div>
+        <Badge variant="outline" className={`${styles.bg} ${styles.text} ${styles.border}`}>
+          {status}
+        </Badge>
+      </div>
+
+      {status === 'Uploaded' && youtubeLink && (
+        <div className="mt-3">
+          <a 
+            href={youtubeLink} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="text-sm text-blue-600 hover:underline inline-flex items-center"
+          >
+            View on YouTube
+            <ExternalLink className="h-3 w-3 ml-1" />
+          </a>
+        </div>
+      )}
+
+      {status === 'Scheduled' && (
+        <div className="mt-3 space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Scheduled for: {uploadTime ? new Date(uploadTime).toLocaleString('en-AU', { 
+              timeZone: 'Australia/Sydney',
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            }) : 'Unknown'}
+          </p>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleCancelSchedule}
+            disabled={isScheduling}
+            className="text-red-600 border-red-300 hover:bg-red-50"
+          >
+            {isScheduling ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Cancel Schedule'}
+          </Button>
+        </div>
+      )}
+
+      {status === 'Confirm Details' && (
+        <div className="mt-3 space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Complete YouTube metadata in the YouTube tab, then confirm details to proceed.
+          </p>
+          <Button 
+            size="sm" 
+            onClick={handleConfirmDetails}
+            disabled={isConfirming}
+            className="w-full"
+            variant="default"
+          >
+            {isConfirming ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Check className="h-3 w-3 mr-1" />}
+            Confirm Details
+          </Button>
+        </div>
+      )}
+
+      {status === 'Not Scheduled' && (
+        <div className="mt-3 space-y-3">
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              YouTube metadata confirmed. Ready to schedule upload.
+            </p>
+            {ytTitle && (
+              <div className="text-xs">
+                <span className="font-medium">Title: </span>
+                <span className="text-muted-foreground">{ytTitle.substring(0, 50)}...</span>
+              </div>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="schedule-datetime" className="text-xs text-muted-foreground">
+              Schedule Upload (GMT+10)
+            </Label>
+            <Input
+              id="schedule-datetime"
+              type="datetime-local"
+              value={scheduledDateTime}
+              onChange={(e) => setScheduledDateTime(e.target.value)}
+              className="mt-1"
+              min={new Date().toISOString().slice(0, 16)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              size="sm" 
+              onClick={handleScheduleUpload}
+              disabled={!scheduledDateTime || isScheduling}
+              className="flex-1"
+            >
+              {isScheduling ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Clock className="h-3 w-3 mr-1" />}
+              Schedule Upload
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={handleUploadNow}
+              disabled={isUploading}
+              className="flex-1"
+            >
+              {isUploading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Upload className="h-3 w-3 mr-1" />}
+              Upload Now
+            </Button>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleClearDetails}
+            disabled={isConfirming}
+            className="w-full text-red-600 border-red-300 hover:bg-red-50"
+          >
+            {isConfirming ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Clear Details'}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
   // Helper to pick first non-nullish value
   const pick = (...vals: any[]) => vals.find((v) => v !== undefined && v !== null);
 
-  // Deep debugging of the exact data structure
-  console.log("Raw videoData (stringified):", JSON.stringify(videoData, null, 2));
+  // Only log basic info for debugging if needed (remove verbose logging)
+  // console.log("Raw videoData (stringified):", JSON.stringify(videoData, null, 2));
   
   // Helper function to extract nested Firestore data
   const extractFirestoreData = (data: any, fieldName: string) => {
@@ -200,7 +531,7 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
           nestedObj[propName] = data[key];
         });
         if (Object.keys(nestedObj).length > 0) {
-          console.log(`Found nested ${fieldName} data via property name matching:`, nestedObj);
+          // console.log(`Found nested ${fieldName} data via property name matching:`, nestedObj);
           return nestedObj;
         }
       }
@@ -208,15 +539,15 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
     
     // If still not found, check field_types to see if it exists but is null
     if (data && data.field_types && data.field_types[fieldName]) {
-      console.log(`Field ${fieldName} exists in field_types but not in data`);
+      // console.log(`Field ${fieldName} exists in field_types but not in data`);
     }
     
     return null;
   };
   
   const data: VideoData = React.useMemo(() => {
-    // Extract metadata from possible naming variants with better logging
-    console.log("VideoData structure keys:", Object.keys(videoData || {}));
+    // Extract metadata from possible naming variants with minimal logging
+    // console.log("VideoData structure keys:", Object.keys(videoData || {}));
 
     // Try to extract Vimeo metadata with multiple approaches
     const vimeoMetadata = pick(
@@ -227,7 +558,7 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
       extractFirestoreData(videoData, 'videoMetadata')
     ) || null;
     
-    console.log("Extracted vimeoMetadata:", vimeoMetadata);
+    // console.log("Extracted vimeoMetadata:", vimeoMetadata);
 
     // Try to extract Vimeo OTT metadata with multiple approaches
     const vimeoOttMetadataRaw = pick(
@@ -238,7 +569,7 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
     );
 
     const vimeoOttMetadata = vimeoOttMetadataRaw || null;
-    console.log("Extracted vimeoOttMetadata:", vimeoOttMetadata);
+    // console.log("Extracted vimeoOttMetadata:", vimeoOttMetadata);
 
     // Also try to directly access duration fields that might exist at the root level
     const directDuration = pick(
@@ -249,7 +580,7 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
       videoData.vimeo_ott_metadata_duration
     );
 
-    console.log("Direct duration value:", directDuration);
+    // console.log("Direct duration value:", directDuration);
 
     // Normalize Vimeo metadata structure so the UI can reliably render it
     let normalizedVimeoMetadata: any = vimeoMetadata || null;
@@ -389,12 +720,24 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
                 (normalizedVimeoMetadata?.thumbnails && normalizedVimeoMetadata.thumbnails[0]?.url) ||
                 (normalizedVimeoOttMetadata?.thumbnail && 
                 ((normalizedVimeoOttMetadata.thumbnail as any)?.url || 
-                (normalizedVimeoOttMetadata.thumbnail as any)?.uri)) || ''
+                (normalizedVimeoOttMetadata.thumbnail as any)?.uri)) || '',
+      
+      // New YouTube scheduling fields
+      youtube_link: videoData.youtube_link || "",
+      upload_scheduled: videoData.upload_scheduled || "",
+      upload_time: videoData.upload_time || "",
+      
+      // New YouTube metadata fields
+      yt_title: videoData.yt_title || "",
+      yt_description: videoData.yt_description || "",
+      yt_tags: videoData.yt_tags || [],
+      yt_privacyStatus: videoData.yt_privacyStatus || "",
+      details_confirmed: videoData.details_confirmed || "",
     };
     
     // If we don't have metadata but have an ID, create minimal metadata
     if (!mappedData.videoMetadata && videoData.vimeoId) {
-      console.log("Creating minimal videoMetadata from vimeoId");
+      // console.log("Creating minimal videoMetadata from vimeoId");
       mappedData.videoMetadata = {
         id: videoData.vimeoId,
         name: videoData.title || videoData.name || "",
@@ -410,7 +753,7 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
     
     // If we don't have OTT metadata but have an ID, create minimal metadata
     if (!mappedData.vimeoOttMetadata && videoData.vimeoOttId) {
-      console.log("Creating minimal vimeoOttMetadata from vimeoOttId");
+      // console.log("Creating minimal vimeoOttMetadata from vimeoOttId");
       mappedData.vimeoOttMetadata = {
         id: videoData.vimeoOttId,
         title: videoData.title || videoData.name || "",
@@ -424,7 +767,7 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
       };
     }
     
-    console.log("Final mapped vimeoOttMetadata:", mappedData.vimeoOttMetadata);
+    // console.log("Final mapped vimeoOttMetadata:", mappedData.vimeoOttMetadata);
     
     // Add a fallback description if not in videoMetadata but available elsewhere
     if (normalizedVimeoMetadata && !normalizedVimeoMetadata.description && videoData.description) {
@@ -503,10 +846,10 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
                     {(() => {
                       const status = (data.youtubeStatus || '').toLowerCase();
                       const statusBadgeStyles: Record<string, { bg: string; text: string; border: string; icon?: React.ReactNode }> = {
-                        'preparing for youtube': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
-                        'ready for youtube': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
-                        'scheduled for youtube': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
-                        'published on youtube': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' }
+                        'Preparing for YouTube': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
+                        'Ready for YouTube': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+                        'Scheduled for YouTube': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+                        'Published on YouTube': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' }
                       };
 
                       const st = statusBadgeStyles[status];
@@ -656,79 +999,109 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
               <div className="w-full lg:w-80 space-y-5">
                 {/* YouTube status card */}
                 {(() => {
-                  const status = (data.youtubeStatus || '').toLowerCase();
+                  // Use youtubeStatus as the primary driver for status determination
+                  const youtubeStatus = (data.youtubeStatus || '').toLowerCase();
+                  
+                  // Fallback checks for backward compatibility
+                  const hasYoutubeLink = !!(data.youtubeLink || data.youtube_link);
+                  const hasUploadScheduled = !!(data.upload_scheduled);
+                  const hasDetailsConfirmed = !!(data.details_confirmed || data.yt_title);
+                  
+                  // Debug logging to understand status determination (only for debugging issues)
+                  const shouldDebug = process.env.NODE_ENV === 'development' && 
+                    (!data.youtubeStatus || data.youtubeStatus === 'unknown');
+                  
+                  if (shouldDebug) {
+                    console.log('YouTube Status Debug:', {
+                      youtubeStatus: data.youtubeStatus,
+                      youtubeStatusLower: youtubeStatus,
+                      hasYoutubeLink,
+                      hasUploadScheduled,
+                      hasDetailsConfirmed,
+                      details_confirmed: data.details_confirmed,
+                      yt_title: data.yt_title,
+                      youtube_link: data.youtube_link,
+                      upload_scheduled: data.upload_scheduled
+                    });
+                  }
+                  
+                  let status: 'Uploaded' | 'Scheduled' | 'Confirm Details' | 'Not Scheduled';
+                  
+                  // Primary logic: Use youtubeStatus field
+                  if (youtubeStatus === 'published on youtube' || hasYoutubeLink) {
+                    status = 'Uploaded';
+                  } else if (youtubeStatus === 'scheduled for youtube' || hasUploadScheduled) {
+                    status = 'Scheduled';
+                  } else if (youtubeStatus === 'ready for youtube') {
+                    // When status is 'ready for youtube', details are confirmed and ready to schedule
+                    status = 'Not Scheduled';
+                  } else if (youtubeStatus === 'preparing for youtube' || !youtubeStatus) {
+                    // When status is 'preparing for youtube' or empty, need to confirm details
+                    // But check if details were confirmed via other fields for backward compatibility
+                    if (hasDetailsConfirmed && !youtubeStatus) {
+                      status = 'Not Scheduled'; // Legacy fallback
+                    } else {
+                      status = 'Confirm Details';
+                    }
+                  } else {
+                    // Fallback to legacy logic if youtubeStatus has an unexpected value
+                    if (hasDetailsConfirmed) {
+                      status = 'Not Scheduled';
+                    } else {
+                      status = 'Confirm Details';
+                    }
+                  }
 
-                  const statusStyles: Record<string, {
+                  if (shouldDebug) {
+                    console.log('Determined YouTube Status:', status);
+                  }
+
+                  const statusStyles: Record<typeof status, {
                     bg: string;
                     border: string;
                     text: string;
                     icon: string;
                   }> = {
-                    'preparing for youtube': {
-                      bg: 'bg-yellow-50 dark:bg-yellow-950/20',
-                      border: 'border-yellow-200 dark:border-yellow-900',
-                      text: 'text-yellow-700 dark:text-yellow-400',
-                      icon: 'text-yellow-600 dark:text-yellow-400'
+                    'Uploaded': {
+                      bg: 'bg-green-50 dark:bg-green-950/20',
+                      border: 'border-green-200 dark:border-green-900',
+                      text: 'text-green-700 dark:text-green-400',
+                      icon: 'text-green-600 dark:text-green-400'
                     },
-                    'ready for youtube': {
-                      bg: 'bg-blue-50 dark:bg-blue-950/20',
-                      border: 'border-blue-200 dark:border-blue-900',
-                      text: 'text-blue-700 dark:text-blue-400',
-                      icon: 'text-blue-600 dark:text-blue-400'
-                    },
-                    'scheduled for youtube': {
+                    'Scheduled': {
                       bg: 'bg-purple-50 dark:bg-purple-950/20',
                       border: 'border-purple-200 dark:border-purple-900',
                       text: 'text-purple-700 dark:text-purple-400',
                       icon: 'text-purple-600 dark:text-purple-400'
                     },
-                    'published on youtube': {
-                      bg: 'bg-green-50 dark:bg-green-950/20',
-                      border: 'border-green-200 dark:border-green-900',
-                      text: 'text-green-700 dark:text-green-400',
-                      icon: 'text-green-600 dark:text-green-400'
+                    'Confirm Details': {
+                      bg: 'bg-blue-50 dark:bg-blue-950/20',
+                      border: 'border-blue-200 dark:border-blue-900',
+                      text: 'text-blue-700 dark:text-blue-400',
+                      icon: 'text-blue-600 dark:text-blue-400'
+                    },
+                    'Not Scheduled': {
+                      bg: 'bg-gray-50 dark:bg-gray-950/20',
+                      border: 'border-gray-200 dark:border-gray-900',
+                      text: 'text-gray-700 dark:text-gray-400',
+                      icon: 'text-gray-600 dark:text-gray-400'
                     }
                   };
 
-                  const styles = statusStyles[status] || statusStyles['preparing for youtube'];
-
-                  const renderActionButton = () => {
-                    switch (status) {
-                      case 'preparing for youtube':
-                        return (
-                          <Button size="sm" className="mt-3 bg-white text-yellow-700 border-yellow-300 hover:bg-yellow-50 dark:bg-yellow-950/50 dark:text-yellow-400 dark:border-yellow-800 dark:hover:bg-yellow-950/70">
-                            <Check className="h-3.5 w-3.5 mr-1.5" />
-                            Mark Ready
-                          </Button>
-                        );
-                      case 'ready for youtube':
-                        return (
-                          <Button size="sm" className="mt-3 bg-white text-blue-700 border-blue-300 hover:bg-blue-50 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-950/70">
-                            <Clock className="h-3.5 w-3.5 mr-1.5" />
-                            Schedule Upload
-                          </Button>
-                        );
-                      case 'scheduled for youtube':
-                        return (
-                          <Button size="sm" className="mt-3 bg-white text-purple-700 border-purple-300 hover:bg-purple-50 dark:bg-purple-950/50 dark:text-purple-400 dark:border-purple-800 dark:hover:bg-purple-950/70">
-                            <Check className="h-3.5 w-3.5 mr-1.5" />
-                            Mark Published
-                          </Button>
-                        );
-                      default:
-                        return null;
-                    }
-                  };
+                  const styles = statusStyles[status];
 
                   return (
-                    <div className={`rounded-lg p-4 ${styles.bg} border ${styles.border}`}>
-                      <div className="flex items-center">
-                        <Youtube className={`h-5 w-5 mr-2 ${styles.icon}`} />
-                        <h3 className={`font-medium ${styles.text}`}>YouTube Status</h3>
-                      </div>
-                      <p className={`mt-1 text-sm ${styles.text} capitalize`}>{status}</p>
-                      {renderActionButton()}
-                    </div>
+                    <YoutubeStatusCard 
+                      status={status}
+                      styles={styles}
+                      videoId={data.document_id}
+                      uploadTime={data.upload_time}
+                      youtubeLink={data.youtubeLink || data.youtube_link}
+                      ytTitle={data.yt_title}
+                      ytDescription={data.yt_description}
+                      ytTags={data.yt_tags}
+                      ytPrivacyStatus={data.yt_privacyStatus}
+                    />
                   );
                 })()}
                 
@@ -1134,23 +1507,27 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
   const [aiDialogOpen, setAiDialogOpen] = React.useState(false);
   const [aiDialogType, setAiDialogType] = React.useState<'title' | 'description' | 'tags'>('title');
   
-  // Content state
+  // Content state - Initialize with confirmed details from Firestore if available
   const [youtubeTitle, setYoutubeTitle] = React.useState(
-    videoData.name || videoData.videoMetadata?.name || videoData.vimeoOttMetadata?.title || ""
+    videoData.yt_title || videoData.name || videoData.videoMetadata?.name || videoData.vimeoOttMetadata?.title || ""
   );
   const [youtubeDescription, setYoutubeDescription] = React.useState(
-    videoData.videoMetadata?.description || videoData.vimeoOttMetadata?.description || ""
+    videoData.yt_description || videoData.videoMetadata?.description || videoData.vimeoOttMetadata?.description || ""
   );
   const [youtubeTags, setYoutubeTags] = React.useState<string[]>(
-    videoData.vimeoOttMetadata?.tags || []
+    videoData.yt_tags || videoData.vimeoOttMetadata?.tags || []
   );
-  const [tagInput, setTagInput] = React.useState("");
+  const [youtubePrivacy, setYoutubePrivacy] = React.useState(
+    videoData.yt_privacyStatus || "unlisted"
+  );
   
-  // Handle tag operations
+  const [newTag, setNewTag] = React.useState("");
+  const [isConfirming, setIsConfirming] = React.useState(false);
+
   const handleAddTag = () => {
-    if (tagInput.trim()) {
-      setYoutubeTags([...youtubeTags, tagInput.trim()]);
-      setTagInput("");
+    if (newTag.trim() && !youtubeTags.includes(newTag.trim())) {
+      setYoutubeTags([...youtubeTags, newTag.trim()]);
+      setNewTag("");
     }
   };
   
@@ -1166,6 +1543,44 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
     newTags.splice(index, 1);
     setYoutubeTags(newTags);
   };
+
+  // Confirm details function
+  const handleConfirmDetails = async () => {
+    if (!youtubeTitle.trim() || !youtubeDescription.trim()) {
+      alert('Please fill in both title and description before confirming details.');
+      return;
+    }
+
+    setIsConfirming(true);
+    try {
+      const response = await fetch(`/api/videos/${videoData.document_id}/confirm-details`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          yt_title: youtubeTitle,
+          yt_description: youtubeDescription,
+          yt_tags: youtubeTags,
+          yt_privacyStatus: youtubePrivacy,
+        }),
+      });
+
+      if (response.ok) {
+        // Instead of reloading, wait a moment and then reload to ensure DB has updated
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        throw new Error('Failed to confirm details');
+      }
+    } catch (error) {
+      console.error('Error confirming details:', error);
+      alert('Failed to confirm details. Please try again.');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
   
   // AI content generation
   const handleContentGenerated = (content: string | string[]) => {
@@ -1177,97 +1592,70 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
       setYoutubeTags(content as string[]);
     }
   };
-  
-  // Copy from other tabs
+
   const copyFromVimeo = (contentType: 'title' | 'description') => {
     if (contentType === 'title') {
-      setYoutubeTitle(videoData.videoMetadata?.name || "");
+      setYoutubeTitle(videoData.videoMetadata?.name || videoData.name || '');
     } else if (contentType === 'description') {
-      setYoutubeDescription(videoData.videoMetadata?.description || "");
+      setYoutubeDescription(videoData.videoMetadata?.description || '');
     }
   };
-  
+
   const copyFromVimeoOtt = (contentType: 'title' | 'description' | 'tags') => {
     if (contentType === 'title') {
-      setYoutubeTitle(videoData.vimeoOttMetadata?.title || "");
+      setYoutubeTitle(videoData.vimeoOttMetadata?.title || videoData.name || '');
     } else if (contentType === 'description') {
-      setYoutubeDescription(videoData.vimeoOttMetadata?.description || "");
+      setYoutubeDescription(videoData.vimeoOttMetadata?.description || '');
     } else if (contentType === 'tags') {
       setYoutubeTags(videoData.vimeoOttMetadata?.tags || []);
     }
   };
-  
-  // Open AI dialog
+
   const openAiDialog = (type: 'title' | 'description' | 'tags') => {
     setAiDialogType(type);
     setAiDialogOpen(true);
   };
-  
+
   const getYoutubeStatusUI = () => {
-    const status = (videoData.youtubeStatus || '').toLowerCase();
+    const status = videoData.youtubeStatus || '';
+    const hasConfirmed = !!(videoData.details_confirmed || videoData.yt_title);
     
-    switch (status) {
-      case 'preparing for youtube':
-        return (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 dark:bg-yellow-950/20 dark:border-yellow-900">
-            <div className="flex items-start">
-              <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5 mr-3" />
-              <div>
-                <h4 className="font-medium text-yellow-700 dark:text-yellow-400">Preparing for YouTube</h4>
-                <p className="text-sm text-yellow-600 dark:text-yellow-500 mt-1">
-                  This video is currently being prepared for YouTube. Update metadata and mark it ready when finished.
-                </p>
-              </div>
-            </div>
+    if (hasConfirmed) {
+      return (
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+          <div className="flex items-center gap-2">
+            <Check className="h-4 w-4 text-green-600" />
+            <span className="font-medium text-green-800">Details Confirmed</span>
           </div>
-        );
-      case 'ready for youtube':
-        return (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 dark:bg-blue-950/20 dark:border-blue-900">
-            <div className="flex items-start">
-              <Check className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 mr-3" />
-              <div>
-                <h4 className="font-medium text-blue-700 dark:text-blue-400">Ready for YouTube</h4>
-                <p className="text-sm text-blue-600 dark:text-blue-500 mt-1">
-                  This video is ready to be scheduled for upload.
-                </p>
-              </div>
-            </div>
-          </div>
-        );
-      case 'scheduled for youtube':
-        return (
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 dark:bg-purple-950/20 dark:border-purple-900">
-            <div className="flex items-start">
-              <Clock className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5 mr-3" />
-              <div>
-                <h4 className="font-medium text-purple-700 dark:text-purple-400">Scheduled for YouTube</h4>
-                <p className="text-sm text-purple-600 dark:text-purple-500 mt-1">
-                  This video has been scheduled for upload on YouTube.
-                </p>
-              </div>
-            </div>
-          </div>
-        );
-      case 'published on youtube':
-        return (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 dark:bg-green-950/20 dark:border-green-900">
-            <div className="flex items-start">
-              <Check className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 mr-3" />
-              <div>
-                <h4 className="font-medium text-green-700 dark:text-green-400">Published on YouTube</h4>
-                <p className="text-sm text-green-600 dark:text-green-500 mt-1">
-                  This video is live on YouTube.
-                </p>
-              </div>
-            </div>
-          </div>
-        );
-      default:
-        return null;
+          <p className="text-sm text-green-700 mt-1">
+            YouTube metadata is ready. You can now schedule or upload your video.
+          </p>
+        </div>
+      );
     }
+    
+    return (
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4 text-blue-600" />
+          <span className="font-medium text-blue-800">Ready to Confirm</span>
+        </div>
+        <p className="text-sm text-blue-700 mt-1">
+          Review your YouTube metadata and confirm details to proceed.
+        </p>
+        <Button 
+          size="sm" 
+          onClick={handleConfirmDetails}
+          disabled={isConfirming}
+          className="mt-3"
+        >
+          {isConfirming ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Check className="h-3 w-3 mr-1" />}
+          Confirm Details
+        </Button>
+      </div>
+    );
   };
-  
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -1275,12 +1663,12 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
         {(() => {
           const status = (videoData.youtubeStatus || '').toLowerCase();
           const badgeStyles: Record<string, { bg: string; text: string; border: string; label: string }> = {
-            'preparing for youtube': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', label: 'Preparing' },
-            'ready for youtube': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', label: 'Ready' },
-            'scheduled for youtube': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', label: 'Scheduled' },
-            'published on youtube': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', label: 'Published' }
+            'Preparing for YouTube': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', label: 'Preparing' },
+            'Ready for YouTube': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', label: 'Ready' },
+            'Scheduled for YouTube': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', label: 'Scheduled' },
+            'Published on YouTube': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', label: 'Published' }
           };
-          const bs = badgeStyles[status] || badgeStyles['preparing for youtube'];
+          const bs = badgeStyles[status] || badgeStyles['Preparing for YouTube'];
           return (
             <Badge variant="outline" className={`${bs.bg} ${bs.text} ${bs.border}`}>{bs.label}</Badge>
           );
@@ -1330,6 +1718,7 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
             placeholder="Enter YouTube title" 
             value={youtubeTitle}
             onChange={(e) => setYoutubeTitle(e.target.value)}
+            disabled={isConfirming}
           />
           <p className="text-xs text-muted-foreground">
             <span className="font-medium">Pro tip:</span> Keep titles under 60 characters for best results
@@ -1346,6 +1735,7 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
                 className="h-7 px-2 text-xs" 
                 title="Copy from Vimeo"
                 onClick={() => copyFromVimeo('description')}
+                disabled={isConfirming}
               >
                 <Video className="h-3 w-3 mr-1" />
                 Copy from Vimeo
@@ -1356,6 +1746,7 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
                 className="h-7 px-2 text-xs" 
                 title="Copy from Vimeo OTT"
                 onClick={() => copyFromVimeoOtt('description')}
+                disabled={isConfirming}
               >
                 <FileVideo className="h-3 w-3 mr-1" />
                 Copy from OTT
@@ -1365,6 +1756,7 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
                 size="sm" 
                 className="h-7 px-2 text-xs bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200"
                 onClick={() => openAiDialog('description')}
+                disabled={isConfirming}
               >
                 <Zap className="h-3 w-3 mr-1" />
                 Generate
@@ -1377,6 +1769,7 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
             className="min-h-32"
             value={youtubeDescription}
             onChange={(e) => setYoutubeDescription(e.target.value)}
+            disabled={isConfirming}
           />
           <div className="flex justify-between items-center">
             <p className="text-xs text-muted-foreground">
@@ -1395,6 +1788,7 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
                 className="h-7 px-2 text-xs" 
                 title="Copy from Vimeo OTT Tags"
                 onClick={() => copyFromVimeoOtt('tags')}
+                disabled={isConfirming}
               >
                 <FileVideo className="h-3 w-3 mr-1" />
                 Copy from OTT
@@ -1404,6 +1798,7 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
                 size="sm" 
                 className="h-7 px-2 text-xs bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200"
                 onClick={() => openAiDialog('tags')}
+                disabled={isConfirming}
               >
                 <Zap className="h-3 w-3 mr-1" />
                 Generate
@@ -1414,23 +1809,27 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
             {youtubeTags.map((tag, i) => (
               <Badge key={i} variant="secondary" className="text-xs flex items-center gap-1">
                 {tag}
-                <X 
-                  className="h-3 w-3 cursor-pointer" 
-                  onClick={() => handleRemoveTag(i)}
-                />
+                {!isConfirming && (
+                  <X 
+                    className="h-3 w-3 cursor-pointer" 
+                    onClick={() => handleRemoveTag(i)}
+                  />
+                )}
               </Badge>
             ))}
           </div>
-          <div className="flex gap-2">
-            <Input 
-              id="youtube-tags" 
-              placeholder="Add tags (press Enter to add)" 
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={handleTagKeyPress}
-            />
-            <Button variant="outline" size="sm" onClick={handleAddTag}>Add</Button>
-          </div>
+          {!isConfirming && (
+            <div className="flex gap-2">
+              <Input 
+                id="youtube-tags" 
+                placeholder="Add tags (press Enter to add)" 
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyDown={handleTagKeyPress}
+              />
+              <Button variant="outline" size="sm" onClick={handleAddTag}>Add</Button>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground">
             Separate tags with commas. Include relevant keywords to improve discoverability.
           </p>
@@ -1438,7 +1837,7 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
         
         <div className="space-y-2">
           <Label htmlFor="youtube-category">YouTube Category</Label>
-          <Select defaultValue="education">
+          <Select defaultValue="education" disabled={isConfirming}>
             <SelectTrigger>
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
@@ -1455,15 +1854,18 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
         
         <div className="space-y-2">
           <Label htmlFor="youtube-visibility">YouTube Visibility</Label>
-          <Select defaultValue="public">
-            <SelectTrigger>
+          <Select 
+            value={youtubePrivacy} 
+            onValueChange={setYoutubePrivacy} 
+            disabled={isConfirming}
+          >
+            <SelectTrigger data-testid="privacy-select">
               <SelectValue placeholder="Select visibility" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="public">Public</SelectItem>
               <SelectItem value="unlisted">Unlisted</SelectItem>
               <SelectItem value="private">Private</SelectItem>
-              <SelectItem value="scheduled">Scheduled</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -1473,20 +1875,39 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
             <Label htmlFor="youtube-comments" className="flex items-center gap-2">
               Allow comments
             </Label>
-            <Switch id="youtube-comments" defaultChecked />
+            <Switch id="youtube-comments" defaultChecked disabled={isConfirming} />
           </div>
           <div className="flex items-center justify-between">
             <Label htmlFor="youtube-embed" className="flex items-center gap-2">
               Allow embedding
             </Label>
-            <Switch id="youtube-embed" defaultChecked />
+            <Switch id="youtube-embed" defaultChecked disabled={isConfirming} />
           </div>
         </div>
       </div>
       
       <div className="pt-4 flex justify-end gap-3">
-        <Button variant="outline">Save as Draft</Button>
-        <Button>Publish to YouTube</Button>
+        {!(videoData.details_confirmed || videoData.yt_title) ? (
+          <>
+            <Button variant="outline">Save as Draft</Button>
+            <Button onClick={handleConfirmDetails} disabled={isConfirming}>
+              {isConfirming ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Check className="h-3 w-3 mr-1" />}
+              Confirm Details
+            </Button>
+          </>
+        ) : (
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              // Clear confirmed details to allow editing again
+              fetch(`/api/videos/${videoData.document_id}/confirm-details`, { method: 'DELETE' })
+                .then(() => window.location.reload());
+            }}
+          >
+            <Edit className="h-3 w-3 mr-1" />
+            Edit Details
+          </Button>
+        )}
       </div>
       
       <AIGenerateDialog
@@ -1506,7 +1927,7 @@ export {
   DialogTrigger,
   DialogContent,
   DialogClose
-} 
+}
 
 // Add a dialog for AI content generation
 interface AIGenerateDialogProps {
@@ -1517,7 +1938,7 @@ interface AIGenerateDialogProps {
   onGenerated: (content: string | string[]) => void;
 }
 
-export const AIGenerateDialog = ({
+const AIGenerateDialog = ({
   open,
   onOpenChange,
   contentType,
@@ -1637,4 +2058,4 @@ export const AIGenerateDialog = ({
       </DialogContent>
     </Dialog>
   );
-}; 
+};
