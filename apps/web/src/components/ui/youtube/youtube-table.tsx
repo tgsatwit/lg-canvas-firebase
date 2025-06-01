@@ -67,7 +67,6 @@ import {
   Eye,
   Filter,
   ListFilter,
-  MoreVertical,
   Pencil,
   Plus,
   Upload,
@@ -132,20 +131,15 @@ const formatTime = (duration: string | number | undefined | null): string => {
   }
 };
 
-// Helper to extract duration from video data, looking at multiple possible locations
-const extractVideoDuration = (video: any): string => {
-  // Try to find duration in multiple places
+// Extract duration from video object for display
+const extractVideoDuration = (video: Video): string => {
+  // Try different duration sources in order of preference
   const duration = 
-    // Direct duration field
     video.duration ||
-    // Nested in vimeo_metadata
-    (video.videoMetadata?.duration || 
-     video.vimeoMetadata?.duration || 
-     video.vimeo_metadata?.duration) ||
-    // Nested in vimeo_ott_metadata
-    (video.vimeoOttMetadata?.duration || 
-     video.vimeo_ott_metadata?.duration);
-     
+    (video.videoMetadata && video.videoMetadata.duration) ||
+    (video.vimeoOttMetadata && video.vimeoOttMetadata.duration) ||
+    0;
+    
   return formatTime(duration);
 };
 
@@ -219,7 +213,9 @@ type Video = {
   youtubeDescription?: string;
   youtubeUploaded?: boolean;
   youtubeUrl?: string;
+  youtubeLink?: string;
   youtubeUploadDate?: string;
+  youtubeStatus?: string;
   scheduledUploadDate?: string;
   vimeoTags?: string[];
   vimeoCategories?: string[];
@@ -272,8 +268,8 @@ export function YouTubeTable({
 
   const [sorting, setSorting] = useState<SortingState>([
     {
-      id: "views",
-      desc: true,
+      id: "title",
+      desc: false,
     },
   ]);
 
@@ -301,27 +297,22 @@ export function YouTubeTable({
     onEditVideo?.(row.original);
   };
 
-  function RowActions({ row }: { row: Row<Video> }) {
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <div className="flex justify-end">
-            <Button size="icon" variant="ghost" className="shadow-none" aria-label="Video actions">
-              <MoreVertical size={16} strokeWidth={2} aria-hidden="true" />
-            </Button>
-          </div>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => handleRowAction(row)}>
-            View details
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-  }
-
   // Simplified badge styling
   const getStatusBadgeClass = (status: string) => {
+    const baseClasses = "inline-flex items-center justify-center rounded-full px-2.5 py-1 text-xs font-medium";
+    switch (status?.toLowerCase()) {
+      case "uploaded":
+        return cn(baseClasses, "bg-green-50 text-green-700 dark:bg-green-500/20 dark:text-green-400");
+      case "scheduled":
+        return cn(baseClasses, "bg-yellow-50 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400");
+      case "not on youtube":
+        return cn(baseClasses, "bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400");
+      default:
+        return cn(baseClasses, "bg-gray-50 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400");
+    }
+  };
+
+  const getYouTubeStatusBadgeClass = (status: string) => {
     const baseClasses = "inline-flex items-center justify-center rounded-full px-2.5 py-1 text-xs font-medium";
     switch (status?.toLowerCase()) {
       case "published":
@@ -337,16 +328,37 @@ export function YouTubeTable({
 
   const getVisibilityBadgeClass = (visibility: string) => {
     const baseClasses = "inline-flex items-center justify-center rounded-full px-2.5 py-1 text-xs font-medium";
-    switch (visibility) {
-      case "Private":
+    switch (visibility?.toLowerCase()) {
+      case "private":
         return cn(baseClasses, "bg-red-50 text-red-700 dark:bg-red-500/20 dark:text-red-400");
-      case "Unlisted":
+      case "members":
         return cn(baseClasses, "bg-purple-50 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400");
-      case "Public":
+      case "public":
         return cn(baseClasses, "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400");
       default:
         return cn(baseClasses, "bg-gray-50 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400");
     }
+  };
+
+  // Function to determine custom status based on video data
+  const getCustomStatus = (video: Video): string => {
+    // Check if uploaded to YouTube
+    if (video.youtubeUrl || video.youtubeLink || video.status === "Published") {
+      return "Uploaded";
+    }
+    
+    // Check if scheduled
+    if (video.scheduledUploadDate) {
+      return "Scheduled";
+    }
+    
+    // Default to not on YouTube
+    return "Not on Youtube";
+  };
+
+  // Function to get YouTube status from the video data
+  const getYouTubeStatus = (video: Video): string => {
+    return video.youtubeStatus || video.status || "Draft";
   };
 
   const columns: ColumnDef<Video>[] = [
@@ -373,7 +385,7 @@ export function YouTubeTable({
       enableHiding: false,
     },
     {
-      header: "Video",
+      header: "Name",
       accessorKey: "title",
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
@@ -389,12 +401,11 @@ export function YouTubeTable({
           </div>
           <div className="flex flex-col">
             <div 
-              className="font-medium line-clamp-2 cursor-pointer hover:text-primary transition-colors"
+              className="font-medium cursor-pointer hover:text-primary transition-colors"
               onClick={() => handleRowAction(row)}
             >
               {row.getValue("title")}
             </div>
-            <div className="text-xs text-muted-foreground">ID: {row.original.id}</div>
           </div>
         </div>
       ),
@@ -404,26 +415,50 @@ export function YouTubeTable({
     },
     {
       header: "Status",
-      accessorKey: "status",
+      accessorKey: "customStatus",
       cell: ({ row }) => {
-        const status = row.getValue("status") as string;
+        const customStatus = getCustomStatus(row.original);
         return (
-          <div className={getStatusBadgeClass(status)}>
-            {status}
+          <div className={getStatusBadgeClass(customStatus)}>
+            {customStatus}
           </div>
         );
       },
-      size: 100,
-      filterFn: statusFilterFn,
+      size: 120,
+      filterFn: (row, columnId, filterValue) => {
+        if (!filterValue || (filterValue as string[]).length === 0) return true;
+        const customStatus = getCustomStatus(row.original);
+        return (filterValue as string[]).includes(customStatus);
+      },
+    },
+    {
+      header: "YouTube Status",
+      accessorKey: "youtubeStatus",
+      cell: ({ row }) => {
+        const youtubeStatus = getYouTubeStatus(row.original);
+        return (
+          <div className={getYouTubeStatusBadgeClass(youtubeStatus)}>
+            {youtubeStatus}
+          </div>
+        );
+      },
+      size: 130,
+      filterFn: (row, columnId, filterValue) => {
+        if (!filterValue || (filterValue as string[]).length === 0) return true;
+        const youtubeStatus = getYouTubeStatus(row.original);
+        return (filterValue as string[]).includes(youtubeStatus);
+      },
     },
     {
       header: "Visibility",
       accessorKey: "visibility",
       cell: ({ row }) => {
         const visibility = row.getValue("visibility") as string;
+        // Map "Unlisted" to "Members" for display
+        const displayVisibility = visibility === "Unlisted" ? "Members" : visibility;
         return (
-          <div className={getVisibilityBadgeClass(visibility)}>
-            {visibility}
+          <div className={getVisibilityBadgeClass(displayVisibility)}>
+            {displayVisibility}
           </div>
         );
       },
@@ -431,45 +466,45 @@ export function YouTubeTable({
       filterFn: visibilityFilterFn,
     },
     {
-      header: "Date",
-      accessorKey: "uploadDate",
-      cell: ({ row }) => {
-        return <div className="text-sm">{row.getValue("uploadDate")}</div>;
-      },
-      size: 120,
-    },
-    {
-      header: "Views",
-      accessorKey: "views",
-      cell: ({ row }) => {
-        const views = row.getValue("views") as number;
-        return <div className="text-sm text-right">{views.toLocaleString()}</div>;
-      },
-      size: 80,
-    },
-    {
-      header: "Likes",
-      accessorKey: "likes",
-      cell: ({ row }) => {
-        const likes = row.getValue("likes") as number;
-        return <div className="text-sm text-right">{likes.toLocaleString()}</div>;
-      },
-      size: 80,
-    },
-    {
-      header: "Comments",
-      accessorKey: "comments",
-      cell: ({ row }) => {
-        const comments = row.getValue("comments") as number;
-        return <div className="text-sm text-right">{comments.toLocaleString()}</div>;
-      },
-      size: 100,
-    },
-    {
       id: "actions",
-      header: () => <span className="sr-only">Actions</span>,
-      cell: ({ row }) => <RowActions row={row} />,
-      size: 60,
+      header: "Actions",
+      cell: ({ row }) => {
+        const video = row.original;
+        const youtubeUrl = video.youtubeUrl || video.youtubeLink;
+        
+        return (
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleRowAction(row)}
+              className="h-8"
+            >
+              <Pencil className="h-4 w-4 mr-1" />
+              Edit
+            </Button>
+            {youtubeUrl && (
+              <Button
+                size="sm"
+                variant="outline"
+                asChild
+                className="h-8"
+              >
+                <a 
+                  href={youtubeUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center"
+                >
+                  <Youtube className="h-4 w-4 mr-1" />
+                  YouTube
+                </a>
+              </Button>
+            )}
+          </div>
+        );
+      },
+      size: 160,
       enableHiding: false,
     },
   ];
@@ -531,28 +566,29 @@ export function YouTubeTable({
     table.getColumn("visibility")?.setFilterValue(newFilterValue.length ? newFilterValue : undefined);
   };
 
-  // Get unique status values
-  const uniqueStatusValues = useMemo(() => {
-    const statusColumn = table.getColumn("status");
-    if (!statusColumn) return [];
-    const values = Array.from(statusColumn.getFacetedUniqueValues().keys());
-    return values.sort();
-  }, [table.getColumn("status")?.getFacetedUniqueValues()]);
+  // Get unique custom status values
+  const uniqueCustomStatusValues = useMemo(() => {
+    const customStatusValues = data.map(video => getCustomStatus(video));
+    return Array.from(new Set(customStatusValues)).sort();
+  }, [data]);
 
-  // Get status counts
-  const statusCounts = useMemo(() => {
-    const statusColumn = table.getColumn("status");
-    if (!statusColumn) return new Map();
-    return statusColumn.getFacetedUniqueValues();
-  }, [table.getColumn("status")?.getFacetedUniqueValues()]);
+  // Get custom status counts
+  const customStatusCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    data.forEach(video => {
+      const status = getCustomStatus(video);
+      counts.set(status, (counts.get(status) || 0) + 1);
+    });
+    return counts;
+  }, [data]);
 
-  const selectedStatuses = useMemo(() => {
-    const filterValue = table.getColumn("status")?.getFilterValue() as string[];
+  const selectedCustomStatuses = useMemo(() => {
+    const filterValue = table.getColumn("customStatus")?.getFilterValue() as string[];
     return filterValue ?? [];
-  }, [table.getColumn("status")?.getFilterValue()]);
+  }, [table.getColumn("customStatus")?.getFilterValue()]);
 
-  const handleStatusChange = (checked: boolean, value: string) => {
-    const filterValue = table.getColumn("status")?.getFilterValue() as string[];
+  const handleCustomStatusChange = (checked: boolean, value: string) => {
+    const filterValue = table.getColumn("customStatus")?.getFilterValue() as string[];
     const newFilterValue = filterValue ? [...filterValue] : [];
 
     if (checked) {
@@ -564,7 +600,44 @@ export function YouTubeTable({
       }
     }
 
-    table.getColumn("status")?.setFilterValue(newFilterValue.length ? newFilterValue : undefined);
+    table.getColumn("customStatus")?.setFilterValue(newFilterValue.length ? newFilterValue : undefined);
+  };
+
+  // Get unique YouTube status values
+  const uniqueYouTubeStatusValues = useMemo(() => {
+    const youtubeStatusValues = data.map(video => getYouTubeStatus(video));
+    return Array.from(new Set(youtubeStatusValues)).sort();
+  }, [data]);
+
+  // Get YouTube status counts
+  const youtubeStatusCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    data.forEach(video => {
+      const status = getYouTubeStatus(video);
+      counts.set(status, (counts.get(status) || 0) + 1);
+    });
+    return counts;
+  }, [data]);
+
+  const selectedYouTubeStatuses = useMemo(() => {
+    const filterValue = table.getColumn("youtubeStatus")?.getFilterValue() as string[];
+    return filterValue ?? [];
+  }, [table.getColumn("youtubeStatus")?.getFilterValue()]);
+
+  const handleYouTubeStatusChange = (checked: boolean, value: string) => {
+    const filterValue = table.getColumn("youtubeStatus")?.getFilterValue() as string[];
+    const newFilterValue = filterValue ? [...filterValue] : [];
+
+    if (checked) {
+      newFilterValue.push(value);
+    } else {
+      const index = newFilterValue.indexOf(value);
+      if (index > -1) {
+        newFilterValue.splice(index, 1);
+      }
+    }
+
+    table.getColumn("youtubeStatus")?.setFilterValue(newFilterValue.length ? newFilterValue : undefined);
   };
 
   // Add the CopyButton component near the top of the file
@@ -636,6 +709,84 @@ export function YouTubeTable({
             <PopoverTrigger asChild>
               <Button variant="outline" className="h-10 border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                 <Filter className="mr-2 h-4 w-4" aria-hidden="true" />
+                Status
+                {selectedCustomStatuses.length > 0 && (
+                  <span className="ml-2 rounded-full bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-xs font-medium">
+                    {selectedCustomStatuses.length}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="min-w-36 p-3" align="start">
+              <div className="space-y-3">
+                <div className="text-xs font-medium text-muted-foreground">Status</div>
+                <div className="space-y-3">
+                  {uniqueCustomStatusValues.map((value, i) => (
+                    <div key={value} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`${id}-status-${i}`}
+                        checked={selectedCustomStatuses.includes(value)}
+                        onCheckedChange={(checked: boolean) => handleCustomStatusChange(checked, value)}
+                      />
+                      <Label
+                        htmlFor={`${id}-status-${i}`}
+                        className="flex grow justify-between gap-2 font-normal"
+                      >
+                        {value}{" "}
+                        <span className="ms-2 text-xs text-muted-foreground">
+                          {customStatusCounts.get(value)}
+                        </span>
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="h-10 border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                <Filter className="mr-2 h-4 w-4" aria-hidden="true" />
+                YouTube Status
+                {selectedYouTubeStatuses.length > 0 && (
+                  <span className="ml-2 rounded-full bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-xs font-medium">
+                    {selectedYouTubeStatuses.length}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="min-w-36 p-3" align="start">
+              <div className="space-y-3">
+                <div className="text-xs font-medium text-muted-foreground">YouTube Status</div>
+                <div className="space-y-3">
+                  {uniqueYouTubeStatusValues.map((value, i) => (
+                    <div key={value} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`${id}-youtube-status-${i}`}
+                        checked={selectedYouTubeStatuses.includes(value)}
+                        onCheckedChange={(checked: boolean) => handleYouTubeStatusChange(checked, value)}
+                      />
+                      <Label
+                        htmlFor={`${id}-youtube-status-${i}`}
+                        className="flex grow justify-between gap-2 font-normal"
+                      >
+                        {value}{" "}
+                        <span className="ms-2 text-xs text-muted-foreground">
+                          {youtubeStatusCounts.get(value)}
+                        </span>
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="h-10 border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                <Filter className="mr-2 h-4 w-4" aria-hidden="true" />
                 Visibility
                 {selectedVisibilities.length > 0 && (
                   <span className="ml-2 rounded-full bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-xs font-medium">
@@ -659,49 +810,9 @@ export function YouTubeTable({
                         htmlFor={`${id}-visibility-${i}`}
                         className="flex grow justify-between gap-2 font-normal"
                       >
-                        {value}{" "}
+                        {value === "Unlisted" ? "Members" : value}{" "}
                         <span className="ms-2 text-xs text-muted-foreground">
                           {visibilityCounts.get(value)}
-                        </span>
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-          
-          {/* Status filter with same styling */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="h-10 border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-                <Filter className="mr-2 h-4 w-4" aria-hidden="true" />
-                Status
-                {selectedStatuses.length > 0 && (
-                  <span className="ml-2 rounded-full bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-xs font-medium">
-                    {selectedStatuses.length}
-                  </span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="min-w-36 p-3" align="start">
-              <div className="space-y-3">
-                <div className="text-xs font-medium text-muted-foreground">Status</div>
-                <div className="space-y-3">
-                  {uniqueStatusValues.map((value, i) => (
-                    <div key={value} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`${id}-status-${i}`}
-                        checked={selectedStatuses.includes(value)}
-                        onCheckedChange={(checked: boolean) => handleStatusChange(checked, value)}
-                      />
-                      <Label
-                        htmlFor={`${id}-status-${i}`}
-                        className="flex grow justify-between gap-2 font-normal"
-                      >
-                        {value}{" "}
-                        <span className="ms-2 text-xs text-muted-foreground">
-                          {statusCounts.get(value)}
                         </span>
                       </Label>
                     </div>
