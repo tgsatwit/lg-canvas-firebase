@@ -37,6 +37,7 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.9.0",
+    "@google-cloud/storage": "^7.16.0",
     "@hello-pangea/dnd": "^18.0.1",
     "@heroicons/react": "^2.2.0",
     "@radix-ui/react-checkbox": "^1.2.3",
@@ -48,6 +49,7 @@
     "@radix-ui/react-tabs": "^1.1.9",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "googleapis": "^150.0.1",
     "next-auth": "^4.24.11",
     "react-beautiful-dnd": "^13.1.1",
     "swr": "^2.3.3",

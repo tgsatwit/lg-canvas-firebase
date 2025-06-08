@@ -13,17 +13,25 @@ import {
 import { MessageSquare } from "lucide-react";
 import { ProfileMenu } from "@/components/ui/profile-menu";
 import { useUserContext } from "@/contexts/UserContext";
+import Image from "next/image";
 
 export function DashboardSidebar() {
   const pathname = usePathname();
   const { user, loading } = useUserContext();
 
   return (
-    <Sidebar className="border-r border-indigo-200/70 shadow-lg">
+    <Sidebar className="border-r border-gray-200 shadow-lg bg-white">
       <div className="flex flex-col h-full">
         <SidebarBody>
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold px-3 bg-gradient-to-r from-indigo-700 via-indigo-600 to-indigo-700/50 bg-clip-text text-transparent">PBL.ai</h2>
+          <div className="mb-6 flex items-center gap-3 px-3">
+            <Image 
+              src="/Sqr_logo.png" 
+              alt="PBL.ai Logo" 
+              width={32} 
+              height={32}
+              className="rounded-lg shadow-sm"
+            />
+            <h2 className="text-2xl font-bold text-black">PBL.ai</h2>
           </div>
           <SidebarLink 
             href="/dashboard" 
@@ -33,18 +41,11 @@ export function DashboardSidebar() {
             Dashboard
           </SidebarLink>
           <SidebarLink 
-            href="/dashboard/canvas" 
-            icon={SwatchIcon}
-            isActive={pathname === "/dashboard/canvas"}
+            href="/dashboard/videos" 
+            icon={FilmIcon}
+            isActive={pathname === "/dashboard/videos"}
           >
-            Canvas
-          </SidebarLink>
-          <SidebarLink 
-            href="/dashboard/chat" 
-            icon={MessageSquare}
-            isActive={pathname === "/dashboard/chat"}
-          >
-            Chat
+            Video Library
           </SidebarLink>
           <SidebarLink 
             href="/dashboard/tasks" 
@@ -61,11 +62,11 @@ export function DashboardSidebar() {
             Social Monitor
           </SidebarLink>
           <SidebarLink 
-            href="/dashboard/videos" 
-            icon={FilmIcon}
-            isActive={pathname === "/dashboard/videos"}
+            href="/dashboard/chat" 
+            icon={MessageSquare}
+            isActive={pathname === "/dashboard/chat"}
           >
-            Video Library
+            Chat
           </SidebarLink>
           <SidebarLink 
             href="/dashboard/playlists" 
@@ -74,28 +75,29 @@ export function DashboardSidebar() {
           >
             Create Playlists
           </SidebarLink>
+          <SidebarLink 
+            href="/dashboard/canvas" 
+            icon={SwatchIcon}
+            isActive={pathname === "/dashboard/canvas"}
+          >
+            Canvas
+          </SidebarLink>
         </SidebarBody>
         
         {/* Profile menu at bottom of sidebar with more padding */}
-        <div className="mt-auto pt-4 border-t border-indigo-200/50 px-4 pb-6">
+        <div className="mt-auto pt-4 border-t border-gray-200 px-4 pb-6">
           <div 
-            className="flex items-center justify-between px-3 py-2 rounded-lg"
-            style={{ 
-              backgroundColor: 'rgba(79, 70, 229, 0.1)',
-              backdropFilter: 'blur(4px)',
-              WebkitBackdropFilter: 'blur(4px)',
-              border: '1px solid rgba(79, 70, 229, 0.2)'
-            }}
+            className="flex items-center justify-between px-3 py-2 rounded-lg bg-gray-50 border border-gray-200"
           >
             {!loading && user ? (
               <>
                 <ProfileMenu user={user} />
-                <span className="text-sm text-slate-700 font-medium">
+                <span className="text-sm text-gray-700 font-medium">
                   Profile
                 </span>
               </>
             ) : (
-              <a href="/auth/login" className="text-sm text-slate-700 hover:text-indigo-900 hover:underline">
+              <a href="/auth/login" className="text-sm text-gray-700 hover:text-gray-900 hover:underline">
                 Sign In
               </a>
             )}

@@ -88,14 +88,6 @@ export const useVideos = () => {
         const data = await response.json();
         
         if (isMounted) {
-          console.log(`✅ Loaded ${data.length} videos`);
-          
-          // Count videos with OTT IDs (minimal summary)
-          const videosWithOttId = data.filter((video: Video) => video.vimeoOttId);
-          if (videosWithOttId.length > 0) {
-            console.log(`📹 ${videosWithOttId.length} videos have Vimeo OTT metadata`);
-          }
-          
           setVideos(data);
           setError(null);
         }

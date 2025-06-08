@@ -320,37 +320,32 @@ export default function SocialMonitorPage() {
   return (
     <div className="container mx-auto p-4">
       <div className="flex flex-col gap-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Social Media Monitor</h1>
-          <div className="flex gap-2">
-            {selectedComments.length > 0 && (
-              <>
-                <Button 
-                  variant="outline" 
-                  className="gap-2"
-                  onClick={handleGenerateAllReplies}
-                  disabled={isGeneratingReplies}
-                >
-                  {isGeneratingReplies ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <MessageSquarePlus className="h-4 w-4" />
-                  )}
-                  Generate {selectedComments.length} Replies
-                </Button>
-                
-                <Button 
-                  className="gap-2"
-                  onClick={handleSendAllReplies}
-                  disabled={Object.keys(replySending).length > 0 || selectedComments.filter(id => customReplies[id]).length === 0}
-                >
-                  <Send className="h-4 w-4" />
-                  Send {selectedComments.filter(id => customReplies[id]).length} Replies
-                </Button>
-              </>
-            )}
+        {selectedComments.length > 0 && (
+          <div className="flex justify-end gap-2">
+            <Button 
+              variant="outline" 
+              className="gap-2"
+              onClick={handleGenerateAllReplies}
+              disabled={isGeneratingReplies}
+            >
+              {isGeneratingReplies ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MessageSquarePlus className="h-4 w-4" />
+              )}
+              Generate {selectedComments.length} Replies
+            </Button>
+            
+            <Button 
+              className="gap-2"
+              onClick={handleSendAllReplies}
+              disabled={Object.keys(replySending).length > 0 || selectedComments.filter(id => customReplies[id]).length === 0}
+            >
+              <Send className="h-4 w-4" />
+              Send {selectedComments.filter(id => customReplies[id]).length} Replies
+            </Button>
           </div>
-        </div>
+        )}
         
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

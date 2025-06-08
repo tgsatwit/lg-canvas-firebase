@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { DashboardShell } from '@/components/dashboard/shell';
 import { YouTubeTable } from '@/components/ui/youtube/youtube-table';
 import { 
@@ -96,7 +97,46 @@ export default function VideosPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const { videos, loading, error } = useVideos();
+  const searchParams = useSearchParams();
+  
+  useEffect(() => {
+    // Check for YouTube auth success/error
+    const youtubeAuth = searchParams.get('youtube_auth');
+    const errorParam = searchParams.get('error');
+    
+    if (youtubeAuth === 'success') {
+      setNotification({
+        type: 'success',
+        message: 'YouTube authentication successful! You can now upload videos.'
+      });
+      // Clear the URL params
+      window.history.replaceState({}, '', '/dashboard/videos');
+    } else if (errorParam === 'youtube_auth_failed' || errorParam === 'youtube_auth_error') {
+      setNotification({
+        type: 'error',
+        message: 'YouTube authentication failed. Please try again.'
+      });
+      // Clear the URL params
+      window.history.replaceState({}, '', '/dashboard/videos');
+    } else if (errorParam === 'youtube_auth_expired') {
+      setNotification({
+        type: 'error',
+        message: 'YouTube authorization expired. Please try the authentication process again.'
+      });
+      // Clear the URL params
+      window.history.replaceState({}, '', '/dashboard/videos');
+    }
+  }, [searchParams]);
+  
+  // Auto-hide notification after 5 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
   
   const handleEditVideo = (video: Video) => {
     // Only log when editing a video (not on every load)
@@ -141,6 +181,21 @@ export default function VideosPage() {
   return (
     <DashboardShell>
       <div className="relative min-h-screen">
+        {notification && (
+          <div className={`mx-4 mt-4 p-4 rounded-md ${
+            notification.type === 'success' 
+              ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' 
+              : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+          }`}>
+            <p className={`text-sm ${
+              notification.type === 'success' 
+                ? 'text-green-800 dark:text-green-300' 
+                : 'text-red-800 dark:text-red-300'
+            }`}>
+              {notification.message}
+            </p>
+          </div>
+        )}
         <div className="relative px-4 py-6 md:px-6 md:py-8">
           {loading ? (
             <div className="space-y-4">

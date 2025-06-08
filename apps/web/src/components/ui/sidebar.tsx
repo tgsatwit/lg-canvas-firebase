@@ -93,8 +93,8 @@ export function SidebarLink({
       className={cn(
         "flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors font-medium",
         isActive
-          ? "bg-indigo-600/80 text-white shadow-md border border-indigo-500/50"
-          : "hover:bg-indigo-300/50 text-slate-700 hover:text-indigo-900"
+          ? "bg-black/80 text-white shadow-md border border-black/50"
+          : "hover:bg-black/30 text-black hover:text-black"
       )}
     >
       <Icon className="w-5 h-5" />

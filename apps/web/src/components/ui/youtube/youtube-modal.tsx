@@ -258,10 +258,17 @@ const YoutubeStatusCard = ({
         },
       });
 
+      const data = await response.json();
+
       if (response.ok) {
         window.location.reload(); // Refresh to show updated status
+      } else if (response.status === 401 && data.authUrl) {
+        // YouTube authentication required
+        if (confirm('YouTube authentication is required. Would you like to authenticate now?')) {
+          window.location.href = data.authUrl;
+        }
       } else {
-        throw new Error('Failed to upload video');
+        throw new Error(data.error || 'Failed to upload video');
       }
     } catch (error) {
       console.error('Error uploading video:', error);
@@ -280,7 +287,7 @@ const YoutubeStatusCard = ({
     // Get tags from the current state (this will need to be passed down or managed differently)
     const currentTitle = ytTitleElement?.value || ytTitle || '';
     const currentDescription = ytDescriptionElement?.value || ytDescription || '';
-    const currentPrivacy = ytPrivacyStatus || 'unlisted';
+    const currentPrivacy = ytPrivacyStatus || 'private';
     const currentTags = ytTags || [];
 
     if (!currentTitle.trim() || !currentDescription.trim()) {
@@ -1518,7 +1525,7 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
     videoData.yt_tags || videoData.vimeoOttMetadata?.tags || []
   );
   const [youtubePrivacy, setYoutubePrivacy] = React.useState(
-    videoData.yt_privacyStatus || "unlisted"
+          videoData.yt_privacyStatus || "private"
   );
   
   const [newTag, setNewTag] = React.useState("");

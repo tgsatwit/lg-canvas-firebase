@@ -17,17 +17,6 @@ export default function HomePage() {
       <div className="text-center">
         <h1 className="text-3xl font-bold">Redirecting to Dashboard...</h1>
       </div>
-      <div className="card">
-        <Link href="/dashboard" className="card-item">
-          <h2>Dashboard <span>→</span></h2>
-          <p>Go to your main dashboard with all features.</p>
-        </Link>
-        
-        <Link href="/youtube-dashboard" className="card-item">
-          <h2>YouTube Management <span>→</span></h2>
-          <p>Manage YouTube comments and videos.</p>
-        </Link>
-      </div>
     </div>
   );
 }
