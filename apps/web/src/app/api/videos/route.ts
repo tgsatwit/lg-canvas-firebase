@@ -16,17 +16,9 @@ export async function GET() {
     
     const collectionName = process.env.FIREBASE_VIDEOS_COLLECTION || 'videos-master';
     
-    console.log(`Fetching videos from single collection: ${collectionName}`);
-    
     const collectionRef = firestoreAdmin.collection(collectionName);
     const snapshot = await collectionRef.get();
     const docs: QueryDocumentSnapshot<DocumentData>[] = snapshot.docs;
-    console.log(`Retrieved ${docs.length} documents from '${collectionName}'`);
-    
-    if (docs.length === 0) {
-      const allCollections = await firestoreAdmin.listCollections();
-      console.log('DEBUG: Available collections:', allCollections.map(c => c.id));
-    }
     
     // Extract duration from various possible locations
     const extractDuration = (data: any): string | number => {
@@ -46,13 +38,6 @@ export async function GET() {
     
     const videos = docs.map((doc) => {
       const data = doc.data();
-      console.log(`Processing document ID: ${doc.id}, Fields: ${Object.keys(data).join(', ')}`);
-      
-      // For debugging
-      if (data.vimeo_metadata) {
-        console.log(`Vimeo metadata thumbnails:`, JSON.stringify(data.vimeo_metadata.thumbnails || []));
-        console.log(`Vimeo metadata description:`, data.vimeo_metadata.description || "No vimeo description");
-      }
       
       // Define thumbnail interface to avoid type errors
       interface ThumbnailObject {
@@ -66,20 +51,13 @@ export async function GET() {
       
       // Check for thumbnails field with numeric keys
       if (data.thumbnails) {
-        console.log(`Thumbnails structure:`, typeof data.thumbnails, Array.isArray(data.thumbnails));
         // If it has numeric keys, it might not show up properly in the log
         if (typeof data.thumbnails === 'object' && !Array.isArray(data.thumbnails)) {
-          console.log(`Thumbnails keys:`, Object.keys(data.thumbnails));
           // Log a specific entry if it exists
           if ('0' in data.thumbnails) {
-            console.log(`Thumbnail[0]:`, data.thumbnails['0']);
+            // Thumbnail processing logic here
           }
         }
-      }
-      
-      // Also check for description in the main thumbnails object
-      if (data.description) {
-        console.log(`Main description:`, data.description);
       }
       
       // Extract nested vimeo_ott_metadata if present
@@ -162,7 +140,6 @@ export async function GET() {
             const hasNumericKeys = keys.some(k => !isNaN(Number(k)));
             
             if (hasNumericKeys) {
-              console.log("Found thumbnails with numeric keys");
               // Convert the object with numeric keys to an array
               const maxIndex = Math.max(...keys.map(k => Number(k)));
               thumbnails = Array(maxIndex + 1).fill(null);
@@ -182,7 +159,6 @@ export async function GET() {
               // Filter out null entries
               thumbnails = thumbnails.filter(Boolean);
               if (thumbnails.length > 0) {
-                console.log(`Extracted ${thumbnails.length} thumbnails from numeric keys`);
                 return thumbnails;
               }
             }
@@ -196,7 +172,6 @@ export async function GET() {
               const hasNumericKeys = keys.some(k => !isNaN(Number(k)));
               
               if (hasNumericKeys) {
-                console.log("Found vimeo_metadata.thumbnails with numeric keys");
                 // Convert the object with numeric keys to an array
                 const maxIndex = Math.max(...keys.map(k => Number(k)));
                 thumbnails = Array(maxIndex + 1).fill(null);
@@ -216,7 +191,6 @@ export async function GET() {
                 // Filter out null entries
                 thumbnails = thumbnails.filter(Boolean);
                 if (thumbnails.length > 0) {
-                  console.log(`Extracted ${thumbnails.length} thumbnails from vimeo_metadata.thumbnails`);
                   return thumbnails;
                 }
               }

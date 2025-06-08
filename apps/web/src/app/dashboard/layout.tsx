@@ -3,6 +3,7 @@
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { UserProvider } from "@/contexts/UserContext";
+import { TaskProvider } from "./tasks/context/task-context";
 
 export default function DashboardRootLayout({
   children,
@@ -11,9 +12,11 @@ export default function DashboardRootLayout({
 }) {
   return (
     <UserProvider>
-      <DashboardLayout>
-        <NuqsAdapter>{children}</NuqsAdapter>
-      </DashboardLayout>
+      <TaskProvider>
+        <DashboardLayout>
+          <NuqsAdapter>{children}</NuqsAdapter>
+        </DashboardLayout>
+      </TaskProvider>
     </UserProvider>
   );
 } 

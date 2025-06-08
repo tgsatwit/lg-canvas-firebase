@@ -220,6 +220,13 @@ type Video = {
   vimeoTags?: string[];
   vimeoCategories?: string[];
   storageUrl?: string;
+  
+  // YouTube metadata fields
+  yt_title?: string;
+  yt_description?: string;
+  yt_tags?: string[];
+  yt_privacyStatus?: string;
+  details_confirmed?: string;
 };
 
 // Custom filter function for multi-column searching
@@ -297,16 +304,18 @@ export function YouTubeTable({
     onEditVideo?.(row.original);
   };
 
-  // Simplified badge styling
+  // Simplified badge styling (matches modal styling)
   const getStatusBadgeClass = (status: string) => {
     const baseClasses = "inline-flex items-center justify-center rounded-full px-2.5 py-1 text-xs font-medium";
     switch (status?.toLowerCase()) {
       case "uploaded":
         return cn(baseClasses, "bg-green-50 text-green-700 dark:bg-green-500/20 dark:text-green-400");
       case "scheduled":
-        return cn(baseClasses, "bg-yellow-50 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400");
-      case "not on youtube":
+        return cn(baseClasses, "bg-purple-50 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400");
+      case "confirm details":
         return cn(baseClasses, "bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400");
+      case "not scheduled":
+        return cn(baseClasses, "bg-gray-50 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400");
       default:
         return cn(baseClasses, "bg-gray-50 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400");
     }
@@ -340,20 +349,40 @@ export function YouTubeTable({
     }
   };
 
-  // Function to determine custom status based on video data
+  // Function to determine custom status based on video data (matches modal logic)
   const getCustomStatus = (video: Video): string => {
-    // Check if uploaded to YouTube
-    if (video.youtubeUrl || video.youtubeLink || video.status === "Published") {
+    // Use youtubeStatus as the primary driver for status determination
+    const youtubeStatus = (video.youtubeStatus || '').toLowerCase();
+    
+    // Fallback checks for backward compatibility
+    const hasYoutubeLink = !!(video.youtubeLink || video.youtubeUrl);
+    const hasUploadScheduled = !!(video.scheduledUploadDate);
+    const hasDetailsConfirmed = !!(video.yt_title);
+    
+    // Primary logic: Use youtubeStatus field (matching modal logic)
+    if (youtubeStatus === 'published on youtube' || hasYoutubeLink) {
       return "Uploaded";
-    }
-    
-    // Check if scheduled
-    if (video.scheduledUploadDate) {
+    } else if (youtubeStatus === 'scheduled for youtube' || hasUploadScheduled) {
       return "Scheduled";
+    } else if (youtubeStatus === 'ready for youtube') {
+      // When status is 'ready for youtube', details are confirmed and ready to schedule
+      return "Not Scheduled";
+    } else if (youtubeStatus === 'preparing for youtube' || !youtubeStatus) {
+      // When status is 'preparing for youtube' or empty, need to confirm details
+      // But check if details were confirmed via other fields for backward compatibility
+      if (hasDetailsConfirmed && !youtubeStatus) {
+        return "Not Scheduled"; // Legacy fallback
+      } else {
+        return "Confirm Details";
+      }
+    } else {
+      // Fallback to legacy logic if youtubeStatus has an unexpected value
+      if (hasDetailsConfirmed) {
+        return "Not Scheduled";
+      } else {
+        return "Confirm Details";
+      }
     }
-    
-    // Default to not on YouTube
-    return "Not on Youtube";
   };
 
   // Function to get YouTube status from the video data
@@ -655,17 +684,7 @@ export function YouTubeTable({
   }
 
   return (
-    <div className="space-y-8 w-full">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-gradient-to-r from-purple-600 to-purple-400 dark:from-purple-900/10 dark:to-purple-800/10 p-8 rounded-2xl">
-        <div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-50 to-purple-100">Video Library</h1>
-          <p className="text-muted-foreground text-purple-200 mt-1">Manage and optimize your video content</p>
-        </div>
-        <Button onClick={onCreateVideo} size="lg" className="bg-white hover:bg-purple-100 text-purple-700 w-full md:w-auto">
-          <Upload className="mr-2 h-4 w-4" />
-          Upload Video
-        </Button>
-      </div>
+    <div className="space-y-6 w-full">
 
       {/* Filters */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-gray-900/50 p-4 rounded-xl shadow-sm">
@@ -851,6 +870,19 @@ export function YouTubeTable({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+        
+        {/* Upload Button */}
+        {onCreateVideo && (
+          <div className="flex justify-end">
+            <Button
+              onClick={onCreateVideo}
+              className="h-10 bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Upload Video
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Table */}

@@ -448,17 +448,7 @@ export function SocialTable({
   };
 
   return (
-    <div className="space-y-8 w-full">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-gradient-to-r from-purple-600 to-purple-400 dark:from-purple-900/10 dark:to-purple-800/10 p-8 rounded-2xl">
-        <div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-50 to-purple-100">Social Monitor</h1>
-          <p className="text-muted-foreground text-purple-200 mt-1">Monitor and respond to comments across your social platforms</p>
-        </div>
-        <Button onClick={onRefresh} size="lg" className="bg-white hover:bg-purple-100 text-purple-700 w-full md:w-auto">
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Refresh
-        </Button>
-      </div>
+    <div className="space-y-6 w-full">
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4">

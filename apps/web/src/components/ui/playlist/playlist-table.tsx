@@ -456,17 +456,7 @@ export function PlaylistTable({
   };
 
   return (
-    <div className="space-y-8 w-full">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-gradient-to-r from-purple-600 to-purple-400 dark:from-purple-900/10 dark:to-purple-800/10 p-8 rounded-2xl">
-        <div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-50 to-purple-100">Playlists</h1>
-          <p className="text-muted-foreground text-purple-200 mt-1">Create and manage YouTube playlists</p>
-        </div>
-        <Button onClick={onCreatePlaylist} size="lg" className="bg-white hover:bg-purple-100 text-purple-700 w-full md:w-auto">
-          <FolderPlus className="mr-2 h-4 w-4" />
-          Create Playlist
-        </Button>
-      </div>
+    <div className="space-y-6 w-full">
 
       {/* Filters */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-gray-900/50 p-4 rounded-xl shadow-sm">
