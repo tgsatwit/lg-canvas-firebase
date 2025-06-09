@@ -14,7 +14,9 @@ export default function DashboardRootLayout({
     <UserProvider>
       <TaskProvider>
         <DashboardLayout>
-          <NuqsAdapter>{children}</NuqsAdapter>
+          <div className="bg-background min-h-screen">
+            <NuqsAdapter>{children}</NuqsAdapter>
+          </div>
         </DashboardLayout>
       </TaskProvider>
     </UserProvider>

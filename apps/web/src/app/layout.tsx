@@ -1,16 +1,14 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Inter } from "next/font/google";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { FirebaseAuthProvider } from "@/components/providers/FirebaseAuthProvider";
 
-const inter = Inter({
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "Open Canvas",
-  description: "Open Canvas Chat UX by LangChain",
+  title: "Canvas – Create, Design, Collaborate",
+  description: "A powerful creative platform for designers and developers",
+  keywords: "canvas, design, collaboration, creative platform",
+  authors: [{ name: "LangChain" }],
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
 };
 
 export default function RootLayout({
@@ -19,11 +17,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-screen" suppressHydrationWarning>
-      <body className={`min-h-full ${inter.className}`}>
+    <html lang="en" className="h-full" suppressHydrationWarning>
+      <body className="h-full bg-background antialiased">
         <SessionProvider>
           <FirebaseAuthProvider>
-            {children}
+            <div className="min-h-full">
+              {children}
+            </div>
           </FirebaseAuthProvider>
         </SessionProvider>
       </body>

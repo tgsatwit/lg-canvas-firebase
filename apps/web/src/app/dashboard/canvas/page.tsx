@@ -8,8 +8,8 @@ import { UserProvider } from "@/contexts/UserContext";
 
 export default function CanvasPage() {
   return (
-    <div className="h-full space-y-6">     
-      <div className="h-[calc(100%-100px)]">
+    <div className="h-full bg-background">     
+      <div className="h-[calc(100vh-5rem)]">
         <UserProvider>
           <ThreadProvider>
             <AssistantProvider>

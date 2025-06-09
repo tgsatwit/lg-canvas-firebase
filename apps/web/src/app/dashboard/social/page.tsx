@@ -304,44 +304,31 @@ export default function SocialMonitorPage() {
     }, 2000);
   };
   
-  const renderPlatformIcon = (platform: string) => {
-    switch (platform) {
-      case 'facebook':
-        return <Facebook className="h-4 w-4 text-blue-600" />;
-      case 'instagram':
-        return <Instagram className="h-4 w-4 text-pink-600" />;
-      case 'youtube':
-        return <Youtube className="h-4 w-4 text-red-600" />;
-      default:
-        return null;
-    }
-  };
-  
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex flex-col gap-6">
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className="space-y-6">
         {selectedComments.length > 0 && (
           <div className="flex justify-end gap-2">
             <Button 
               variant="outline" 
-              className="gap-2"
+              className="apple-button-secondary"
               onClick={handleGenerateAllReplies}
               disabled={isGeneratingReplies}
             >
               {isGeneratingReplies ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
-                <MessageSquarePlus className="h-4 w-4" />
+                <MessageSquarePlus className="h-4 w-4 mr-2" />
               )}
               Generate {selectedComments.length} Replies
             </Button>
             
             <Button 
-              className="gap-2"
+              className="apple-button"
               onClick={handleSendAllReplies}
               disabled={Object.keys(replySending).length > 0 || selectedComments.filter(id => customReplies[id]).length === 0}
             >
-              <Send className="h-4 w-4" />
+              <Send className="h-4 w-4 mr-2" />
               Send {selectedComments.filter(id => customReplies[id]).length} Replies
             </Button>
           </div>
@@ -349,76 +336,78 @@ export default function SocialMonitorPage() {
         
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total Comments</CardTitle>
+          <Card className="apple-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Comments</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <div className="text-3xl font-semibold">{stats.total}</div>
+              <p className="text-sm text-muted-foreground mt-1">
                 {stats.unanswered} unanswered
               </p>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium">Facebook</CardTitle>
+          <Card className="apple-card">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Facebook</CardTitle>
               <Facebook className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.facebook}</div>
+              <div className="text-3xl font-semibold">{stats.facebook}</div>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium">Instagram</CardTitle>
+          <Card className="apple-card">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Instagram</CardTitle>
               <Instagram className="h-4 w-4 text-pink-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.instagram}</div>
+              <div className="text-3xl font-semibold">{stats.instagram}</div>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium">YouTube</CardTitle>
+          <Card className="apple-card">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm font-medium text-muted-foreground">YouTube</CardTitle>
               <Youtube className="h-4 w-4 text-red-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.youtube}</div>
+              <div className="text-3xl font-semibold">{stats.youtube}</div>
             </CardContent>
           </Card>
         </div>
         
         {/* Comment Stream */}
-        <div className="h-[600px]">
-          <SocialCommentStream
-            comments={filteredComments}
-            isLoading={isLoading}
-            selectedComments={selectedComments}
-            selectedComment={selectedComment}
-            onSelectComment={handleSelectComment}
-            onSelectCommentToggle={handleSelectCommentToggle}
-            onSelectAllComments={handleSelectAllComments}
-            onFilterChange={(platform) => setFilter(platform as PlatformType)}
-            currentFilter={filter}
-            onShowOnlySelected={() => setShowOnlySelected(!showOnlySelected)}
-            showOnlySelected={showOnlySelected}
-            customReplies={customReplies}
-            editingReply={editingReply}
-            onStartEditReply={handleStartEditReply}
-            onCancelEditReply={handleCancelEditReply}
-            onUpdateReply={handleUpdateReply}
-            onDeleteReply={handleDeleteReply}
-            onCopyReply={handleCopyReply}
-            onGenerateReply={handleGenerateReply}
-            onSendReply={handleSendReply}
-            isGeneratingReplies={isGeneratingReplies}
-            replySending={replySending}
-          />
-        </div>
+        <Card className="apple-card p-0 overflow-hidden">
+          <div className="h-[600px]">
+            <SocialCommentStream
+              comments={filteredComments}
+              isLoading={isLoading}
+              selectedComments={selectedComments}
+              selectedComment={selectedComment}
+              onSelectComment={handleSelectComment}
+              onSelectCommentToggle={handleSelectCommentToggle}
+              onSelectAllComments={handleSelectAllComments}
+              onFilterChange={(platform) => setFilter(platform as PlatformType)}
+              currentFilter={filter}
+              onShowOnlySelected={() => setShowOnlySelected(!showOnlySelected)}
+              showOnlySelected={showOnlySelected}
+              customReplies={customReplies}
+              editingReply={editingReply}
+              onStartEditReply={handleStartEditReply}
+              onCancelEditReply={handleCancelEditReply}
+              onUpdateReply={handleUpdateReply}
+              onDeleteReply={handleDeleteReply}
+              onCopyReply={handleCopyReply}
+              onGenerateReply={handleGenerateReply}
+              onSendReply={handleSendReply}
+              isGeneratingReplies={isGeneratingReplies}
+              replySending={replySending}
+            />
+          </div>
+        </Card>
       </div>
     </div>
   );

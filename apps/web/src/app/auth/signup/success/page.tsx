@@ -6,7 +6,9 @@ import { SignupSuccess } from "@/components/auth/signup/success";
 export default function Page() {
   return (
     <UserProvider>
-      <SignupSuccess />
+      <main className="min-h-screen flex items-center justify-center bg-background">
+        <SignupSuccess />
+      </main>
     </UserProvider>
   );
 }

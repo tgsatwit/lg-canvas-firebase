@@ -13,7 +13,6 @@ import { VideoUploadModal } from "@/components/videos/video-upload-modal";
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { useVideos } from '@/hooks/use-videos';
 
-
 // Define the Video type to match the one in use-videos.ts
 type Video = {
   id: string;
@@ -139,16 +138,6 @@ export default function VideosPage() {
   }, [notification]);
   
   const handleEditVideo = (video: Video) => {
-    // Only log when editing a video (not on every load)
-    // console.log("Selected video data:", {
-    //   id: video.id,
-    //   title: video.title,
-    //   vimeoId: video.vimeoId,
-    //   vimeoOttId: video.vimeoOttId,
-    //   gcpLink: video.gcpLink,
-    //   hasVimeoMetadata: !!video.videoMetadata,
-    //   hasVimeoOttMetadata: !!video.vimeoOttMetadata
-    // });
     setSelectedVideo(video);
     setIsModalOpen(true);
   };
@@ -169,9 +158,9 @@ export default function VideosPage() {
     return (
       <DashboardShell>
         <div className="p-6">
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-md">
-            <h3 className="text-lg font-medium text-red-800 dark:text-red-300">Error loading videos</h3>
-            <p className="mt-1 text-sm text-red-700 dark:text-red-400">{error.message}</p>
+          <div className="apple-card bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+            <h3 className="text-lg font-semibold text-red-800 dark:text-red-300 mb-2">Error loading videos</h3>
+            <p className="text-sm text-red-700 dark:text-red-400">{error.message}</p>
           </div>
         </div>
       </DashboardShell>
@@ -180,14 +169,14 @@ export default function VideosPage() {
 
   return (
     <DashboardShell>
-      <div className="relative min-h-screen">
+      <div className="relative min-h-screen bg-background">
         {notification && (
-          <div className={`mx-4 mt-4 p-4 rounded-md ${
+          <div className={`mx-6 mt-4 p-4 rounded-xl ${
             notification.type === 'success' 
               ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' 
               : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
           }`}>
-            <p className={`text-sm ${
+            <p className={`text-sm font-medium ${
               notification.type === 'success' 
                 ? 'text-green-800 dark:text-green-300' 
                 : 'text-red-800 dark:text-red-300'
@@ -196,12 +185,12 @@ export default function VideosPage() {
             </p>
           </div>
         )}
-        <div className="relative px-4 py-6 md:px-6 md:py-8">
+        <div className="relative px-6 py-8">
           {loading ? (
-            <div className="space-y-4">
-              <div className="h-10 w-full sm:w-[300px] bg-gray-200 dark:bg-gray-800 rounded-md animate-pulse" />
-              <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-                <div className="h-[400px] bg-gray-100 dark:bg-gray-900 animate-pulse" />
+            <div className="space-y-6">
+              <div className="h-12 w-full sm:w-[300px] bg-muted rounded-xl animate-pulse" />
+              <div className="apple-card">
+                <div className="h-[400px] bg-muted rounded-xl animate-pulse" />
               </div>
             </div>
           ) : (

@@ -84,12 +84,23 @@ export default function SocialMonitorPage() {
 
   return (
     <DashboardShell>
-      <div className="relative min-h-screen">
-        <div className="relative px-4 py-6 md:px-6 md:py-8">
-          <SocialTable 
-            onRefresh={handleRefresh}
-            onSelectComment={handleSelectComment}
-          />
+      <div className="relative min-h-screen bg-background">
+        <div className="px-6 py-8">
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight">Social Monitor</h1>
+              <p className="text-muted-foreground mt-2">
+                Manage and respond to comments across all your social platforms
+              </p>
+            </div>
+            
+            <div className="apple-card p-0 overflow-hidden">
+              <SocialTable 
+                onRefresh={handleRefresh}
+                onSelectComment={handleSelectComment}
+              />
+            </div>
+          </div>
           
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogContent>

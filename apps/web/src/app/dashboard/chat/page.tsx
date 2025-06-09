@@ -91,9 +91,15 @@ export default function ChatPage() {
 
   if (status === 'loading' || isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
+      <div className="flex h-[calc(100vh-5rem)] items-center justify-center bg-background">
         <LoadingContent loading={true} error={null}>
-          <div>Loading chat...</div>
+          <div className="text-center space-y-4">
+            <div className="w-12 h-12 mx-auto">
+              <div className="absolute inset-0 rounded-full border-3 border-muted"></div>
+              <div className="absolute inset-0 rounded-full border-3 border-primary border-t-transparent animate-spin"></div>
+            </div>
+            <p className="text-muted-foreground">Loading chat...</p>
+          </div>
         </LoadingContent>
       </div>
     );
@@ -101,16 +107,16 @@ export default function ChatPage() {
 
   if (!session?.user) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
-        <Card className="p-8 rounded-2xl border-0 shadow-lg">
-          <p>Please sign in to access the chat.</p>
+      <div className="flex h-[calc(100vh-5rem)] items-center justify-center bg-background">
+        <Card className="apple-card max-w-sm text-center">
+          <p className="text-muted-foreground">Please sign in to access the chat.</p>
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)] -m-6 flex bg-gray-50 overflow-hidden">
+    <div className="h-[calc(100vh-4rem)] -m-6 flex bg-background overflow-hidden">
       {/* Sidebar - only show when not collapsed */}
       {!sidebarCollapsed && (
         <ChatSidebar

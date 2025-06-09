@@ -38,12 +38,23 @@ export default function PlaylistsPage() {
 
   return (
     <DashboardShell>
-      <div className="relative min-h-screen">
-        <div className="relative px-4 py-6 md:px-6 md:py-8">
-          <PlaylistTable 
-            onEditPlaylist={handleEditPlaylist}
-            onCreatePlaylist={handleCreatePlaylist}
-          />
+      <div className="relative min-h-screen bg-background">
+        <div className="px-6 py-8">
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight">Playlists</h1>
+              <p className="text-muted-foreground mt-2">
+                Organize your videos into collections
+              </p>
+            </div>
+            
+            <div className="apple-card p-0 overflow-hidden">
+              <PlaylistTable 
+                onEditPlaylist={handleEditPlaylist}
+                onCreatePlaylist={handleCreatePlaylist}
+              />
+            </div>
+          </div>
           
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DialogContent>

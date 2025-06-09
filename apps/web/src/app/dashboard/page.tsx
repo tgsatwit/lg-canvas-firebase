@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, CheckCircle2, MessageSquare, Video, Grid3x3, Search, ChevronRight, Clock, AlertCircle, Plus } from "lucide-react";
+import { Calendar, CheckCircle2, MessageSquare, Video, Grid3x3, Search, ChevronRight, Clock, Plus } from "lucide-react";
 import { useTaskContext } from "./tasks/context/task-context";
 import { useVideos } from "@/hooks/use-videos";
 import { useSocialApi } from "@/hooks/use-social-api";
@@ -132,9 +132,9 @@ export default function DashboardPage() {
   };
 
   const priorityColors = {
-    high: "text-red-600 bg-red-50 border-red-200",
-    medium: "text-amber-600 bg-amber-50 border-amber-200",
-    low: "text-emerald-600 bg-emerald-50 border-emerald-200",
+    high: "bg-red-50 text-red-700 border-red-200",
+    medium: "bg-amber-50 text-amber-700 border-amber-200",
+    low: "bg-green-50 text-green-700 border-green-200",
   };
 
   const getNextSevenDays = () => {
@@ -148,145 +148,146 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto p-6 space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 mt-1">Welcome back! Here's what needs your attention today.</p>
-        </div>
+      <div className="space-y-4">
+        <h1 className="text-4xl font-semibold tracking-tight">Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}</h1>
+        <p className="text-muted-foreground text-lg">Here's what needs your attention today.</p>
         
         {/* Search Bar */}
-        <form onSubmit={handleSearch} className="flex-1 max-w-md">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Ask a question..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 h-10 bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
+        <form onSubmit={handleSearch} className="relative max-w-xl">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Ask anything..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="apple-input pl-12 pr-4 text-base"
+          />
         </form>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Open Tasks */}
-        <Card className="border-gray-200 hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push("/dashboard/tasks")}>
+        <Card className="apple-card hover:scale-[1.02] cursor-pointer" onClick={() => router.push("/dashboard/tasks")}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <CheckCircle2 className="h-5 w-5 text-blue-600" />
-                </div>
-                <CardTitle className="text-base font-medium text-gray-700">Open Tasks</CardTitle>
+              <div className="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6 text-blue-600" />
               </div>
-              <ChevronRight className="h-4 w-4 text-gray-400" />
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{openTasks.length}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              {openTasks.filter(t => t.priority === "high").length} high priority
-            </p>
+          <CardContent className="space-y-1">
+            <p className="text-3xl font-semibold">{openTasks.length}</p>
+            <p className="text-sm text-muted-foreground">Open Tasks</p>
+            {openTasks.filter(t => t.priority === "high").length > 0 && (
+              <p className="text-xs text-red-600 font-medium">
+                {openTasks.filter(t => t.priority === "high").length} high priority
+              </p>
+            )}
           </CardContent>
         </Card>
 
         {/* Unactioned Comments */}
         <Card 
           className={cn(
-            "border-gray-200 hover:shadow-md transition-shadow cursor-pointer",
-            totalUnansweredComments > 0 && "border-amber-200 bg-amber-50/50"
+            "apple-card hover:scale-[1.02] cursor-pointer",
+            totalUnansweredComments > 0 && "ring-2 ring-amber-200"
           )} 
           onClick={() => router.push("/dashboard/social-monitor")}
         >
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className={cn(
-                  "p-2 rounded-lg",
-                  totalUnansweredComments > 0 ? "bg-amber-100" : "bg-gray-50"
-                )}>
-                  <MessageSquare className={cn(
-                    "h-5 w-5",
-                    totalUnansweredComments > 0 ? "text-amber-600" : "text-gray-600"
-                  )} />
-                </div>
-                <CardTitle className="text-base font-medium text-gray-700">Unactioned Comments</CardTitle>
+              <div className={cn(
+                "w-12 h-12 rounded-2xl flex items-center justify-center",
+                totalUnansweredComments > 0 ? "bg-amber-100" : "bg-gray-100"
+              )}>
+                <MessageSquare className={cn(
+                  "h-6 w-6",
+                  totalUnansweredComments > 0 ? "text-amber-600" : "text-gray-600"
+                )} />
               </div>
-              <ChevronRight className="h-4 w-4 text-gray-400" />
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{totalUnansweredComments}</div>
-            <p className="text-xs text-gray-500 mt-1">Awaiting response</p>
+          <CardContent className="space-y-1">
+            <p className="text-3xl font-semibold">{totalUnansweredComments}</p>
+            <p className="text-sm text-muted-foreground">Unactioned Comments</p>
           </CardContent>
         </Card>
 
         {/* Video Library */}
-        <Card className="border-gray-200 hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push("/dashboard/videos")}>
+        <Card className="apple-card hover:scale-[1.02] cursor-pointer" onClick={() => router.push("/dashboard/videos")}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-purple-50 rounded-lg">
-                  <Video className="h-5 w-5 text-purple-600" />
-                </div>
-                <CardTitle className="text-base font-medium text-gray-700">Video Library</CardTitle>
+              <div className="w-12 h-12 rounded-2xl bg-purple-100 flex items-center justify-center">
+                <Video className="h-6 w-6 text-purple-600" />
               </div>
-              <ChevronRight className="h-4 w-4 text-gray-400" />
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{videos.length}</div>
-            <div className="flex gap-3 mt-1">
-              <span className="text-xs text-gray-500">{videoStatusBreakdown.published} published</span>
-              <span className="text-xs text-gray-500">{videoStatusBreakdown.draft} drafts</span>
+          <CardContent className="space-y-1">
+            <p className="text-3xl font-semibold">{videos.length}</p>
+            <p className="text-sm text-muted-foreground">Total Videos</p>
+            <div className="flex gap-4 text-xs text-muted-foreground">
+              <span>{videoStatusBreakdown.published} published</span>
+              <span>{videoStatusBreakdown.draft} drafts</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Canvas */}
-        <Card className="border-gray-200 hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push("/dashboard/canvas")}>
+        <Card className="apple-card hover:scale-[1.02] cursor-pointer" onClick={() => router.push("/dashboard/canvas")}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-emerald-50 rounded-lg">
-                  <Grid3x3 className="h-5 w-5 text-emerald-600" />
-                </div>
-                <CardTitle className="text-base font-medium text-gray-700">Canvas</CardTitle>
+              <div className="w-12 h-12 rounded-2xl bg-green-100 flex items-center justify-center">
+                <Grid3x3 className="h-6 w-6 text-green-600" />
               </div>
-              <ChevronRight className="h-4 w-4 text-gray-400" />
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-sm text-gray-600">Create & manage projects</div>
+          <CardContent className="space-y-1">
+            <p className="text-lg font-semibold">Canvas</p>
+            <p className="text-sm text-muted-foreground">Create & manage projects</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar/Schedule Section */}
-        <Card className="lg:col-span-2 border-gray-200">
+        <Card className="apple-card lg:col-span-2">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-gray-600" />
-                <CardTitle className="text-lg font-semibold text-gray-900">Schedule & Calendar</CardTitle>
+              <div className="flex items-center gap-3">
+                <Calendar className="h-5 w-5 text-muted-foreground" />
+                <CardTitle>Schedule & Calendar</CardTitle>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex gap-1 p-1 bg-muted rounded-full">
                 <Button
-                  variant={calendarView === "schedule" ? "default" : "outline"}
+                  variant={calendarView === "schedule" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setCalendarView("schedule")}
+                  className={cn(
+                    "rounded-full px-4 py-1 text-sm font-medium transition-all",
+                    calendarView === "schedule" 
+                      ? "bg-background shadow-sm" 
+                      : "hover:bg-background/50"
+                  )}
                 >
                   Schedule
                 </Button>
                 <Button
-                  variant={calendarView === "calendar" ? "default" : "outline"}
+                  variant={calendarView === "calendar" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setCalendarView("calendar")}
+                  className={cn(
+                    "rounded-full px-4 py-1 text-sm font-medium transition-all",
+                    calendarView === "calendar" 
+                      ? "bg-background shadow-sm" 
+                      : "hover:bg-background/50"
+                  )}
                 >
                   Calendar
                 </Button>
@@ -297,12 +298,12 @@ export default function DashboardPage() {
             {calendarView === "schedule" ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between mb-4">
-                  <p className="text-sm text-gray-500">Next 7 days</p>
+                  <p className="text-sm font-medium text-muted-foreground">Next 7 days</p>
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="ghost"
                     onClick={() => handleAddTask()}
-                    className="text-xs"
+                    className="text-xs hover:bg-muted"
                   >
                     <Plus className="h-3 w-3 mr-1" />
                     Add Task
@@ -324,51 +325,51 @@ export default function DashboardPage() {
                     <div 
                       key={dateStr} 
                       className={cn(
-                        "border rounded-lg p-3 transition-colors",
-                        isToday ? "border-blue-200 bg-blue-50/50" : "border-gray-100",
+                        "rounded-xl p-4 transition-all",
+                        isToday ? "bg-blue-50 border border-blue-200" : "bg-muted/50",
                         !hasItems && "opacity-60"
                       )}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-700">
+                          <span className="text-sm font-medium">
                             {date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                           </span>
-                          {isToday && <Badge variant="secondary" className="text-xs">Today</Badge>}
+                          {isToday && <Badge variant="secondary" className="text-xs px-2 py-0">Today</Badge>}
                         </div>
                         {hasItems && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-muted-foreground">
                             {dayTasks.length + dayVideos.length} items
                           </span>
                         )}
                       </div>
                       
                       {hasItems ? (
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                           {dayTasks.slice(0, 2).map(task => (
                             <div key={task.id} className="flex items-center gap-2">
-                              <div className={cn("w-2 h-2 rounded-full", {
+                              <div className={cn("w-2 h-2 rounded-full flex-shrink-0", {
                                 "bg-red-500": task.priority === "high",
                                 "bg-amber-500": task.priority === "medium",
-                                "bg-emerald-500": task.priority === "low"
+                                "bg-green-500": task.priority === "low"
                               })} />
-                              <span className="text-sm text-gray-600 truncate">{task.title}</span>
+                              <span className="text-sm text-foreground/80 truncate">{task.title}</span>
                             </div>
                           ))}
                           {dayVideos.slice(0, 2).map(video => (
                             <div key={video.id} className="flex items-center gap-2">
-                              <Video className="h-3 w-3 text-purple-500" />
-                              <span className="text-sm text-gray-600 truncate">{video.title}</span>
+                              <Video className="h-3 w-3 text-purple-500 flex-shrink-0" />
+                              <span className="text-sm text-foreground/80 truncate">{video.title}</span>
                             </div>
                           ))}
                           {(dayTasks.length + dayVideos.length) > 4 && (
-                            <p className="text-xs text-gray-400 pl-4">
-                              +{(dayTasks.length + dayVideos.length) - 4} more items
+                            <p className="text-xs text-muted-foreground pl-5">
+                              +{(dayTasks.length + dayVideos.length) - 4} more
                             </p>
                           )}
                         </div>
                       ) : (
-                        <p className="text-sm text-gray-400">No scheduled items</p>
+                        <p className="text-sm text-muted-foreground">No scheduled items</p>
                       )}
                     </div>
                   );
@@ -387,19 +388,19 @@ export default function DashboardPage() {
         </Card>
 
         {/* Open Tasks Section */}
-        <Card className="border-gray-200">
+        <Card className="apple-card">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-gray-600" />
-                <CardTitle className="text-lg font-semibold text-gray-900">Open Tasks</CardTitle>
+              <div className="flex items-center gap-3">
+                <Clock className="h-5 w-5 text-muted-foreground" />
+                <CardTitle>Open Tasks</CardTitle>
               </div>
               <div className="flex items-center gap-2">
                 <Button 
                   variant="ghost" 
                   size="sm"
                   onClick={() => handleAddTask()}
-                  className="text-gray-600"
+                  className="h-8 w-8 p-0 hover:bg-muted"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -407,10 +408,10 @@ export default function DashboardPage() {
                   variant="ghost" 
                   size="sm"
                   onClick={() => router.push("/dashboard/tasks")}
-                  className="text-gray-600"
+                  className="text-xs hover:bg-muted"
                 >
                   View all
-                  <ChevronRight className="h-4 w-4 ml-1" />
+                  <ChevronRight className="h-3 w-3 ml-1" />
                 </Button>
               </div>
             </div>
@@ -420,13 +421,13 @@ export default function DashboardPage() {
               {openTasks.slice(0, 5).map(task => (
                 <div 
                   key={task.id} 
-                  className="p-3 border border-gray-100 rounded-lg hover:border-gray-200 transition-colors cursor-pointer"
+                  className="p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
                   onClick={() => router.push("/dashboard/tasks")}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-medium text-gray-900 truncate">{task.title}</h4>
-                      <div className="flex items-center gap-2 mt-1">
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <h4 className="text-sm font-medium truncate">{task.title}</h4>
+                      <div className="flex items-center gap-2">
                         <Badge 
                           variant="outline" 
                           className={cn("text-xs border", priorityColors[task.priority])}
@@ -434,16 +435,16 @@ export default function DashboardPage() {
                           {task.priority}
                         </Badge>
                         {task.dueDate && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-muted-foreground">
                             Due {new Date(task.dueDate).toLocaleDateString()}
                           </span>
                         )}
                       </div>
                     </div>
                     {task.status === "in-progress" && (
-                      <div className="flex items-center gap-1 text-blue-600">
+                      <div className="flex items-center gap-1.5 text-blue-600 text-xs">
                         <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
-                        <span className="text-xs">In Progress</span>
+                        <span>In Progress</span>
                       </div>
                     )}
                   </div>
@@ -451,14 +452,14 @@ export default function DashboardPage() {
               ))}
               
               {openTasks.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                  <p className="text-sm">No open tasks</p>
+                <div className="text-center py-12">
+                  <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
+                  <p className="text-sm text-muted-foreground">No open tasks</p>
                 </div>
               )}
               
               {openTasks.length > 5 && (
-                <p className="text-xs text-center text-gray-500 pt-2">
+                <p className="text-xs text-center text-muted-foreground pt-2">
                   +{openTasks.length - 5} more tasks
                 </p>
               )}

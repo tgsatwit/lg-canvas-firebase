@@ -7,14 +7,13 @@ import { useRouter } from "next/navigation";
 export default function Page() {
   const router = useRouter();
   const [errorOccurred, setErrorOccurred] = useState(false);
-  const [message, setMessage] = useState("Signing out..."); // Add message state
+  const [message, setMessage] = useState("Signing out...");
 
   useEffect(() => {
     async function performSignOut() {
       try {
         setMessage("Signing out...");
         
-        // Use NextAuth signOut function
         await signOut({ 
           redirect: false,
           callbackUrl: "/auth/login"
@@ -30,32 +29,41 @@ export default function Page() {
     }
     performSignOut();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+  }, []);
 
   return (
-    <>
-      {errorOccurred ? (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
-            <h1 className="text-2xl font-bold text-red-500 mb-4">Sign out error</h1>
-            <p className="text-gray-700 mb-4">
-              {message} Please try again or close your browser.
-            </p>
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="apple-card max-w-sm w-full text-center space-y-6">
+        {errorOccurred ? (
+          <>
+            <div className="w-16 h-16 mx-auto rounded-full bg-destructive/10 flex items-center justify-center">
+              <svg className="w-8 h-8 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-semibold">Sign Out Error</h1>
+              <p className="text-muted-foreground">{message}</p>
+            </div>
             <button 
               onClick={() => router.push("/auth/login")}
-              className="bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700"
+              className="apple-button w-full"
             >
               Return to Login
             </button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
-            <p className="text-gray-700">{message}</p>
-          </div>
-        </div>
-      )}
-    </>
+          </>
+        ) : (
+          <>
+            <div className="relative">
+              <div className="w-16 h-16 mx-auto">
+                <div className="absolute inset-0 rounded-full border-4 border-muted"></div>
+                <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+              </div>
+            </div>
+            <p className="text-muted-foreground font-medium">{message}</p>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
