@@ -4,11 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { DashboardShell } from '@/components/dashboard/shell';
 import { YouTubeTable } from '@/components/ui/youtube/youtube-table';
-import { 
-  Dialog, 
-  DialogContent,
-  VideoEditorModal
-} from '@/components/ui/youtube/youtube-modal';
+import { VideoEditorModal } from '@/components/ui/youtube/youtube-modal';
 import { VideoUploadModal } from "@/components/videos/video-upload-modal";
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { useVideos } from '@/hooks/use-videos';

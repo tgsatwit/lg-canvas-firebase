@@ -99,7 +99,7 @@ const VideoEditorModal = ({ open, onOpenChange, children, videoData }: VideoEdit
       {open && (
         <DialogPortal>
           <DialogOverlay />
-          <DialogContent className="max-w-[90vw] w-full max-h-[90vh] p-0">
+          <DialogContent className="max-w-6xl w-[95vw] h-[85vh] p-0 flex flex-col">
             <VideoEditorTabs videoData={videoData} />
           </DialogContent>
         </DialogPortal>
@@ -842,9 +842,7 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
       label: "Overview",
       icon: <Info className="h-4 w-4" />,
       content: (
-        <ScrollArea className="h-full max-h-[calc(90vh-48px)]">
-          <div className="p-6 space-y-6">
-            <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex flex-col lg:flex-row gap-6">
               {/* Left column - Video preview and basic info */}
               <div className="flex-1 space-y-5">
                 <div className="space-y-3">
@@ -1200,37 +1198,37 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
                       </div>
                     )}
                     
-                    {data.videoMetadata?.link && (
+                    {(data.videoMetadata?.link || data.vimeoId) && (
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground flex items-center">
                           <Video className="h-3 w-3 mr-1" />
                           Vimeo Link
                         </Label>
                         <a 
-                          href={data.videoMetadata.link} 
+                          href={data.videoMetadata?.link || `https://vimeo.com/manage/videos/${data.vimeoId}`} 
                           target="_blank" 
                           rel="noopener noreferrer" 
                           className="flex items-center justify-between text-xs border rounded-md px-3 py-2 text-primary hover:bg-primary/5 transition-colors group"
                         >
-                          <span className="truncate mr-2">Open in Vimeo</span>
+                          <span className="truncate mr-2">Manage in Vimeo</span>
                           <ExternalLink className="h-3 w-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                         </a>
                       </div>
                     )}
                     
-                    {data.vimeoOttMetadata?.link && (
+                    {(data.vimeoOttMetadata?.link || data.vimeoOttId) && (
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground flex items-center">
                           <FileVideo className="h-3 w-3 mr-1" />
                           Vimeo OTT Link
                         </Label>
                         <a 
-                          href={data.vimeoOttMetadata.link} 
+                          href={`https://pbl.vhx.tv/admin/manage/videos/${data.vimeoOttId}`} 
                           target="_blank" 
                           rel="noopener noreferrer" 
                           className="flex items-center justify-between text-xs border rounded-md px-3 py-2 text-primary hover:bg-primary/5 transition-colors group"
                         >
-                          <span className="truncate mr-2">Open in Vimeo OTT</span>
+                          <span className="truncate mr-2">Manage in Vimeo OTT</span>
                           <ExternalLink className="h-3 w-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                         </a>
                       </div>
@@ -1258,8 +1256,6 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
                 </div>
               </div>
             </div>
-          </div>
-        </ScrollArea>
       )
     },
     {
@@ -1424,11 +1420,11 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
                         </Button>
                       </div>
                     </div>
-                    {data.vimeoOttMetadata?.link && (
+                    {(data.vimeoOttMetadata?.link || data.vimeoOttId) && (
                       <div className="flex items-center gap-3">
                         <Label className="text-xs text-muted-foreground w-24">Vimeo OTT Link</Label>
-                        <a href={data.vimeoOttMetadata?.link || ''} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
-                          Open on Vimeo OTT <ExternalLink className="h-3 w-3" />
+                        <a href={`https://pbl.vhx.tv/admin/manage/videos/${data.vimeoOttId}`} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
+                          Manage in Vimeo OTT <ExternalLink className="h-3 w-3" />
                         </a>
                       </div>
                     )}
@@ -1484,27 +1480,48 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
   ];
 
   return (
-    <Tabs defaultValue="overview" className="h-full">
-      <div className="border-b sticky top-0 bg-background z-10">
-        <TabsList className="w-full flex justify-start px-1 border-b-0 rounded-none bg-transparent h-12">
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-background to-muted/20">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <Edit className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold">{data.name || "Edit Video"}</h1>
+            <p className="text-sm text-muted-foreground">Manage your video content and settings</p>
+          </div>
+        </div>
+      </div>
+
+      <Tabs defaultValue="overview" className="flex flex-col flex-1 min-h-0">
+        <div className="border-b bg-background">
+          <TabsList className="w-full flex justify-start px-6 border-b-0 rounded-none bg-transparent h-14">
         {tabs.map((tab) => (
-          <TabsTrigger 
-            key={tab.id}
-            value={tab.id}
-              className="flex items-center gap-1.5 rounded-none border-b-2 border-transparent py-3 px-4 data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:bg-transparent hover:bg-muted/50"
-          >
-            {tab.icon}
-            {tab.label}
+                      <TabsTrigger 
+              key={tab.id}
+              value={tab.id}
+              className="flex items-center gap-2 rounded-lg border-2 border-transparent py-2.5 px-4 mx-1 data-[state=active]:border-primary/20 data-[state=active]:bg-primary/5 data-[state=active]:text-primary hover:bg-muted/50 transition-all duration-200"
+            >
+                          {tab.icon}
+              <span className="font-medium">{tab.label}</span>
           </TabsTrigger>
         ))}
       </TabsList>
       </div>
-      {tabs.map((tab) => (
-        <TabsContent key={tab.id} value={tab.id} className="mt-0 outline-none">
-          {tab.content}
-        </TabsContent>
-      ))}
-    </Tabs>
+        <div className="flex-1 min-h-0">
+          {tabs.map((tab) => (
+            <TabsContent key={tab.id} value={tab.id} className="h-full m-0 outline-none">
+              <ScrollArea className="h-full">
+                <div className="p-6">
+                  {tab.content}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+          ))}
+        </div>
+      </Tabs>
+    </div>
   )
 }
 
@@ -1642,19 +1659,17 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
     }
     
     return (
-      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+      <div className="flex items-center justify-between rounded-md border border-blue-200 bg-blue-50/50 px-3 py-2">
         <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-blue-600" />
-          <span className="font-medium text-blue-800">Ready to Confirm</span>
+          <Clock className="h-3 w-3 text-blue-600" />
+          <span className="text-sm font-medium text-blue-800">Ready to Confirm</span>
+          <span className="text-xs text-blue-600">Review and confirm details to proceed</span>
         </div>
-        <p className="text-sm text-blue-700 mt-1">
-          Review your YouTube metadata and confirm details to proceed.
-        </p>
         <Button 
           size="sm" 
           onClick={handleConfirmDetails}
           disabled={isConfirming}
-          className="mt-3"
+          className="h-7 px-3 text-xs"
         >
           {isConfirming ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Check className="h-3 w-3 mr-1" />}
           Confirm Details
@@ -1842,22 +1857,6 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
           </p>
         </div>
         
-        <div className="space-y-2">
-          <Label htmlFor="youtube-category">YouTube Category</Label>
-          <Select defaultValue="education" disabled={isConfirming}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="education">Education</SelectItem>
-              <SelectItem value="entertainment">Entertainment</SelectItem>
-              <SelectItem value="music">Music</SelectItem>
-              <SelectItem value="tech">Science & Technology</SelectItem>
-              <SelectItem value="howto">How-to & Style</SelectItem>
-              <SelectItem value="gaming">Gaming</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
         
         <div className="space-y-2">
           <Label htmlFor="youtube-visibility">YouTube Visibility</Label>
@@ -1877,20 +1876,7 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
           </Select>
         </div>
         
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="youtube-comments" className="flex items-center gap-2">
-              Allow comments
-            </Label>
-            <Switch id="youtube-comments" defaultChecked disabled={isConfirming} />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="youtube-embed" className="flex items-center gap-2">
-              Allow embedding
-            </Label>
-            <Switch id="youtube-embed" defaultChecked disabled={isConfirming} />
-          </div>
-        </div>
+
       </div>
       
       <div className="pt-4 flex justify-end gap-3">
