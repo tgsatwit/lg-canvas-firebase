@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 
 // Define the Video type with all the rich metadata from the Firestore document
-type Video = {
+export type Video = {
   id: string;
   title: string;
   thumbnail: string;
-  visibility: "Public" | "Private" | "Unlisted";
+  visibility: "Public" | "Private" | "Unlisted" | "public" | "private" | "unlisted" | "-";
   uploadDate: string;
   views: number;
   likes: number;
@@ -65,6 +65,17 @@ type Video = {
   
   // Raw data for debugging
   rawData?: any;
+  
+  // YouTube specific fields
+  youtubeStatus?: string;
+  youtubeLink?: string;
+  upload_scheduled?: string;
+  upload_time?: string;
+  yt_title?: string;
+  yt_description?: string;
+  yt_tags?: string[];
+  yt_privacyStatus?: string;
+  details_confirmed?: string;
 };
 
 export const useVideos = () => {

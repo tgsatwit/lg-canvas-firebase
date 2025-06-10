@@ -162,7 +162,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
       const thread = await withTimeout(
         client.threads.create({
           metadata: {
-            firebase_user_id: user.uid,
+            firebase_user_id: user.id,
             customModelName: modelName,
             modelConfig: activeModelConfig,
           },
@@ -230,7 +230,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
       const res = await withTimeout(
         client.threads.search({
           metadata: {
-            firebase_user_id: user.uid,
+            firebase_user_id: user.id,
           },
         }),
         OPERATION_TIMEOUT,

@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString(),
       uploadDate: new Date().toISOString(),
       status: 'Processing',
-      youtubeStatus: 'preparing for youtube',
+      youtubeStatus: 'Preparing for YouTube',
       
       // Add tags if provided
       ...(tagArray.length > 0 && { tags: tagArray }),

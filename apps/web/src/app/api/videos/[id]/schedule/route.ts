@@ -34,7 +34,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     await docRef.update({
       upload_time: upload_time,
       upload_scheduled: 'Yes',
-      youtubeStatus: 'scheduled for youtube',
+      youtubeStatus: 'Scheduled for YouTube',
       updated_at: new Date().toISOString()
     });
     
@@ -77,7 +77,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     await docRef.update({
       upload_time: null,
       upload_scheduled: null,
-      youtubeStatus: 'ready for youtube', // Back to ready state after cancelling schedule
+      youtubeStatus: 'Ready for YouTube', // Back to ready state after cancelling schedule
       updated_at: new Date().toISOString()
     });
     

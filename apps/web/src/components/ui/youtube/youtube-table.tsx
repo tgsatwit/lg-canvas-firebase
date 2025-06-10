@@ -147,7 +147,7 @@ type Video = {
   id: string;
   title: string;
   thumbnail: string;
-  visibility: "Public" | "Private" | "Unlisted";
+  visibility: "Public" | "Private" | "Unlisted" | "public" | "private" | "unlisted" | "-";
   uploadDate: string;
   views: number;
   likes: number;
@@ -230,6 +230,13 @@ type Video = {
 };
 
 // Custom filter function for multi-column searching
+// Helper function to transform raw visibility values to display values
+const transformVisibilityToDisplay = (rawValue: string): string => {
+  if (rawValue === "-") return "-";
+  const capitalizedValue = rawValue.charAt(0).toUpperCase() + rawValue.slice(1);
+  return capitalizedValue === "Unlisted" ? "Members" : capitalizedValue;
+};
+
 const multiColumnFilterFn: FilterFn<Video> = (row, columnId, filterValue) => {
   const searchableRowContent = `${row.original.title}`.toLowerCase();
   const searchTerm = (filterValue ?? "").toLowerCase();
@@ -239,8 +246,9 @@ const multiColumnFilterFn: FilterFn<Video> = (row, columnId, filterValue) => {
 // Filter function for visibility filtering
 const visibilityFilterFn: FilterFn<Video> = (row, columnId, filterValue) => {
   if (!filterValue || (filterValue as string[]).length === 0) return true;
-  const visibility = row.getValue(columnId) as string;
-  return (filterValue as string[]).includes(visibility);
+  const rawVisibility = row.getValue(columnId) as string;
+  const displayVisibility = transformVisibilityToDisplay(rawVisibility);
+  return (filterValue as string[]).includes(displayVisibility);
 };
 
 // Filter function for status filtering
@@ -344,6 +352,8 @@ export function YouTubeTable({
         return cn(baseClasses, "bg-purple-50 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400");
       case "public":
         return cn(baseClasses, "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400");
+      case "-":
+        return cn(baseClasses, "bg-gray-50 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400");
       default:
         return cn(baseClasses, "bg-gray-50 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400");
     }
@@ -483,8 +493,21 @@ export function YouTubeTable({
       accessorKey: "visibility",
       cell: ({ row }) => {
         const visibility = row.getValue("visibility") as string;
+        
+        // Handle dash case
+        if (visibility === "-") {
+          return (
+            <div className={getVisibilityBadgeClass("-")}>
+              -
+            </div>
+          );
+        }
+        
+        // Capitalize first letter for display
+        const capitalizedVisibility = visibility.charAt(0).toUpperCase() + visibility.slice(1);
+        
         // Map "Unlisted" to "Members" for display
-        const displayVisibility = visibility === "Unlisted" ? "Members" : visibility;
+        const displayVisibility = capitalizedVisibility === "Unlisted" ? "Members" : capitalizedVisibility;
         return (
           <div className={getVisibilityBadgeClass(displayVisibility)}>
             {displayVisibility}
@@ -559,19 +582,28 @@ export function YouTubeTable({
     },
   });
 
-  // Get unique visibility values
+  // Get unique visibility values - transform raw values to display values
   const uniqueVisibilityValues = useMemo(() => {
     const visibilityColumn = table.getColumn("visibility");
     if (!visibilityColumn) return [];
-    const values = Array.from(visibilityColumn.getFacetedUniqueValues().keys());
-    return values.sort();
+    const rawValues = Array.from(visibilityColumn.getFacetedUniqueValues().keys());
+    const displayValues = rawValues.map(transformVisibilityToDisplay);
+    return Array.from(new Set(displayValues)).sort();
   }, [table.getColumn("visibility")?.getFacetedUniqueValues()]);
 
-  // Get visibility counts
+  // Get visibility counts - transform raw values to display values
   const visibilityCounts = useMemo(() => {
     const visibilityColumn = table.getColumn("visibility");
     if (!visibilityColumn) return new Map();
-    return visibilityColumn.getFacetedUniqueValues();
+    const rawCounts = visibilityColumn.getFacetedUniqueValues();
+    const displayCounts = new Map<string, number>();
+    
+    rawCounts.forEach((count, rawValue) => {
+      const displayValue = transformVisibilityToDisplay(rawValue);
+      displayCounts.set(displayValue, (displayCounts.get(displayValue) || 0) + count);
+    });
+    
+    return displayCounts;
   }, [table.getColumn("visibility")?.getFacetedUniqueValues()]);
 
   const selectedVisibilities = useMemo(() => {

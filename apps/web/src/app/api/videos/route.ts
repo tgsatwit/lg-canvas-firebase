@@ -97,7 +97,7 @@ export async function GET() {
                   'https://via.placeholder.com/640x360'),
                   
         // Visibility, status and other metadata
-        visibility: data.visibility || "Public",
+        visibility: data.yt_privacyStatus || "-",
         uploadDate: uploadDateIso,
         views: data.views || 0,
         likes: data.likes || 0,

@@ -100,7 +100,7 @@ export function ContentComposerChatInterfaceComponent(
           ffmpeg: ffmpegRef.current,
           messageRef,
           documents: fileList,
-          userId: userData.user.uid,
+          userId: userData.user.id,
           toast,
         });
         contentDocuments.push(...documentsResult);
@@ -153,7 +153,7 @@ export function ContentComposerChatInterfaceComponent(
     <div className="h-full w-full">
       <AssistantRuntimeProvider runtime={runtime}>
         <Thread
-          userId={userData?.user?.uid}
+          userId={userData?.user?.id}
           setChatStarted={props.setChatStarted}
           handleQuickStart={props.handleQuickStart}
           hasChatStarted={props.hasChatStarted}

@@ -4,6 +4,7 @@ import { buttonVariants } from "../../ui/button";
 import { UserAuthForm } from "./user-auth-form-login";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 export function Login() {
   const [isError, setIsError] = useState(false);
@@ -43,52 +44,97 @@ export function Login() {
 
   return (
     <div className="flex h-screen relative overflow-hidden">
-      {/* Background design - abstract shapes or gradient */}
+      {/* Enhanced background with Liquid Glass inspiration */}
       <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-zinc-900 to-blue-900" 
-             style={{
-               backgroundImage: 'radial-gradient(circle at top right, rgba(67, 56, 202, 0.7), transparent 60%), radial-gradient(circle at bottom left, rgba(63, 0, 237, 0.8), transparent 60%)'
-             }}
-        />
+        {/* Primary gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-pink-900 via-purple-900 to-indigo-900" />
+        
+        {/* Liquid Glass ambient layers */}
         <div
-          className="absolute inset-0 pointer-events-none"
+          className="absolute inset-0"
           style={{
-            backgroundImage:
-              `linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)`,
-            backgroundSize: '40px 40px',
-            opacity: 1,
+            background: `
+              radial-gradient(circle at 20% 20%, rgba(236, 72, 153, 0.4) 0%, transparent 50%),
+              radial-gradient(circle at 80% 80%, rgba(147, 51, 234, 0.4) 0%, transparent 50%),
+              radial-gradient(circle at 40% 70%, rgba(219, 39, 119, 0.3) 0%, transparent 50%)
+            `,
+          }}
+        />
+        
+        {/* Subtle grid pattern for depth */}
+        <div
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage: `
+              linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
+            `,
+            backgroundSize: '60px 60px',
           }}
         />
       </div>
       
-      {/* Left side - illustration or brand messaging */}
-      <div className="w-1/2 flex flex-col justify-center items-center p-12 relative z-10 hidden md:flex">
-        <div className="max-w-md text-center space-y-6">
-          <h1 className="text-7xl font-bold px-3 bg-gradient-to-r from-indigo-700 via-indigo-600 to-indigo-700/50 bg-clip-text text-transparent">PBL.ai</h1>
-        </div>
-      </div>
-      
-      {/* Right side - login form */}
-      <div className="relative flex flex-col justify-center items-center w-1/2 z-20">
-        <div 
-          className="rounded-xl w-full max-w-md px-10 py-12 mx-auto flex flex-col gap-6" 
-          style={{ 
-            backgroundColor: 'rgba(255, 255, 255, 0.15)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            border: '2px solid rgba(255, 255, 255, 0.2)',
-            boxShadow: '0 4px 30px rgba(0, 0, 0, 0.2)'
-          }}>
-          <div className="flex flex-col space-y-6 text-center">
-            <h1 className="text-3xl font-semibold text-indigo-700">Login</h1>
-          </div>
-          <div className="flex flex-col gap-5">
-            <UserAuthForm />
-            {isError && (
-              <p className="text-red-500 text-sm text-center mt-2">
-                {errorMessage}
-              </p>
-            )}
+      {/* Liquid Glass login container */}
+      <div className="w-full flex flex-col justify-center items-center p-8 relative z-10">
+        <div className="w-full max-w-2xl relative">
+          {/* Outer glow effect */}
+          <div 
+            className="absolute inset-0 rounded-3xl opacity-60 blur-xl"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05))',
+            }}
+          />
+          
+          {/* Main Liquid Glass container */}
+          <div 
+            className="relative rounded-3xl px-20 py-20 mx-auto flex flex-col gap-10 border shadow-2xl" 
+            style={{ 
+              background: `
+                linear-gradient(135deg, 
+                  rgba(255, 255, 255, 0.25) 0%,
+                  rgba(255, 255, 255, 0.1) 50%,
+                  rgba(255, 255, 255, 0.05) 100%
+                )
+              `,
+              backdropFilter: 'blur(20px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: `
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.1)
+              `,
+            }}>
+            
+            {/* Specular highlight overlay */}
+            <div 
+              className="absolute top-0 left-0 right-0 h-px opacity-60"
+              style={{
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)'
+              }}
+            />
+            
+            {/* Logo */}
+            <div className="flex justify-center relative">
+              <Image
+                src="/Sqr_logo.png"
+                alt="PBL.ai Logo"
+                width={100}
+                height={100}
+                className="rounded-xl"
+              />
+            </div>
+        
+            
+            {/* Form container */}
+            <div className="w-full max-w-lg mx-auto">
+              <UserAuthForm />
+              {isError && (
+                <p className="text-red-500 text-sm text-center mt-4">
+                  {errorMessage}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
