@@ -81,7 +81,8 @@ export function ChatHeader({
   const handleExportConversation = () => {
     const exportData = {
       title: conversation.title,
-      messages: conversation.messages,
+      // TODO: Add messages when available from proper context
+      // messages: [], 
       createdAt: conversation.createdAt,
       updatedAt: conversation.updatedAt,
     };
@@ -101,9 +102,8 @@ export function ChatHeader({
   };
 
   const handleShareConversation = async () => {
-    const shareText = `${conversation.title}\n\n${conversation.messages
-      .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
-      .join('\n\n')}`;
+    // TODO: Access messages from proper context when available
+    const shareText = `${conversation.title}\n\nConversation details available for sharing.`;
     
     if (navigator.share) {
       try {

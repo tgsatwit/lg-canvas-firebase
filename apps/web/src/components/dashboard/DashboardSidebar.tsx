@@ -48,6 +48,13 @@ export function DashboardSidebar() {
             Video Library
           </SidebarLink>
           <SidebarLink 
+            href="/dashboard/videos/youtube" 
+            icon={FilmIcon}
+            isActive={pathname === "/dashboard/videos/youtube"}
+          >
+            YouTube Manager
+          </SidebarLink>
+          <SidebarLink 
             href="/dashboard/tasks" 
             icon={ClipboardDocumentListIcon}
             isActive={pathname === "/dashboard/tasks"}

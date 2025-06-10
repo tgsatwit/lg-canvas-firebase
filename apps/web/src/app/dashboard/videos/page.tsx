@@ -15,7 +15,7 @@ type Video = {
   id: string;
   title: string;
   thumbnail: string;
-  visibility: "Public" | "Private" | "Unlisted";
+  visibility: "Public" | "Private" | "Unlisted" | "public" | "private" | "unlisted" | "-";
   uploadDate: string;
   views: number;
   likes: number;

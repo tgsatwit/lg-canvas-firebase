@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminFirestore } from '@/lib/firebase/admin';
 import { DocumentData } from 'firebase-admin/firestore';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
     
     // Get Firestore instance
     const firestoreAdmin = adminFirestore();
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     
     return NextResponse.json(video);
   } catch (error) {
-    console.error(`Error fetching video with ID ${params.id}:`, error);
+    console.error(`Error fetching video:`, error);
     return NextResponse.json(
       { error: "Failed to fetch video", details: String(error) },
       { status: 500 }
@@ -73,9 +73,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
     const data = await request.json();
     
     // Get Firestore instance
@@ -123,7 +123,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error(`Error updating video with ID ${params.id}:`, error);
+    console.error(`Error updating video:`, error);
     return NextResponse.json(
       { error: "Failed to update video", details: String(error) },
       { status: 500 }

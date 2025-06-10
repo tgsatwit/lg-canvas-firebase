@@ -188,8 +188,8 @@ function ConversationItem({
   onSelect,
   onDelete,
 }: ConversationItemProps) {
-  const lastMessage = conversation.messages[conversation.messages.length - 1];
-  const messageCount = conversation.messages.length;
+  // Use available properties from Conversation type
+  const messageCount = conversation.messageCount || 0;
 
   return (
     <div
@@ -207,10 +207,9 @@ function ConversationItem({
             {conversation.title}
           </h3>
           
-          {lastMessage && (
+          {conversation.lastMessagePreview && (
             <p className="text-xs text-gray-500 truncate">
-              {lastMessage.role === 'user' ? 'You: ' : 'AI: '}
-              {lastMessage.content}
+              {conversation.lastMessagePreview}
             </p>
           )}
           

@@ -703,7 +703,7 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
       gcp_info_last_updated: videoData.gcp_info_last_updated || "",
       
       // YouTube status tracking and link
-      youtubeStatus: videoData.youtubeStatus || videoData.youtube_status || videoData.status || "preparing for youtube",
+      youtubeStatus: videoData.youtubeStatus || videoData.youtube_status || videoData.status || "Preparing for YouTube",
       youtubeLink: videoData.youtubeLink || videoData.youtube_link || videoData.youtubeUrl || videoData.youtube_url || "",
       
       // Handle descriptions
@@ -851,10 +851,10 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
                     {(() => {
                       const status = (data.youtubeStatus || '').toLowerCase();
                       const statusBadgeStyles: Record<string, { bg: string; text: string; border: string; icon?: React.ReactNode }> = {
-                        'Preparing for YouTube': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
-                        'Ready for YouTube': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
-                        'Scheduled for YouTube': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
-                        'Published on YouTube': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' }
+                        'preparing for youtube': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
+                        'ready for youtube': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+                        'scheduled for youtube': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+                        'published on youtube': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' }
                       };
 
                       const st = statusBadgeStyles[status];
@@ -1259,6 +1259,16 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
       )
     },
     {
+      id: "edit-details",
+      label: "Edit Details",
+      icon: <Youtube className="h-4 w-4" />,
+      content: (
+        <ScrollArea className="h-full max-h-[calc(90vh-48px)]">
+          <YouTubeTabContent videoData={data} />
+        </ScrollArea>
+      )
+    },
+    {
       id: "vimeo-metadata",
       label: "Vimeo",
       icon: <Video className="h-4 w-4" />,
@@ -1464,16 +1474,6 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
               <div className="p-8 text-center text-sm text-muted-foreground">No Vimeo OTT metadata available.</div>
             )}
           </div>
-        </ScrollArea>
-      )
-    },
-    {
-      id: "youtube",
-      label: "YouTube",
-      icon: <Youtube className="h-4 w-4" />,
-      content: (
-        <ScrollArea className="h-full max-h-[calc(90vh-48px)]">
-          <YouTubeTabContent videoData={data} />
         </ScrollArea>
       )
     },
@@ -1685,12 +1685,12 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
         {(() => {
           const status = (videoData.youtubeStatus || '').toLowerCase();
           const badgeStyles: Record<string, { bg: string; text: string; border: string; label: string }> = {
-            'Preparing for YouTube': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', label: 'Preparing' },
-            'Ready for YouTube': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', label: 'Ready' },
-            'Scheduled for YouTube': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', label: 'Scheduled' },
-            'Published on YouTube': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', label: 'Published' }
+            'preparing for youtube': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', label: 'Preparing' },
+            'ready for youtube': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', label: 'Ready' },
+            'scheduled for youtube': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', label: 'Scheduled' },
+            'published on youtube': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', label: 'Published' }
           };
-          const bs = badgeStyles[status] || badgeStyles['Preparing for YouTube'];
+          const bs = badgeStyles[status] || badgeStyles['preparing for youtube'];
           return (
             <Badge variant="outline" className={`${bs.bg} ${bs.text} ${bs.border}`}>{bs.label}</Badge>
           );

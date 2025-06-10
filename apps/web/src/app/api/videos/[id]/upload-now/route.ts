@@ -2,11 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminFirestore } from '@/lib/firebase/admin';
 import { getYouTubeService } from '@/lib/youtube/youtube-service';
 import { cookies } from 'next/headers';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/auth';
+import { createScopedLogger } from "@/utils/logger";
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+const logger = createScopedLogger("api/videos/upload-now");
+
+export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
+    const session = await getServerSession(authOptions);
     
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    logger.info(`Initiating immediate YouTube upload for video ${id}`);
+
     // Get Firestore instance
     const firestoreAdmin = adminFirestore();
     if (!firestoreAdmin) {
@@ -100,19 +112,26 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         youtubeLink: youtubeUrl,
         youtubeId: videoId,
         youtube_id: videoId,
-        youtubeStatus: 'published on youtube',
-        youtube_status: 'published on youtube',
+        youtubeStatus: 'Published on YouTube',
+        youtube_status: 'Published on YouTube',
         upload_scheduled: null,
         uploaded_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
 
-      return NextResponse.json({ 
+      const uploadResult = {
         success: true,
-        message: "Video uploaded to YouTube successfully",
+        videoId: id,
+        youtubeId: videoId,
+        status: 'uploaded',
+        message: 'Video uploaded to YouTube successfully',
         youtube_link: youtubeUrl,
         youtube_id: videoId
-      });
+      };
+
+             logger.info(`Upload initiated for video ${id}`);
+
+      return NextResponse.json(uploadResult);
       
     } catch (uploadError: any) {
       console.error(`Error uploading to YouTube:`, uploadError);
@@ -139,14 +158,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       );
     }
     
-  } catch (error) {
-    const { id } = await params;
-    console.error(`Error processing upload for video ${id}:`, error);
-    return NextResponse.json(
-      { error: "Failed to process video upload", details: String(error) },
-      { status: 500 }
-    );
-  }
+      } catch (error) {
+      logger.error(`Error initiating upload: ${String(error)}`);
+      return NextResponse.json(
+        { error: "Failed to initiate upload", details: String(error) },
+        { status: 500 }
+      );
+    }
 }
 
 // Get stored YouTube tokens from cookies

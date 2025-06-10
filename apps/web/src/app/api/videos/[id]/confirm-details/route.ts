@@ -35,9 +35,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       yt_title: yt_title,
       yt_description: yt_description,
       yt_tags: yt_tags || [],
-      yt_privacyStatus: yt_privacyStatus || 'unlisted',
+      yt_privacyStatus: yt_privacyStatus || 'private',
       details_confirmed: 'Yes',
-      youtubeStatus: 'ready for youtube',
+      youtubeStatus: 'Ready for YouTube',
       updated_at: new Date().toISOString()
     });
     
@@ -83,7 +83,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       yt_tags: null,
       yt_privacyStatus: null,
       details_confirmed: null,
-      youtubeStatus: 'preparing for youtube',
+      youtubeStatus: 'Preparing for YouTube',
       updated_at: new Date().toISOString()
     });
 

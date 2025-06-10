@@ -5,7 +5,7 @@ import { redirect, RedirectType } from "next/navigation";
 import { useUserContext } from "@/contexts/UserContext";
 
 export function SignupSuccess() {
-  const { getUser, user } = useUserContext();
+  const { user } = useUserContext();
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
@@ -14,23 +14,14 @@ export function SignupSuccess() {
     }
     const startTime = Date.now();
     const checkDuration = 3 * 60 * 1000; // 3 minutes in milliseconds
-    const interval = 4000; // 4 seconds
 
-    const checkUser = async () => {
-      await getUser();
-      if (Date.now() - startTime >= checkDuration) {
-        setIsChecking(false);
-      }
-    };
-
-    const intervalId = setInterval(checkUser, interval);
-
-    // Initial check
-    checkUser();
+    const checkTimeout = setTimeout(() => {
+      setIsChecking(false);
+    }, checkDuration);
 
     // Cleanup function
-    return () => clearInterval(intervalId);
-  }, [getUser]);
+    return () => clearTimeout(checkTimeout);
+  }, [user]);
 
   useEffect(() => {
     if (user) {

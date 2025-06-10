@@ -382,7 +382,7 @@ function ArtifactRendererComponent(props: ArtifactRendererProps) {
       <CustomQuickActions
         streamMessage={streamMessage}
         assistantId={selectedAssistant?.assistant_id}
-        user={user}
+        user={user as any}
         isTextSelected={isSelectionActive || selectedBlocks !== undefined}
       />
       {currentArtifactContent.type === "text" ? (

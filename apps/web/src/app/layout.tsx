@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Open Canvas",
-  description: "Open Canvas Chat UX by LangChain",
+  title: "PBL.ai",
+  description: "PBL.ai Dashboard",
 };
 
 export default function RootLayout({
