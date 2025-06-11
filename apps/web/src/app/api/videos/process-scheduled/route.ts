@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       .collection(collectionName)
       .where('upload_scheduled', '==', 'Yes')
       .where('upload_time', '<=', now.toISOString())
-      .where('youtubeStatus', '==', 'scheduled for youtube')
+      .where('youtubeStatus', '==', 'Scheduled for YouTube')
       .get();
     
     console.log(`Found ${scheduledVideos.size} videos scheduled for upload`);

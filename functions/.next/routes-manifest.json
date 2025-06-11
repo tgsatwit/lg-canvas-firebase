@@ -1,0 +1,214 @@
+{
+  "version": 3,
+  "pages404": true,
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "dynamicRoutes": [
+    {
+      "page": "/api/auth/[...nextauth]",
+      "regex": "^/api/auth/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPnextauth": "nxtPnextauth"
+      },
+      "namedRegex": "^/api/auth/(?<nxtPnextauth>.+?)(?:/)?$"
+    },
+    {
+      "page": "/api/videos/[id]",
+      "regex": "^/api/videos/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/videos/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/videos/[id]/confirm-details",
+      "regex": "^/api/videos/([^/]+?)/confirm\\-details(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/videos/(?<nxtPid>[^/]+?)/confirm\\-details(?:/)?$"
+    },
+    {
+      "page": "/api/videos/[id]/schedule",
+      "regex": "^/api/videos/([^/]+?)/schedule(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/videos/(?<nxtPid>[^/]+?)/schedule(?:/)?$"
+    },
+    {
+      "page": "/api/videos/[id]/schedule-upload",
+      "regex": "^/api/videos/([^/]+?)/schedule\\-upload(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/videos/(?<nxtPid>[^/]+?)/schedule\\-upload(?:/)?$"
+    },
+    {
+      "page": "/api/videos/[id]/upload-now",
+      "regex": "^/api/videos/([^/]+?)/upload\\-now(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/videos/(?<nxtPid>[^/]+?)/upload\\-now(?:/)?$"
+    },
+    {
+      "page": "/api/[..._path]",
+      "regex": "^/api/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtP_path": "nxtP_path"
+      },
+      "namedRegex": "^/api/(?<nxtP_path>.+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/auth/login",
+      "regex": "^/auth/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/auth/login(?:/)?$"
+    },
+    {
+      "page": "/auth/signout",
+      "regex": "^/auth/signout(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/auth/signout(?:/)?$"
+    },
+    {
+      "page": "/auth/signup",
+      "regex": "^/auth/signup(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/auth/signup(?:/)?$"
+    },
+    {
+      "page": "/auth/signup/success",
+      "regex": "^/auth/signup/success(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/auth/signup/success(?:/)?$"
+    },
+    {
+      "page": "/dashboard",
+      "regex": "^/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard(?:/)?$"
+    },
+    {
+      "page": "/dashboard/canvas",
+      "regex": "^/dashboard/canvas(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/canvas(?:/)?$"
+    },
+    {
+      "page": "/dashboard/chat",
+      "regex": "^/dashboard/chat(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/chat(?:/)?$"
+    },
+    {
+      "page": "/dashboard/playlists",
+      "regex": "^/dashboard/playlists(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/playlists(?:/)?$"
+    },
+    {
+      "page": "/dashboard/social",
+      "regex": "^/dashboard/social(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/social(?:/)?$"
+    },
+    {
+      "page": "/dashboard/social-monitor",
+      "regex": "^/dashboard/social\\-monitor(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/social\\-monitor(?:/)?$"
+    },
+    {
+      "page": "/dashboard/social-monitor/connect",
+      "regex": "^/dashboard/social\\-monitor/connect(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/social\\-monitor/connect(?:/)?$"
+    },
+    {
+      "page": "/dashboard/social-monitor/permissions",
+      "regex": "^/dashboard/social\\-monitor/permissions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/social\\-monitor/permissions(?:/)?$"
+    },
+    {
+      "page": "/dashboard/tasks",
+      "regex": "^/dashboard/tasks(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/tasks(?:/)?$"
+    },
+    {
+      "page": "/dashboard/videos",
+      "regex": "^/dashboard/videos(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/videos(?:/)?$"
+    },
+    {
+      "page": "/dashboard/videos/youtube",
+      "regex": "^/dashboard/videos/youtube(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/videos/youtube(?:/)?$"
+    },
+    {
+      "page": "/favicon.ico",
+      "regex": "^/favicon\\.ico(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/favicon\\.ico(?:/)?$"
+    },
+    {
+      "page": "/users",
+      "regex": "^/users(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/users(?:/)?$"
+    },
+    {
+      "page": "/youtube-dashboard",
+      "regex": "^/youtube\\-dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/youtube\\-dashboard(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "RSC",
+    "varyHeader": "RSC, Next-Router-State-Tree, Next-Router-Prefetch, Next-Router-Segment-Prefetch",
+    "prefetchHeader": "Next-Router-Prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSuffix": ".prefetch.rsc",
+    "prefetchSegmentHeader": "Next-Router-Segment-Prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments"
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  },
+  "rewrites": []
+}

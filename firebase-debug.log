@@ -1,0 +1,190 @@
+[debug] [2025-06-11T14:32:04.733Z] ----------------------------------------------------------------------
+[debug] [2025-06-11T14:32:04.734Z] Command:       /usr/local/bin/node /usr/local/bin/firebase deploy --only functions --debug
+[debug] [2025-06-11T14:32:04.734Z] CLI Version:   13.30.0
+[debug] [2025-06-11T14:32:04.734Z] Platform:      darwin
+[debug] [2025-06-11T14:32:04.734Z] Node Version:  v22.13.1
+[debug] [2025-06-11T14:32:04.734Z] Time:          Thu Jun 12 2025 00:32:04 GMT+1000 (Australian Eastern Standard Time)
+[debug] [2025-06-11T14:32:04.734Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-06-11T14:32:04.795Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-06-11T14:32:04.796Z] > authorizing via signed-in user (timothygillam@gmail.com)
+[debug] [2025-06-11T14:32:04.796Z] [iam] checking project face-by-lisa for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]
+[debug] [2025-06-11T14:32:04.796Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:04.796Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:04.796Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/face-by-lisa:testIamPermissions [none]
+[debug] [2025-06-11T14:32:04.796Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/face-by-lisa:testIamPermissions x-goog-quota-user=projects/face-by-lisa
+[debug] [2025-06-11T14:32:04.797Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/face-by-lisa:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2025-06-11T14:32:06.033Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/face-by-lisa:testIamPermissions 200
+[debug] [2025-06-11T14:32:06.034Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/face-by-lisa:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get"]}
+[debug] [2025-06-11T14:32:06.034Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:06.034Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:06.034Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/face-by-lisa/serviceAccounts/face-by-lisa@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2025-06-11T14:32:06.034Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/face-by-lisa/serviceAccounts/face-by-lisa@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2025-06-11T14:32:07.802Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/face-by-lisa/serviceAccounts/face-by-lisa@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2025-06-11T14:32:07.803Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/face-by-lisa/serviceAccounts/face-by-lisa@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[info] 
+[info] === Deploying to 'face-by-lisa'...
+[info] 
+[info] i  deploying functions 
+[info] Running command: npm --prefix "$RESOURCE_DIR" run build
+[info] ✔  functions: Finished running predeploy script. 
+[debug] [2025-06-11T14:32:39.672Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:39.672Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:39.672Z] >>> [apiv2][query] GET https://cloudresourcemanager.googleapis.com/v1/projects/face-by-lisa [none]
+[debug] [2025-06-11T14:32:40.958Z] <<< [apiv2][status] GET https://cloudresourcemanager.googleapis.com/v1/projects/face-by-lisa 200
+[debug] [2025-06-11T14:32:40.958Z] <<< [apiv2][body] GET https://cloudresourcemanager.googleapis.com/v1/projects/face-by-lisa {"projectNumber":"591061623955","projectId":"face-by-lisa","lifecycleState":"ACTIVE","name":"face-by-lisa","labels":{"firebase":"enabled"},"createTime":"2024-12-03T01:18:12.970672Z"}
+[info] i  functions: preparing codebase default for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[debug] [2025-06-11T14:32:40.959Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:40.959Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:40.959Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:40.959Z] Checked if tokens are valid: true, expires at: 1749654526945
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[debug] [2025-06-11T14:32:40.959Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:40.959Z] Checked if tokens are valid: true, expires at: 1749654526945
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2025-06-11T14:32:40.959Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:40.959Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:40.959Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/cloudfunctions.googleapis.com [none]
+[debug] [2025-06-11T14:32:40.959Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/cloudfunctions.googleapis.com x-goog-quota-user=projects/face-by-lisa
+[debug] [2025-06-11T14:32:40.960Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/runtimeconfig.googleapis.com [none]
+[debug] [2025-06-11T14:32:40.960Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/runtimeconfig.googleapis.com x-goog-quota-user=projects/face-by-lisa
+[debug] [2025-06-11T14:32:40.960Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/cloudbuild.googleapis.com [none]
+[debug] [2025-06-11T14:32:40.960Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/cloudbuild.googleapis.com x-goog-quota-user=projects/face-by-lisa
+[debug] [2025-06-11T14:32:40.961Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/artifactregistry.googleapis.com [none]
+[debug] [2025-06-11T14:32:40.961Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/artifactregistry.googleapis.com x-goog-quota-user=projects/face-by-lisa
+[debug] [2025-06-11T14:32:42.419Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/cloudbuild.googleapis.com 200
+[debug] [2025-06-11T14:32:42.419Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/cloudbuild.googleapis.com [omitted]
+[info] ✔  functions: required API cloudbuild.googleapis.com is enabled 
+[debug] [2025-06-11T14:32:42.426Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/cloudfunctions.googleapis.com 200
+[debug] [2025-06-11T14:32:42.426Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/cloudfunctions.googleapis.com [omitted]
+[info] ✔  functions: required API cloudfunctions.googleapis.com is enabled 
+[debug] [2025-06-11T14:32:42.433Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/runtimeconfig.googleapis.com 200
+[debug] [2025-06-11T14:32:42.433Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/runtimeconfig.googleapis.com [omitted]
+[debug] [2025-06-11T14:32:42.448Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/artifactregistry.googleapis.com 200
+[debug] [2025-06-11T14:32:42.449Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/artifactregistry.googleapis.com [omitted]
+[info] ✔  artifactregistry: required API artifactregistry.googleapis.com is enabled 
+[debug] [2025-06-11T14:32:42.449Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:42.449Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:42.449Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/face-by-lisa/adminSdkConfig [none]
+[debug] [2025-06-11T14:32:43.413Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/face-by-lisa/adminSdkConfig 200
+[debug] [2025-06-11T14:32:43.413Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/face-by-lisa/adminSdkConfig {"projectId":"face-by-lisa","storageBucket":"face-by-lisa.firebasestorage.app"}
+[debug] [2025-06-11T14:32:43.413Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:43.413Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:43.413Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/face-by-lisa/configs [none]
+[debug] [2025-06-11T14:32:44.031Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/face-by-lisa/configs 200
+[debug] [2025-06-11T14:32:44.031Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/face-by-lisa/configs {"configs":[{"name":"projects/face-by-lisa/configs/google"},{"name":"projects/face-by-lisa/configs/storage"}]}
+[debug] [2025-06-11T14:32:44.031Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:44.031Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:44.031Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:44.031Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:44.031Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/face-by-lisa/configs/google/variables [none]
+[debug] [2025-06-11T14:32:44.032Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/face-by-lisa/configs/storage/variables [none]
+[debug] [2025-06-11T14:32:44.433Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/face-by-lisa/configs/google/variables 200
+[debug] [2025-06-11T14:32:44.433Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/face-by-lisa/configs/google/variables {"variables":[{"name":"projects/face-by-lisa/configs/google/variables/cloud/bucket","updateTime":"2025-02-17T23:17:16.029849665Z"}]}
+[debug] [2025-06-11T14:32:44.433Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:44.433Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:44.433Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/face-by-lisa/configs/google/variables/cloud/bucket [none]
+[debug] [2025-06-11T14:32:44.652Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/face-by-lisa/configs/storage/variables 200
+[debug] [2025-06-11T14:32:44.652Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/face-by-lisa/configs/storage/variables {"variables":[{"name":"projects/face-by-lisa/configs/storage/variables/bucket","updateTime":"2025-02-17T12:41:57.216198643Z"}]}
+[debug] [2025-06-11T14:32:44.652Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:44.652Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:44.652Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/face-by-lisa/configs/storage/variables/bucket [none]
+[debug] [2025-06-11T14:32:44.833Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/face-by-lisa/configs/google/variables/cloud/bucket 200
+[debug] [2025-06-11T14:32:44.833Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/face-by-lisa/configs/google/variables/cloud/bucket {"name":"projects/face-by-lisa/configs/google/variables/cloud/bucket","updateTime":"2025-02-17T23:17:16.029849665Z","text":"pbl_videos"}
+[debug] [2025-06-11T14:32:45.054Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/face-by-lisa/configs/storage/variables/bucket 200
+[debug] [2025-06-11T14:32:45.054Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/face-by-lisa/configs/storage/variables/bucket {"name":"projects/face-by-lisa/configs/storage/variables/bucket","updateTime":"2025-02-17T12:41:57.216198643Z","text":"face-by-lisa.appspot.com"}
+[debug] [2025-06-11T14:32:45.055Z] Validating nodejs source
+[warn] ⚠  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+[warn] ⚠  functions: Please note that there will be breaking changes when you upgrade. 
+[debug] [2025-06-11T14:32:45.453Z] > [functions] package.json contents: {
+  "name": "functions",
+  "description": "Cloud Functions for Firebase - Next.js API Routes",
+  "scripts": {
+    "build": "npm run build:next && npm run build:prep && npm run build:functions",
+    "build:next": "cd ../apps/web && npm run build",
+    "build:prep": "node scripts/build-next.js",
+    "build:functions": "tsc --project tsconfig.json",
+    "build:watch": "tsc --project tsconfig.json --watch",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "shell": "npm run build && firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "main": "lib/index.js",
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^5.0.0",
+    "next": "^15.3.1",
+    "react": "^18",
+    "react-dom": "^18",
+    "@assistant-ui/react": "^0.7.68",
+    "@blocknote/core": "^0.29.1",
+    "@langchain/core": "^0.3.38",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.1.3",
+    "@types/node": "^20.0.0",
+    "firebase-functions-test": "^3.1.0",
+    "fs-extra": "^11.0.0"
+  },
+  "private": true
+}
+[debug] [2025-06-11T14:32:45.453Z] Building nodejs source
+[info] i  functions: Loading and analyzing source code for codebase default to determine what to deploy 
+[debug] [2025-06-11T14:32:45.454Z] Could not find functions.yaml. Must use http discovery
+[debug] [2025-06-11T14:32:45.456Z] Found firebase-functions binary at '/Users/timgillam/projects/pbl-canvas/functions/node_modules/.bin/firebase-functions'
+[info] Serving at port 8543
+
+[debug] [2025-06-11T14:32:45.685Z] Got response from /__/functions.yaml {"endpoints":{"nextjsFunc":{"platform":"gcfv1","availableMemoryMb":2048,"timeoutSeconds":540,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"httpsTrigger":{},"entryPoint":"nextjsFunc"}},"specVersion":"v1alpha1","requiredAPIs":[],"extensions":{}}
+[info] i  extensions: ensuring required API firebaseextensions.googleapis.com is enabled... 
+[debug] [2025-06-11T14:32:49.696Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:49.696Z] Checked if tokens are valid: true, expires at: 1749654526945
+[debug] [2025-06-11T14:32:49.696Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/firebaseextensions.googleapis.com [none]
+[debug] [2025-06-11T14:32:49.696Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/firebaseextensions.googleapis.com x-goog-quota-user=projects/face-by-lisa
+[debug] [2025-06-11T14:32:51.090Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/firebaseextensions.googleapis.com 429
+[debug] [2025-06-11T14:32:51.090Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/firebaseextensions.googleapis.com [omitted]
+[error] 
+[error] Error: Request to https://serviceusage.googleapis.com/v1/projects/face-by-lisa/services/firebaseextensions.googleapis.com had HTTP Error: 429, Quota exceeded for quota metric 'Default requests' and limit 'Default requests per minute' of service 'serviceusage.googleapis.com' for consumer 'project_number:563584335869'.
+[debug] [2025-06-11T14:32:51.091Z] Error Context: {
+  "body": {
+    "error": {
+      "code": 429,
+      "message": "Quota exceeded for quota metric 'Default requests' and limit 'Default requests per minute' of service 'serviceusage.googleapis.com' for consumer 'project_number:563584335869'.",
+      "status": "RESOURCE_EXHAUSTED",
+      "details": [
+        {
+          "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+          "reason": "RATE_LIMIT_EXCEEDED",
+          "domain": "googleapis.com",
+          "metadata": {
+            "quota_unit": "1/min/{project}",
+            "quota_limit": "DefaultRequestsPerMinutePerProject",
+            "quota_limit_value": "600",
+            "service": "serviceusage.googleapis.com",
+            "consumer": "projects/563584335869",
+            "quota_location": "global",
+            "quota_metric": "serviceusage.googleapis.com/default_requests"
+          }
+        },
+        {
+          "@type": "type.googleapis.com/google.rpc.Help",
+          "links": [
+            {
+              "description": "Request a higher quota limit.",
+              "url": "https://cloud.google.com/docs/quotas/help/request_increase"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "response": {
+    "statusCode": 429
+  }
+}

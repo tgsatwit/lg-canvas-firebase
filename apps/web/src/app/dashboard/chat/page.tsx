@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { Card } from '@/components/ui/card';
 import { ChatInterface, ChatSidebar } from '@/components/chat';
 import { LoadingContent } from '@/components/ui/loading-content';
 import { useToast } from '@/hooks/use-toast';
@@ -91,41 +90,149 @@ export default function ChatPage() {
 
   if (status === 'loading' || isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
-        <LoadingContent loading={true} error={null}>
-          <div>Loading chat...</div>
-        </LoadingContent>
+      <div 
+        className="flex h-screen items-center justify-center relative"
+        style={{
+          background: `
+            linear-gradient(135deg, 
+              rgba(6, 182, 212, 0.1) 0%,
+              rgba(99, 102, 241, 0.05) 50%,
+              rgba(34, 197, 94, 0.1) 100%
+            )
+          `,
+        }}
+      >
+        {/* Ambient background layers */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div
+            className="absolute inset-0 opacity-30"
+            style={{
+              background: `
+                radial-gradient(circle at 30% 40%, rgba(6, 182, 212, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 70% 60%, rgba(99, 102, 241, 0.15) 0%, transparent 50%)
+              `,
+            }}
+          />
+        </div>
+
+        <div 
+          className="relative z-10 p-8 rounded-2xl border"
+          style={{
+            background: `
+              linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.25) 0%,
+                rgba(255, 255, 255, 0.1) 100%
+              )
+            `,
+            backdropFilter: 'blur(20px) saturate(150%)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            boxShadow: `
+              0 8px 32px rgba(0, 0, 0, 0.1),
+              inset 0 1px 0 rgba(255, 255, 255, 0.4)
+            `,
+          }}
+        >
+          <LoadingContent loading={true} error={null}>
+            <div className="text-gray-800 text-lg">Loading chat...</div>
+          </LoadingContent>
+        </div>
       </div>
     );
   }
 
   if (!session?.user) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50">
-        <Card className="p-8 rounded-2xl border-0 shadow-lg">
-          <p>Please sign in to access the chat.</p>
-        </Card>
+      <div 
+        className="flex h-screen items-center justify-center relative"
+        style={{
+          background: `
+            linear-gradient(135deg, 
+              rgba(6, 182, 212, 0.1) 0%,
+              rgba(99, 102, 241, 0.05) 50%,
+              rgba(34, 197, 94, 0.1) 100%
+            )
+          `,
+        }}
+      >
+        {/* Ambient background layers */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div
+            className="absolute inset-0 opacity-30"
+            style={{
+              background: `
+                radial-gradient(circle at 30% 40%, rgba(6, 182, 212, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 70% 60%, rgba(99, 102, 241, 0.15) 0%, transparent 50%)
+              `,
+            }}
+          />
+        </div>
+
+        <div 
+          className="relative z-10 p-8 rounded-2xl border"
+          style={{
+            background: `
+              linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.25) 0%,
+                rgba(255, 255, 255, 0.1) 100%
+              )
+            `,
+            backdropFilter: 'blur(20px) saturate(150%)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            boxShadow: `
+              0 8px 32px rgba(0, 0, 0, 0.1),
+              inset 0 1px 0 rgba(255, 255, 255, 0.4)
+            `,
+          }}
+        >
+          <p className="text-gray-800 text-lg">Please sign in to access the chat.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)] -m-6 flex bg-gray-50 overflow-hidden">
+    <div 
+      className="h-[calc(100vh-4rem)] -m-6 pt-6 flex overflow-hidden relative"
+      style={{
+        background: `
+          linear-gradient(135deg, 
+            rgba(6, 182, 212, 0.1) 0%,
+            rgba(99, 102, 241, 0.05) 50%,
+            rgba(34, 197, 94, 0.1) 100%
+          )
+        `,
+      }}
+    >
+      {/* Ambient background layers */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div
+          className="absolute inset-0 opacity-30"
+          style={{
+            background: `
+              radial-gradient(circle at 30% 40%, rgba(6, 182, 212, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 70% 60%, rgba(99, 102, 241, 0.15) 0%, transparent 50%)
+            `,
+          }}
+        />
+      </div>
+
       {/* Sidebar - only show when not collapsed */}
       {!sidebarCollapsed && (
-        <ChatSidebar
-          conversations={conversations}
-          activeConversationId={activeConversationId || newConversationId}
-          onSelectConversation={setActiveConversation}
-          onDeleteConversation={handleDeleteConversation}
-          collapsed={false}
-          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-          userId={session.user.id}
-        />
+        <div className="relative z-10">
+          <ChatSidebar
+            conversations={conversations}
+            activeConversationId={activeConversationId || newConversationId}
+            onSelectConversation={setActiveConversation}
+            onDeleteConversation={handleDeleteConversation}
+            collapsed={false}
+            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+            userId={session.user.id}
+          />
+        </div>
       )}
       
       {/* Main Chat Area */}
-      <div className="flex-1 h-full">
+      <div className="relative z-10 flex-1 h-full">
         <ChatInterface
           userId={session.user.id}
           conversationId={activeConversationId || newConversationId}

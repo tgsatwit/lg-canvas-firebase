@@ -91,14 +91,15 @@ export function SidebarLink({
     <a
       href={href}
       className={cn(
-        "flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors font-medium",
-        isActive
-          ? "bg-black/80 text-white shadow-md border border-black/50"
-          : "hover:bg-black/30 text-black hover:text-black"
+        "flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 font-medium group",
+        "hover:scale-[1.02] active:scale-[0.98]"
       )}
     >
-      <Icon className="w-5 h-5" />
-      <span>{children}</span>
+      <Icon className={cn(
+        "w-5 h-5 transition-colors duration-200",
+        isActive ? "text-current" : "text-gray-600 group-hover:text-gray-800"
+      )} />
+      <div className="flex-1">{children}</div>
     </a>
   );
 } 

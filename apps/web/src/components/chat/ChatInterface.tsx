@@ -235,69 +235,100 @@ export function ChatInterface({
   // Show simple new chat interface when no conversation or empty conversation
   if (!conversationId || !activeConversation || activeConversation.messages.length === 0) {
     return (
-      <div className="h-full grid grid-rows-[auto_1fr_auto] bg-white">
-        {/* Header - Fixed at top */}
-        <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggleSidebar}
-              className="hover:bg-gray-100 rounded-xl"
-            >
-              <Menu className="h-4 w-4" />
-            </Button>
-            <h1 className="text-lg font-medium text-gray-900">PBL Assistant</h1>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {browserSupportsSpeechRecognition && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleVoiceToggle}
-                className={cn(
-                  "hover:bg-gray-100 rounded-xl",
-                  isListening && "bg-red-50 text-red-600 hover:bg-red-100",
-                  hasPermission === false && "bg-orange-50 text-orange-600 hover:bg-orange-100"
-                )}
-                title={
-                  hasPermission === false 
-                    ? "Microphone access denied. Click to request permission."
-                    : isListening 
-                      ? "Stop listening"
-                      : "Start voice input"
-                }
-              >
-                {isListening ? (
-                  <MicOff className="h-4 w-4" />
-                ) : (
-                  <Mic className="h-4 w-4" />
-                )}
-              </Button>
-            )}
-          </div>
-        </div>
-        
-        {/* Welcome Content - Middle area */}
-        <div className="flex items-center justify-center px-4 bg-gray-50">
-          <div className="max-w-2xl text-center">
-            <h2 className="text-2xl font-medium text-gray-900 mb-3">How can I help you today?</h2>
-            <p className="text-gray-600">Start a conversation by typing a message below.</p>
-          </div>
+      <div className="h-full relative overflow-hidden">
+        {/* Enhanced background with light liquid glass effect */}
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 bg-gradient-to-b from-white via-slate-50/80 to-white"/>
+          <div className="absolute inset-0 bg-gradient-to-br from-pink-50/60 via-rose-25/30 to-purple-50/60"/>
+          <div className="absolute inset-0 backdrop-blur-xl"/>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-pink-100/60 rounded-full blur-2xl"/>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-rose-100/60 rounded-full blur-xl"/>
         </div>
 
-        {/* Input - Fixed at bottom */}
-        <div className="p-4 bg-white border-t border-gray-100">
-          <div className="max-w-4xl mx-auto">
-            <MessageInput
-              onSendMessage={handleSendMessage}
-              disabled={isGenerating}
-              isListening={isListening}
-              onVoiceToggle={handleVoiceToggle}
-              browserSupportsSpeechRecognition={browserSupportsSpeechRecognition}
-              transcript={transcript}
-            />
+        <div className="h-full grid grid-rows-[auto_1fr_auto] relative z-10">
+          {/* Enhanced header with liquid glass effect */}
+          <header className="relative border-b border-gray-200/60">
+            <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-white/80 to-white/70 backdrop-blur-xl"/>
+            <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-transparent to-transparent"/>
+            <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-gray-300/60 to-transparent"/>
+            <div className="relative flex items-center justify-between px-6 py-4">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onToggleSidebar}
+                  className="text-gray-700 hover:bg-white/60 hover:text-gray-900 rounded-xl transition-all duration-200"
+                >
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                {browserSupportsSpeechRecognition && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleVoiceToggle}
+                    className={cn(
+                      "text-gray-700 rounded-xl transition-all duration-200",
+                      isListening 
+                        ? "bg-gradient-to-r from-red-50/80 to-orange-50/60 text-red-600 hover:bg-red-100/80" 
+                        : hasPermission === false 
+                          ? "bg-gradient-to-r from-orange-50/80 to-yellow-50/60 text-orange-600 hover:bg-orange-100/80"
+                          : "hover:bg-white/60 hover:text-gray-900"
+                    )}
+                    title={
+                      hasPermission === false 
+                        ? "Microphone access denied. Click to request permission."
+                        : isListening 
+                          ? "Stop listening"
+                          : "Start voice input"
+                    }
+                  >
+                    {isListening ? (
+                      <MicOff className="h-4 w-4" />
+                    ) : (
+                      <Mic className="h-4 w-4" />
+                    )}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </header>
+          
+          {/* Enhanced welcome content with glass styling */}
+          <div className="flex items-center justify-center px-6 relative">
+            <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-white/30 pointer-events-none"/>
+            <div className="max-w-2xl text-center relative z-10">
+              <div className="relative mb-6">
+                <div className="absolute inset-0 bg-gradient-to-r from-pink-50/60 to-rose-50/40 rounded-2xl backdrop-blur-sm border border-pink-200/40 shadow-sm blur-sm"/>
+                <div className="relative bg-gradient-to-r from-white/60 via-white/80 to-white/60 rounded-2xl p-8 backdrop-blur-sm border border-gray-200/60">
+                  <h2 className="text-2xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-3">
+                    How can I help you today?
+                  </h2>
+                  <p className="text-gray-600">Start a conversation by typing a message below.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Enhanced input area with glass styling */}
+          <div className="relative border-t border-gray-200/60">
+            <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-white/80 to-white/70 backdrop-blur-xl"/>
+            <div className="absolute inset-0 bg-gradient-to-t from-white/60 via-transparent to-transparent"/>
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gray-300/60 to-transparent"/>
+            <div className="relative p-6">
+              <div className="max-w-4xl mx-auto">
+                <MessageInput
+                  onSendMessage={handleSendMessage}
+                  disabled={isGenerating}
+                  isListening={isListening}
+                  onVoiceToggle={handleVoiceToggle}
+                  browserSupportsSpeechRecognition={browserSupportsSpeechRecognition}
+                  transcript={transcript}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -313,87 +344,116 @@ export function ChatInterface({
     : activeConversation.messages;
 
   return (
-    <div className="h-full grid grid-rows-[auto_1fr_auto] bg-white">
-      {/* Header - Fixed at top */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-100">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onToggleSidebar}
-            className="hover:bg-gray-100 rounded-xl"
-          >
-            <Menu className="h-4 w-4" />
-          </Button>
-          <h1 className="text-lg font-medium text-gray-900 truncate">
-            {activeConversation.title}
-          </h1>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {speechSynthesisSupported && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleVoiceModeToggle}
-              className={cn(
-                "hover:bg-gray-100 rounded-xl",
-                voiceMode && "bg-blue-50 text-blue-600 hover:bg-blue-100"
-              )}
-            >
-              {isSpeaking ? (
-                <VolumeX className="h-4 w-4" />
-              ) : (
-                <Volume2 className="h-4 w-4" />
-              )}
-            </Button>
-          )}
-          
-          {browserSupportsSpeechRecognition && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleVoiceToggle}
-              className={cn(
-                "hover:bg-gray-100 rounded-xl",
-                isListening && "bg-red-50 text-red-600 hover:bg-red-100",
-                hasPermission === false && "bg-orange-50 text-orange-600 hover:bg-orange-100"
-              )}
-              title={
-                hasPermission === false 
-                  ? "Microphone access denied. Click to request permission."
-                  : isListening 
-                    ? "Stop listening"
-                    : "Start voice input"
-              }
-            >
-              {isListening ? (
-                <MicOff className="h-4 w-4" />
-              ) : (
-                <Mic className="h-4 w-4" />
-              )}
-            </Button>
-          )}
-        </div>
+    <div className="h-full relative overflow-hidden">
+      {/* Enhanced background with light liquid glass effect */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-white via-slate-50/80 to-white"/>
+        <div className="absolute inset-0 bg-gradient-to-br from-pink-50/60 via-rose-25/30 to-purple-50/60"/>
+        <div className="absolute inset-0 backdrop-blur-xl"/>
+        <div className="absolute top-0 right-0 w-32 h-32 bg-pink-100/60 rounded-full blur-2xl"/>
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-rose-100/60 rounded-full blur-xl"/>
       </div>
 
-      {/* Messages - Middle area with overflow */}
-      <div className="bg-gray-50 overflow-hidden">
-        <MessageList messages={allMessages} />
-        <div ref={messagesEndRef} />
-      </div>
+      <div className="h-full grid grid-rows-[auto_1fr_auto] relative z-10">
+        {/* Enhanced header with liquid glass effect */}
+        <header className="relative border-b border-gray-200/60">
+          <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-white/80 to-white/70 backdrop-blur-xl"/>
+          <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-transparent to-transparent"/>
+          <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-gray-300/60 to-transparent"/>
+          <div className="relative flex items-center justify-between px-6 py-4">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onToggleSidebar}
+                className="text-gray-700 hover:bg-white/60 hover:text-gray-900 rounded-xl transition-all duration-200"
+              >
+                <Menu className="h-4 w-4" />
+              </Button>
+              <h1 className="text-lg font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent truncate">
+                {activeConversation.title}
+              </h1>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {speechSynthesisSupported && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleVoiceModeToggle}
+                  className={cn(
+                    "text-gray-700 rounded-xl transition-all duration-200",
+                    voiceMode 
+                      ? "bg-gradient-to-r from-pink-50/80 to-rose-50/60 text-pink-600 hover:bg-pink-100/80"
+                      : "hover:bg-white/60 hover:text-gray-900"
+                  )}
+                >
+                  {isSpeaking ? (
+                    <VolumeX className="h-4 w-4" />
+                  ) : (
+                    <Volume2 className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
+              
+              {browserSupportsSpeechRecognition && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleVoiceToggle}
+                  className={cn(
+                    "text-gray-700 rounded-xl transition-all duration-200",
+                    isListening 
+                      ? "bg-gradient-to-r from-red-50/80 to-orange-50/60 text-red-600 hover:bg-red-100/80" 
+                      : hasPermission === false 
+                        ? "bg-gradient-to-r from-orange-50/80 to-yellow-50/60 text-orange-600 hover:bg-orange-100/80"
+                        : "hover:bg-white/60 hover:text-gray-900"
+                  )}
+                  title={
+                    hasPermission === false 
+                      ? "Microphone access denied. Click to request permission."
+                      : isListening 
+                        ? "Stop listening"
+                        : "Start voice input"
+                  }
+                >
+                  {isListening ? (
+                    <MicOff className="h-4 w-4" />
+                  ) : (
+                    <Mic className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+        </header>
 
-      {/* Input - Fixed at bottom */}
-      <div className="p-4 bg-white border-t border-gray-100">
-        <div className="max-w-4xl mx-auto">
-          <MessageInput
-            onSendMessage={handleSendMessage}
-            disabled={isGenerating}
-            isListening={isListening}
-            onVoiceToggle={handleVoiceToggle}
-            browserSupportsSpeechRecognition={browserSupportsSpeechRecognition}
-            transcript={transcript}
-          />
+        {/* Enhanced messages area with glass effect */}
+        <div className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-white/30 pointer-events-none"/>
+          <div className="relative z-10">
+            <MessageList messages={allMessages} />
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+
+        {/* Enhanced input area with glass styling */}
+        <div className="relative border-t border-gray-200/60">
+          <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-white/80 to-white/70 backdrop-blur-xl"/>
+          <div className="absolute inset-0 bg-gradient-to-t from-white/60 via-transparent to-transparent"/>
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gray-300/60 to-transparent"/>
+          <div className="relative p-6">
+            <div className="max-w-4xl mx-auto">
+              <MessageInput
+                onSendMessage={handleSendMessage}
+                disabled={isGenerating}
+                isListening={isListening}
+                onVoiceToggle={handleVoiceToggle}
+                browserSupportsSpeechRecognition={browserSupportsSpeechRecognition}
+                transcript={transcript}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>

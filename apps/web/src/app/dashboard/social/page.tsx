@@ -318,106 +318,238 @@ export default function SocialMonitorPage() {
   };
   
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex flex-col gap-6">
-        {selectedComments.length > 0 && (
-          <div className="flex justify-end gap-2">
-            <Button 
-              variant="outline" 
-              className="gap-2"
-              onClick={handleGenerateAllReplies}
-              disabled={isGeneratingReplies}
+    <div 
+      className="relative min-h-screen"
+      style={{
+        background: `
+          linear-gradient(135deg, 
+            rgba(219, 39, 119, 0.1) 0%,
+            rgba(251, 146, 60, 0.05) 50%,
+            rgba(59, 130, 246, 0.1) 100%
+          )
+        `,
+      }}
+    >
+      {/* Ambient background layers */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div
+          className="absolute inset-0 opacity-30"
+          style={{
+            background: `
+              radial-gradient(circle at 30% 30%, rgba(219, 39, 119, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 70% 70%, rgba(251, 146, 60, 0.15) 0%, transparent 50%)
+            `,
+          }}
+        />
+      </div>
+
+      <div className="relative z-10 container mx-auto p-6">
+        <div className="flex flex-col gap-6">
+          {selectedComments.length > 0 && (
+            <div 
+              className="flex justify-end gap-3 p-4 rounded-2xl border"
+              style={{
+                background: `
+                  linear-gradient(135deg, 
+                    rgba(255, 255, 255, 0.2) 0%,
+                    rgba(255, 255, 255, 0.1) 100%
+                  )
+                `,
+                backdropFilter: 'blur(15px) saturate(130%)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                boxShadow: `
+                  0 8px 24px rgba(0, 0, 0, 0.1),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.4)
+                `,
+              }}
             >
-              {isGeneratingReplies ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <MessageSquarePlus className="h-4 w-4" />
-              )}
-              Generate {selectedComments.length} Replies
-            </Button>
+              <Button 
+                variant="outline" 
+                className="gap-2 rounded-xl transition-all duration-300 hover:scale-[1.02]"
+                onClick={handleGenerateAllReplies}
+                disabled={isGeneratingReplies}
+                style={{
+                  background: `
+                    linear-gradient(135deg, 
+                      rgba(255, 255, 255, 0.3) 0%,
+                      rgba(255, 255, 255, 0.15) 100%
+                    )
+                  `,
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                }}
+              >
+                {isGeneratingReplies ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <MessageSquarePlus className="h-4 w-4" />
+                )}
+                Generate {selectedComments.length} Replies
+              </Button>
+              
+              <Button 
+                className="gap-2 rounded-xl transition-all duration-300 hover:scale-[1.02] bg-black hover:bg-gray-800"
+                onClick={handleSendAllReplies}
+                disabled={Object.keys(replySending).length > 0 || selectedComments.filter(id => customReplies[id]).length === 0}
+              >
+                <Send className="h-4 w-4" />
+                Send {selectedComments.filter(id => customReplies[id]).length} Replies
+              </Button>
+            </div>
+          )}
+          
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div 
+              className="p-6 rounded-2xl border transition-all duration-300 hover:scale-[1.02]"
+              style={{
+                background: `
+                  linear-gradient(135deg, 
+                    rgba(255, 255, 255, 0.25) 0%,
+                    rgba(255, 255, 255, 0.1) 100%
+                  )
+                `,
+                backdropFilter: 'blur(20px) saturate(150%)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                boxShadow: `
+                  0 8px 32px rgba(0, 0, 0, 0.1),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.4)
+                `,
+              }}
+            >
+              <div className="pb-3">
+                <h3 className="text-base font-medium text-gray-800">Total Comments</h3>
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-gray-900">{stats.total}</div>
+                <p className="text-sm text-gray-600 mt-1">
+                  {stats.unanswered} unanswered
+                </p>
+              </div>
+            </div>
             
-            <Button 
-              className="gap-2"
-              onClick={handleSendAllReplies}
-              disabled={Object.keys(replySending).length > 0 || selectedComments.filter(id => customReplies[id]).length === 0}
+            <div 
+              className="p-6 rounded-2xl border transition-all duration-300 hover:scale-[1.02]"
+              style={{
+                background: `
+                  linear-gradient(135deg, 
+                    rgba(59, 130, 246, 0.15) 0%,
+                    rgba(59, 130, 246, 0.05) 100%
+                  )
+                `,
+                backdropFilter: 'blur(20px) saturate(150%)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                boxShadow: `
+                  0 8px 32px rgba(59, 130, 246, 0.1),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.4)
+                `,
+              }}
             >
-              <Send className="h-4 w-4" />
-              Send {selectedComments.filter(id => customReplies[id]).length} Replies
-            </Button>
+              <div className="pb-3 flex flex-row items-center justify-between space-y-0">
+                <h3 className="text-base font-medium text-blue-800">Facebook</h3>
+                <Facebook className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-blue-900">{stats.facebook}</div>
+              </div>
+            </div>
+            
+            <div 
+              className="p-6 rounded-2xl border transition-all duration-300 hover:scale-[1.02]"
+              style={{
+                background: `
+                  linear-gradient(135deg, 
+                    rgba(236, 72, 153, 0.15) 0%,
+                    rgba(236, 72, 153, 0.05) 100%
+                  )
+                `,
+                backdropFilter: 'blur(20px) saturate(150%)',
+                border: '1px solid rgba(236, 72, 153, 0.3)',
+                boxShadow: `
+                  0 8px 32px rgba(236, 72, 153, 0.1),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.4)
+                `,
+              }}
+            >
+              <div className="pb-3 flex flex-row items-center justify-between space-y-0">
+                <h3 className="text-base font-medium text-pink-800">Instagram</h3>
+                <Instagram className="h-5 w-5 text-pink-600" />
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-pink-900">{stats.instagram}</div>
+              </div>
+            </div>
+            
+            <div 
+              className="p-6 rounded-2xl border transition-all duration-300 hover:scale-[1.02]"
+              style={{
+                background: `
+                  linear-gradient(135deg, 
+                    rgba(239, 68, 68, 0.15) 0%,
+                    rgba(239, 68, 68, 0.05) 100%
+                  )
+                `,
+                backdropFilter: 'blur(20px) saturate(150%)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                boxShadow: `
+                  0 8px 32px rgba(239, 68, 68, 0.1),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.4)
+                `,
+              }}
+            >
+              <div className="pb-3 flex flex-row items-center justify-between space-y-0">
+                <h3 className="text-base font-medium text-red-800">YouTube</h3>
+                <Youtube className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-red-900">{stats.youtube}</div>
+              </div>
+            </div>
           </div>
-        )}
-        
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total Comments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {stats.unanswered} unanswered
-              </p>
-            </CardContent>
-          </Card>
           
-          <Card>
-            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium">Facebook</CardTitle>
-              <Facebook className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.facebook}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium">Instagram</CardTitle>
-              <Instagram className="h-4 w-4 text-pink-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.instagram}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium">YouTube</CardTitle>
-              <Youtube className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.youtube}</div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* Comment Stream */}
-        <div className="h-[600px]">
-          <SocialCommentStream
-            comments={filteredComments}
-            isLoading={isLoading}
-            selectedComments={selectedComments}
-            selectedComment={selectedComment}
-            onSelectComment={handleSelectComment}
-            onSelectCommentToggle={handleSelectCommentToggle}
-            onSelectAllComments={handleSelectAllComments}
-            onFilterChange={(platform) => setFilter(platform as PlatformType)}
-            currentFilter={filter}
-            onShowOnlySelected={() => setShowOnlySelected(!showOnlySelected)}
-            showOnlySelected={showOnlySelected}
-            customReplies={customReplies}
-            editingReply={editingReply}
-            onStartEditReply={handleStartEditReply}
-            onCancelEditReply={handleCancelEditReply}
-            onUpdateReply={handleUpdateReply}
-            onDeleteReply={handleDeleteReply}
-            onCopyReply={handleCopyReply}
-            onGenerateReply={handleGenerateReply}
-            onSendReply={handleSendReply}
-            isGeneratingReplies={isGeneratingReplies}
-            replySending={replySending}
-          />
+          {/* Comment Stream */}
+          <div 
+            className="h-[600px] rounded-2xl border overflow-hidden"
+            style={{
+              background: `
+                linear-gradient(135deg, 
+                  rgba(255, 255, 255, 0.25) 0%,
+                  rgba(255, 255, 255, 0.1) 100%
+                )
+              `,
+              backdropFilter: 'blur(20px) saturate(150%)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: `
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4)
+              `,
+            }}
+          >
+            <SocialCommentStream
+              comments={filteredComments}
+              isLoading={isLoading}
+              selectedComments={selectedComments}
+              selectedComment={selectedComment}
+              onSelectComment={handleSelectComment}
+              onSelectCommentToggle={handleSelectCommentToggle}
+              onSelectAllComments={handleSelectAllComments}
+              onFilterChange={(platform) => setFilter(platform as PlatformType)}
+              currentFilter={filter}
+              onShowOnlySelected={() => setShowOnlySelected(!showOnlySelected)}
+              showOnlySelected={showOnlySelected}
+              customReplies={customReplies}
+              editingReply={editingReply}
+              onStartEditReply={handleStartEditReply}
+              onCancelEditReply={handleCancelEditReply}
+              onUpdateReply={handleUpdateReply}
+              onDeleteReply={handleDeleteReply}
+              onCopyReply={handleCopyReply}
+              onGenerateReply={handleGenerateReply}
+              onSendReply={handleSendReply}
+              isGeneratingReplies={isGeneratingReplies}
+              replySending={replySending}
+            />
+          </div>
         </div>
       </div>
     </div>

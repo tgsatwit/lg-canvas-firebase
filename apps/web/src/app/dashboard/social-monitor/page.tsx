@@ -84,8 +84,48 @@ export default function SocialMonitorPage() {
 
   return (
     <DashboardShell>
-      <div className="relative min-h-screen">
-        <div className="relative px-4 py-6 md:px-6 md:py-8">
+      <div 
+        className="relative min-h-screen"
+        style={{
+          background: `
+            linear-gradient(135deg, 
+              rgba(251, 146, 60, 0.1) 0%,
+              rgba(59, 130, 246, 0.05) 50%,
+              rgba(245, 101, 101, 0.1) 100%
+            )
+          `,
+        }}
+      >
+        {/* Ambient background layers */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div
+            className="absolute inset-0 opacity-30"
+            style={{
+              background: `
+                radial-gradient(circle at 40% 20%, rgba(251, 146, 60, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 60% 80%, rgba(59, 130, 246, 0.15) 0%, transparent 50%)
+              `,
+            }}
+          />
+        </div>
+
+        <div 
+          className="relative z-10 px-6 py-8 md:px-8 md:py-10 mt-6 mx-6 rounded-2xl border"
+          style={{
+            background: `
+              linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.25) 0%,
+                rgba(255, 255, 255, 0.1) 100%
+              )
+            `,
+            backdropFilter: 'blur(20px) saturate(150%)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            boxShadow: `
+              0 8px 32px rgba(0, 0, 0, 0.1),
+              inset 0 1px 0 rgba(255, 255, 255, 0.4)
+            `,
+          }}
+        >
           <SocialTable 
             onRefresh={handleRefresh}
             onSelectComment={handleSelectComment}
