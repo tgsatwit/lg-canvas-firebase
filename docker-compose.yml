@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - .env
+    depends_on:
+      - firebase-emulator
+    volumes:
+      - ./apps/web/.next:/app/apps/web/.next
+    restart: unless-stopped
+
+  firebase-emulator:
+    image: google/firebase-tools:latest
+    ports:
+      - "8080:8080"  # Firebase UI
+      - "8088:8088"  # Firestore
+    volumes:
+      - ./firebase.json:/firebase.json
+      - ./firestore.rules:/firestore.rules
+      - ./firestore.indexes.json:/firestore.indexes.json
+    command: firebase emulators:start --project demo-project
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/tmp/service-account.json
+
+  # Optional: Redis for caching
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+networks:
+  default:
+    name: pbl-canvas-network 

@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[4965],{94965:(e,t,a)=>{a.r(t),a.d(t,{default:()=>k.A,defaultFootnoteBackContent:()=>l.yJ,defaultFootnoteBackLabel:()=>l.hk,defaultHandlers:()=>u.Y});var l=a(71219),u=a(88132),k=a(1397)}}]);

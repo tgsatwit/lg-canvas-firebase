@@ -148,138 +148,300 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 mt-1">Welcome back! Here's what needs your attention today.</p>
-        </div>
-        
-        {/* Search Bar */}
-        <form onSubmit={handleSearch} className="flex-1 max-w-md">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Ask a question..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 h-10 bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
-        </form>
+    <div 
+      className="min-h-screen relative"
+      style={{
+        background: `
+          linear-gradient(135deg, 
+            rgba(236, 72, 153, 0.1) 0%,
+            rgba(147, 51, 234, 0.05) 50%,
+            rgba(219, 39, 119, 0.1) 100%
+          )
+        `,
+      }}
+    >
+      {/* Ambient background layers */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div
+          className="absolute inset-0 opacity-30"
+          style={{
+            background: `
+              radial-gradient(circle at 20% 30%, rgba(236, 72, 153, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 80% 70%, rgba(147, 51, 234, 0.15) 0%, transparent 50%)
+            `,
+          }}
+        />
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Open Tasks */}
-        <Card className="border-gray-200 hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push("/dashboard/tasks")}>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <CheckCircle2 className="h-5 w-5 text-blue-600" />
+      <div className="relative z-10 space-y-6 p-6">
+        {/* Header */}
+        <div 
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 rounded-2xl border"
+          style={{
+            background: `
+              linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.25) 0%,
+                rgba(255, 255, 255, 0.1) 100%
+              )
+            `,
+            backdropFilter: 'blur(20px) saturate(180%)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            boxShadow: `
+              0 8px 32px rgba(0, 0, 0, 0.1),
+              inset 0 1px 0 rgba(255, 255, 255, 0.4)
+            `,
+          }}
+        >
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-gray-600 mt-1">Welcome back! Here's what needs your attention today.</p>
+          </div>
+          
+          {/* Search Bar */}
+          <form onSubmit={handleSearch} className="flex-1 max-w-md">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Ask a question..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-4 h-12 border-0 rounded-xl"
+                style={{
+                  background: `
+                    linear-gradient(135deg, 
+                      rgba(255, 255, 255, 0.3) 0%,
+                      rgba(255, 255, 255, 0.15) 100%
+                    )
+                  `,
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+                }}
+              />
+            </div>
+          </form>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Open Tasks */}
+          <div 
+            className="p-6 rounded-2xl border cursor-pointer transition-all duration-300 hover:scale-[1.02]" 
+            onClick={() => router.push("/dashboard/tasks")}
+            style={{
+              background: `
+                linear-gradient(135deg, 
+                  rgba(255, 255, 255, 0.25) 0%,
+                  rgba(255, 255, 255, 0.1) 100%
+                )
+              `,
+              backdropFilter: 'blur(20px) saturate(150%)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: `
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4)
+              `,
+            }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div 
+                  className="p-3 rounded-xl"
+                  style={{
+                    background: `
+                      linear-gradient(135deg, 
+                        rgba(59, 130, 246, 0.2) 0%,
+                        rgba(59, 130, 246, 0.1) 100%
+                      )
+                    `,
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                  }}
+                >
+                  <CheckCircle2 className="h-6 w-6 text-blue-600" />
                 </div>
-                <CardTitle className="text-base font-medium text-gray-700">Open Tasks</CardTitle>
+                <h3 className="text-base font-medium text-gray-800">Open Tasks</h3>
               </div>
               <ChevronRight className="h-4 w-4 text-gray-400" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{openTasks.length}</div>
-            <p className="text-xs text-gray-500 mt-1">
+            <div className="text-3xl font-bold text-gray-900 mb-1">{openTasks.length}</div>
+            <p className="text-sm text-gray-600">
               {openTasks.filter(t => t.priority === "high").length} high priority
             </p>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Unactioned Comments */}
-        <Card 
-          className={cn(
-            "border-gray-200 hover:shadow-md transition-shadow cursor-pointer",
-            totalUnansweredComments > 0 && "border-amber-200 bg-amber-50/50"
-          )} 
-          onClick={() => router.push("/dashboard/social-monitor")}
-        >
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className={cn(
-                  "p-2 rounded-lg",
-                  totalUnansweredComments > 0 ? "bg-amber-100" : "bg-gray-50"
-                )}>
+          {/* Unactioned Comments */}
+          <div 
+            className={cn(
+              "p-6 rounded-2xl border cursor-pointer transition-all duration-300 hover:scale-[1.02]",
+              totalUnansweredComments > 0 && "ring-2 ring-amber-200"
+            )} 
+            onClick={() => router.push("/dashboard/social-monitor")}
+            style={{
+              background: `
+                linear-gradient(135deg, 
+                  rgba(255, 255, 255, 0.25) 0%,
+                  rgba(255, 255, 255, 0.1) 100%
+                )
+              `,
+              backdropFilter: 'blur(20px) saturate(150%)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: `
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4)
+              `,
+            }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div 
+                  className="p-3 rounded-xl"
+                  style={{
+                    background: `
+                      linear-gradient(135deg, 
+                        ${totalUnansweredComments > 0 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(107, 114, 128, 0.2)'} 0%,
+                        ${totalUnansweredComments > 0 ? 'rgba(245, 158, 11, 0.1)' : 'rgba(107, 114, 128, 0.1)'} 100%
+                      )
+                    `,
+                    backdropFilter: 'blur(8px)',
+                    border: `1px solid ${totalUnansweredComments > 0 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(107, 114, 128, 0.2)'}`,
+                  }}
+                >
                   <MessageSquare className={cn(
-                    "h-5 w-5",
+                    "h-6 w-6",
                     totalUnansweredComments > 0 ? "text-amber-600" : "text-gray-600"
                   )} />
                 </div>
-                <CardTitle className="text-base font-medium text-gray-700">Unactioned Comments</CardTitle>
+                <h3 className="text-base font-medium text-gray-800">Unactioned Comments</h3>
               </div>
               <ChevronRight className="h-4 w-4 text-gray-400" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{totalUnansweredComments}</div>
-            <p className="text-xs text-gray-500 mt-1">Awaiting response</p>
-          </CardContent>
-        </Card>
+            <div className="text-3xl font-bold text-gray-900 mb-1">{totalUnansweredComments}</div>
+            <p className="text-sm text-gray-600">Awaiting response</p>
+          </div>
 
-        {/* Video Library */}
-        <Card className="border-gray-200 hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push("/dashboard/videos")}>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-purple-50 rounded-lg">
-                  <Video className="h-5 w-5 text-purple-600" />
+          {/* Video Library */}
+          <div 
+            className="p-6 rounded-2xl border cursor-pointer transition-all duration-300 hover:scale-[1.02]" 
+            onClick={() => router.push("/dashboard/videos")}
+            style={{
+              background: `
+                linear-gradient(135deg, 
+                  rgba(255, 255, 255, 0.25) 0%,
+                  rgba(255, 255, 255, 0.1) 100%
+                )
+              `,
+              backdropFilter: 'blur(20px) saturate(150%)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: `
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4)
+              `,
+            }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div 
+                  className="p-3 rounded-xl"
+                  style={{
+                    background: `
+                      linear-gradient(135deg, 
+                        rgba(147, 51, 234, 0.2) 0%,
+                        rgba(147, 51, 234, 0.1) 100%
+                      )
+                    `,
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(147, 51, 234, 0.2)',
+                  }}
+                >
+                  <Video className="h-6 w-6 text-purple-600" />
                 </div>
-                <CardTitle className="text-base font-medium text-gray-700">Video Library</CardTitle>
+                <h3 className="text-base font-medium text-gray-800">Video Library</h3>
               </div>
               <ChevronRight className="h-4 w-4 text-gray-400" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{videos.length}</div>
-            <div className="flex gap-3 mt-1">
-              <span className="text-xs text-gray-500">{videoStatusBreakdown.published} published</span>
-              <span className="text-xs text-gray-500">{videoStatusBreakdown.draft} drafts</span>
+            <div className="text-3xl font-bold text-gray-900 mb-1">{videos.length}</div>
+            <div className="flex gap-3">
+              <span className="text-sm text-gray-600">{videoStatusBreakdown.published} published</span>
+              <span className="text-sm text-gray-600">{videoStatusBreakdown.draft} drafts</span>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Canvas */}
-        <Card className="border-gray-200 hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push("/dashboard/canvas")}>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-emerald-50 rounded-lg">
-                  <Grid3x3 className="h-5 w-5 text-emerald-600" />
+          {/* Canvas */}
+          <div 
+            className="p-6 rounded-2xl border cursor-pointer transition-all duration-300 hover:scale-[1.02]" 
+            onClick={() => router.push("/dashboard/canvas")}
+            style={{
+              background: `
+                linear-gradient(135deg, 
+                  rgba(255, 255, 255, 0.25) 0%,
+                  rgba(255, 255, 255, 0.1) 100%
+                )
+              `,
+              backdropFilter: 'blur(20px) saturate(150%)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: `
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4)
+              `,
+            }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div 
+                  className="p-3 rounded-xl"
+                  style={{
+                    background: `
+                      linear-gradient(135deg, 
+                        rgba(16, 185, 129, 0.2) 0%,
+                        rgba(16, 185, 129, 0.1) 100%
+                      )
+                    `,
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                  }}
+                >
+                  <Grid3x3 className="h-6 w-6 text-emerald-600" />
                 </div>
-                <CardTitle className="text-base font-medium text-gray-700">Canvas</CardTitle>
+                <h3 className="text-base font-medium text-gray-800">Canvas</h3>
               </div>
               <ChevronRight className="h-4 w-4 text-gray-400" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm text-gray-600">Create & manage projects</div>
-          </CardContent>
-        </Card>
-      </div>
+            <div className="text-sm text-gray-700">Create & manage projects</div>
+          </div>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Calendar/Schedule Section */}
-        <Card className="lg:col-span-2 border-gray-200">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-gray-600" />
-                <CardTitle className="text-lg font-semibold text-gray-900">Schedule & Calendar</CardTitle>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Calendar/Schedule Section */}
+          <div 
+            className="lg:col-span-2 p-6 rounded-2xl border"
+            style={{
+              background: `
+                linear-gradient(135deg, 
+                  rgba(255, 255, 255, 0.25) 0%,
+                  rgba(255, 255, 255, 0.1) 100%
+                )
+              `,
+              backdropFilter: 'blur(20px) saturate(150%)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: `
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4)
+              `,
+            }}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Calendar className="h-6 w-6 text-gray-700" />
+                <h2 className="text-xl font-semibold text-gray-900">Schedule & Calendar</h2>
               </div>
               <div className="flex items-center gap-2">
                 <Button
                   variant={calendarView === "schedule" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setCalendarView("schedule")}
+                  className="rounded-xl"
                 >
                   Schedule
                 </Button>
@@ -287,22 +449,22 @@ export default function DashboardPage() {
                   variant={calendarView === "calendar" ? "default" : "outline"}
                   size="sm"
                   onClick={() => setCalendarView("calendar")}
+                  className="rounded-xl"
                 >
                   Calendar
                 </Button>
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
+            
             {calendarView === "schedule" ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between mb-4">
-                  <p className="text-sm text-gray-500">Next 7 days</p>
+                  <p className="text-sm text-gray-600">Next 7 days</p>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => handleAddTask()}
-                    className="text-xs"
+                    className="text-xs rounded-xl"
                   >
                     <Plus className="h-3 w-3 mr-1" />
                     Add Task
@@ -324,27 +486,37 @@ export default function DashboardPage() {
                     <div 
                       key={dateStr} 
                       className={cn(
-                        "border rounded-lg p-3 transition-colors",
-                        isToday ? "border-blue-200 bg-blue-50/50" : "border-gray-100",
+                        "border rounded-xl p-4 transition-all duration-300",
+                        isToday ? "ring-2 ring-blue-200" : "",
                         !hasItems && "opacity-60"
                       )}
+                      style={{
+                        background: `
+                          linear-gradient(135deg, 
+                            ${isToday ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255, 255, 255, 0.1)'} 0%,
+                            ${isToday ? 'rgba(59, 130, 246, 0.05)' : 'rgba(255, 255, 255, 0.05)'} 100%
+                          )
+                        `,
+                        backdropFilter: 'blur(10px)',
+                        border: `1px solid ${isToday ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 255, 255, 0.2)'}`,
+                      }}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-700">
+                          <span className="text-sm font-medium text-gray-800">
                             {date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                           </span>
-                          {isToday && <Badge variant="secondary" className="text-xs">Today</Badge>}
+                          {isToday && <Badge variant="secondary" className="text-xs rounded-lg">Today</Badge>}
                         </div>
                         {hasItems && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-gray-600">
                             {dayTasks.length + dayVideos.length} items
                           </span>
                         )}
                       </div>
                       
                       {hasItems ? (
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                           {dayTasks.slice(0, 2).map(task => (
                             <div key={task.id} className="flex items-center gap-2">
                               <div className={cn("w-2 h-2 rounded-full", {
@@ -352,23 +524,23 @@ export default function DashboardPage() {
                                 "bg-amber-500": task.priority === "medium",
                                 "bg-emerald-500": task.priority === "low"
                               })} />
-                              <span className="text-sm text-gray-600 truncate">{task.title}</span>
+                              <span className="text-sm text-gray-700 truncate">{task.title}</span>
                             </div>
                           ))}
                           {dayVideos.slice(0, 2).map(video => (
                             <div key={video.id} className="flex items-center gap-2">
                               <Video className="h-3 w-3 text-purple-500" />
-                              <span className="text-sm text-gray-600 truncate">{video.title}</span>
+                              <span className="text-sm text-gray-700 truncate">{video.title}</span>
                             </div>
                           ))}
                           {(dayTasks.length + dayVideos.length) > 4 && (
-                            <p className="text-xs text-gray-400 pl-4">
+                            <p className="text-xs text-gray-500 pl-4">
                               +{(dayTasks.length + dayVideos.length) - 4} more items
                             </p>
                           )}
                         </div>
                       ) : (
-                        <p className="text-sm text-gray-400">No scheduled items</p>
+                        <p className="text-sm text-gray-500">No scheduled items</p>
                       )}
                     </div>
                   );
@@ -383,23 +555,37 @@ export default function DashboardPage() {
                 />
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Open Tasks Section */}
-        <Card className="border-gray-200">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-gray-600" />
-                <CardTitle className="text-lg font-semibold text-gray-900">Open Tasks</CardTitle>
+          {/* Open Tasks Section */}
+          <div 
+            className="p-6 rounded-2xl border"
+            style={{
+              background: `
+                linear-gradient(135deg, 
+                  rgba(255, 255, 255, 0.25) 0%,
+                  rgba(255, 255, 255, 0.1) 100%
+                )
+              `,
+              backdropFilter: 'blur(20px) saturate(150%)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: `
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4)
+              `,
+            }}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Clock className="h-6 w-6 text-gray-700" />
+                <h2 className="text-xl font-semibold text-gray-900">Open Tasks</h2>
               </div>
               <div className="flex items-center gap-2">
                 <Button 
                   variant="ghost" 
                   size="sm"
                   onClick={() => handleAddTask()}
-                  className="text-gray-600"
+                  className="text-gray-700 hover:bg-white/20 rounded-xl"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -407,34 +593,43 @@ export default function DashboardPage() {
                   variant="ghost" 
                   size="sm"
                   onClick={() => router.push("/dashboard/tasks")}
-                  className="text-gray-600"
+                  className="text-gray-700 hover:bg-white/20 rounded-xl"
                 >
                   View all
                   <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
+            
             <div className="space-y-3">
               {openTasks.slice(0, 5).map(task => (
                 <div 
                   key={task.id} 
-                  className="p-3 border border-gray-100 rounded-lg hover:border-gray-200 transition-colors cursor-pointer"
+                  className="p-4 border rounded-xl hover:scale-[1.01] transition-all duration-300 cursor-pointer"
                   onClick={() => router.push("/dashboard/tasks")}
+                  style={{
+                    background: `
+                      linear-gradient(135deg, 
+                        rgba(255, 255, 255, 0.2) 0%,
+                        rgba(255, 255, 255, 0.1) 100%
+                      )
+                    `,
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                  }}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-medium text-gray-900 truncate">{task.title}</h4>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2 mt-2">
                         <Badge 
                           variant="outline" 
-                          className={cn("text-xs border", priorityColors[task.priority])}
+                          className={cn("text-xs border rounded-lg", priorityColors[task.priority])}
                         >
                           {task.priority}
                         </Badge>
                         {task.dueDate && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-gray-600">
                             Due {new Date(task.dueDate).toLocaleDateString()}
                           </span>
                         )}
@@ -451,20 +646,20 @@ export default function DashboardPage() {
               ))}
               
               {openTasks.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                <div className="text-center py-8 text-gray-600">
+                  <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                   <p className="text-sm">No open tasks</p>
                 </div>
               )}
               
               {openTasks.length > 5 && (
-                <p className="text-xs text-center text-gray-500 pt-2">
+                <p className="text-xs text-center text-gray-600 pt-2">
                   +{openTasks.length - 5} more tasks
                 </p>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
