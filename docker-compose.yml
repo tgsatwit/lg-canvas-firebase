@@ -9,24 +9,21 @@ services:
       - NODE_ENV=production
     env_file:
       - .env
-    depends_on:
-      - firebase-emulator
     volumes:
       - ./apps/web/.next:/app/apps/web/.next
     restart: unless-stopped
 
-  firebase-emulator:
-    image: google/firebase-tools:latest
+  agent:
+    build: .
+    command: npx @langchain/langgraph-cli dev --port 54367 --config ../../langgraph.json
+    working_dir: /app/apps/agents
     ports:
-      - "8080:8080"  # Firebase UI
-      - "8088:8088"  # Firestore
-    volumes:
-      - ./firebase.json:/firebase.json
-      - ./firestore.rules:/firestore.rules
-      - ./firestore.indexes.json:/firestore.indexes.json
-    command: firebase emulators:start --project demo-project
+      - "54367:54367"
     environment:
-      - GOOGLE_APPLICATION_CREDENTIALS=/tmp/service-account.json
+      - NODE_ENV=production
+    env_file:
+      - .env
+    restart: unless-stopped
 
   # Optional: Redis for caching
   redis:

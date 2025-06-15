@@ -180,4 +180,31 @@ langgraph dev --port 54367
 2. **Environment Variables**: Keep secure backup of all keys
 3. **Code**: Ensure all code is version controlled
 
-For support, check the project documentation or create an issue in the repository. 
+For support, check the project documentation or create an issue in the repository.
+
+# Containerized Deployment (Docker Compose)
+
+The application is now fully containerized. Both the web frontend and the LangGraph agent run as separate services using Docker Compose.
+
+## Starting the Application
+
+1. Ensure Docker and Docker Compose are installed.
+2. Copy `.env.example` to `.env` and configure your environment variables.
+3. Run:
+
+```sh
+docker-compose up --build
+```
+
+- The web app will be available at http://localhost:3000
+- The agent will be available at http://localhost:54367
+
+## Services
+
+- **web**: Next.js frontend (port 3000)
+- **agent**: LangGraph agent (port 54367)
+- **redis**: (optional) for caching (port 6379)
+
+## Notes
+- The `functions/` folder and Firebase Functions are no longer used.
+- The Firebase Emulator is not required for local development. 
