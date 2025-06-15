@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Page() {
   const router = useRouter();
+  const { signOut } = useAuth();
   const [errorOccurred, setErrorOccurred] = useState(false);
   const [message, setMessage] = useState("Signing out..."); // Add message state
 
@@ -14,11 +15,8 @@ export default function Page() {
       try {
         setMessage("Signing out...");
         
-        // Use NextAuth signOut function
-        await signOut({ 
-          redirect: false,
-          callbackUrl: "/auth/login"
-        });
+        // Use Firebase signOut function
+        await signOut();
         
         setMessage("Redirecting...");
         router.push("/auth/login");

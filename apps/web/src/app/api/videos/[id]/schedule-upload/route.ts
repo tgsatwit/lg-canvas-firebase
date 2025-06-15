@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/auth';
+import { getServerUser } from '@/lib/auth';
 import { createScopedLogger } from "@/utils/logger";
 
 const logger = createScopedLogger("api/videos/schedule-upload");
@@ -8,9 +7,9 @@ const logger = createScopedLogger("api/videos/schedule-upload");
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
-    const session = await getServerSession(authOptions);
+    const user = await getServerUser();
     
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

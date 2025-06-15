@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/auth';
+import { getServerUser } from '@/lib/auth';
 import { createScopedLogger } from "@/utils/logger";
 
 const logger = createScopedLogger("api/social/permissions");
@@ -27,17 +26,17 @@ const GetPermissionsSchema = z.object({
 export async function GET(request: Request) {
   try {
     // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const user = await getServerUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
     // Check if user is an admin (only admins can view all permissions)
-    const isAdmin = await checkIfUserIsAdmin(session.user.id);
+    const isAdmin = await checkIfUserIsAdmin(user.uid);
     if (!isAdmin) {
       // Non-admin users can only view their own permissions
       return NextResponse.json({ 
-        permissions: await getUserPermissions(session.user.id) 
+        permissions: await getUserPermissions(user.uid) 
       });
     }
 
@@ -85,13 +84,13 @@ export async function GET(request: Request) {
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const user = await getServerUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
     // Verify admin status
-    const isAdmin = await checkIfUserIsAdmin(session.user.id);
+    const isAdmin = await checkIfUserIsAdmin(user.uid);
     if (!isAdmin) {
       return NextResponse.json(
         { error: 'Only administrators can set permissions' },
@@ -124,7 +123,7 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info('Permissions updated successfully', {
-      adminId: session.user.id,
+      adminId: user.uid,
       userId,
       platformId
     });

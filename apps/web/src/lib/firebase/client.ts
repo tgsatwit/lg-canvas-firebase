@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getAuth, connectAuthEmulator, onAuthStateChanged, User } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getStorage, connectStorageEmulator } from "firebase/storage";
 
@@ -14,7 +14,7 @@ const firebaseConfig = {
     storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-    // measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID // Optional: add if using Analytics
+    measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID // Optional: add if using Analytics
 };
 
 /**
@@ -31,6 +31,10 @@ const auth = getAuth(firebaseApp);
 const firestore = getFirestore(firebaseApp);
 const storage = getStorage(firebaseApp);
 
+// Database configuration - this should match your FIREBASE_VIDEOS_DB environment variable
+export const CHAT_DATABASE_ID = 'pbl-backend';
+const chatDb = getFirestore(firebaseApp, CHAT_DATABASE_ID);
+
 /**
  * Connect to emulators in development mode if configured
  */
@@ -43,6 +47,7 @@ if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATORS === 'true' && process.env.NOD
     
     // Connect to Firestore emulator
     connectFirestoreEmulator(firestore, emulatorHost, 8080);
+    connectFirestoreEmulator(chatDb, emulatorHost, 8080);
     
     // Connect to Storage emulator
     connectStorageEmulator(storage, emulatorHost, 9199);
@@ -50,5 +55,27 @@ if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATORS === 'true' && process.env.NOD
     console.log('Firebase emulators connected');
 }
 
+// Helper function to ensure Firebase is initialized
+export const ensureFirebaseInitialized = () => {
+  if (typeof window === 'undefined') {
+    throw new Error('Firebase client can only be used in browser environment');
+  }
+  if (!chatDb) {
+    throw new Error('Firebase chatDb is not initialized');
+  }
+  return { chatDb, auth };
+};
+
+// Function to debug auth state
+export const debugAuthState = () => {
+  if (typeof window === 'undefined') return;
+  
+  console.log('Firebase Auth State:', {
+    currentUser: auth?.currentUser?.uid,
+    email: auth?.currentUser?.email,
+    isAuthenticated: !!auth?.currentUser
+  });
+};
+
 // Export the Firebase services
-export { firebaseApp, auth, firestore, storage }; 
+export { firebaseApp, auth, firestore, storage, chatDb }; 

@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Inter } from "next/font/google";
-import { SessionProvider } from "@/components/providers/SessionProvider";
-import { FirebaseAuthProvider } from "@/components/providers/FirebaseAuthProvider";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -21,11 +20,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-screen" suppressHydrationWarning>
       <body className={`min-h-full ${inter.className}`}>
-        <SessionProvider>
-          <FirebaseAuthProvider>
-            {children}
-          </FirebaseAuthProvider>
-        </SessionProvider>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

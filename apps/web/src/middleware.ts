@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
 
 // Define paths that don't require authentication
-const PUBLIC_PATHS = ["/auth/login", "/auth/signout", "/api/auth"];
+const PUBLIC_PATHS = ["/auth/login", "/auth/signout"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -12,19 +11,19 @@ export async function middleware(request: NextRequest) {
     PUBLIC_PATHS.some(path => pathname.startsWith(path)) || 
     pathname.startsWith("/_next") || 
     pathname.match(/\.(svg|png|jpg|jpeg|gif|webp)$/) ||
-    pathname.startsWith("/favicon.ico")
+    pathname.startsWith("/favicon.ico") ||
+    pathname.startsWith("/api/auth") // Allow Firebase auth API routes
   ) {
     return NextResponse.next();
   }
 
-  // Check session with NextAuth
-  const token = await getToken({ 
-    req: request,
-    secret: process.env.AUTH_SECRET || "tUXL/gKjz3Q67p4YA8kjlhsDUeXeYSrAcYLTbDUsEpo="
-  });
+  // Check for Firebase session cookie
+  const sessionCookie = request.cookies.get('__session');
 
   // If session exists, continue, otherwise redirect to login
-  if (token) {
+  if (sessionCookie?.value) {
+    // Note: We're not verifying the session cookie here for performance
+    // The verification happens in the actual API routes/pages that need it
     return NextResponse.next();
   }
   

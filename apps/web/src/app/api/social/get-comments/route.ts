@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createScopedLogger } from '@/utils/logger';
-import { getSession } from '@/lib/auth';
+import { getServerUser } from '@/lib/auth';
 import { getSocialComments, SocialPlatform } from '@/lib/firebase/social';
 
 const logger = createScopedLogger('api/social/get-comments');
@@ -27,9 +27,9 @@ export async function GET(req: NextRequest) {
     
     logger.info('Fetching social comments', params);
     
-    const session = await getSession();
+    const user = await getServerUser();
     
-    if (!session?.user?.id) {
+    if (!user?.uid) {
       logger.warn('Unauthorized request to fetch social comments');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       );
     }
     
-    const userId = session.user.id;
+    const userId = user.uid;
     
     const comments = await getSocialComments(userId, {
       platform: params.platform as SocialPlatform | undefined,

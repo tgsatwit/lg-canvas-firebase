@@ -6,12 +6,13 @@ WORKDIR /app
 
 # Copy package files
 COPY package.json yarn.lock ./
+COPY turbo.json ./
 COPY apps/web/package.json ./apps/web/
 COPY apps/agents/package.json ./apps/agents/
 COPY packages/shared/package.json ./packages/shared/
 
-# Install dependencies
-RUN yarn install --frozen-lockfile
+# Install dependencies without running build scripts
+RUN yarn install --frozen-lockfile --ignore-scripts
 
 # Copy source code
 COPY . .
@@ -42,7 +43,7 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/yarn.lock ./yarn.lock
 
 # Install only production dependencies
-RUN yarn install --frozen-lockfile --production && yarn cache clean
+RUN yarn install --frozen-lockfile --production --ignore-scripts && yarn cache clean
 
 # Change ownership
 RUN chown -R nextjs:nodejs /app

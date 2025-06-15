@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createScopedLogger } from '@/utils/logger';
-import { getSession } from '@/lib/auth';
+import { getServerUser } from '@/lib/auth';
 import { updateCommentStatus as updateFirebaseCommentStatus, SocialPlatform } from '@/lib/firebase/social';
 
 const logger = createScopedLogger('api/social/mark-answered');
@@ -19,14 +19,14 @@ export async function POST(req: NextRequest) {
     
     logger.info('Marking comment as answered', { commentId, platform, answered });
     
-    const session = await getSession();
+    const user = await getServerUser();
     
-    if (!session?.user?.id) {
+    if (!user?.uid) {
       logger.warn('Unauthorized request to mark comment as answered', { commentId, platform });
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
     
-    const userId = session.user.id;
+    const userId = user.uid;
     
     const result = await updateFirebaseCommentStatus(
       userId,

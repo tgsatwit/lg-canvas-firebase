@@ -194,7 +194,7 @@ export const Thread: FC<ThreadProps> = (props: ThreadProps) => {
             <span className="text-sm text-muted-foreground">
               {user?.name || user?.email || "User"}
             </span>
-            <ProfileMenu user={user} />
+            <ProfileMenu />
           </div>
         </div>
       </div>

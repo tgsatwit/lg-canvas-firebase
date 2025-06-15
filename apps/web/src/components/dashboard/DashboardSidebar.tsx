@@ -221,7 +221,7 @@ export function DashboardSidebar() {
             <div className="relative flex items-center justify-between px-4 py-3">
               {!loading && user ? (
                 <>
-                  <ProfileMenu user={user} />
+                  <ProfileMenu />
                   <span className="text-sm text-gray-600 font-medium transition-colors duration-300">
                     Profile
                   </span>

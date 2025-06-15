@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { createScopedLogger } from '@/utils/logger';
-import { getSession } from '@/lib/auth';
+import { getServerUser } from '@/lib/auth';
 import { getSocialStats } from '@/lib/firebase/social';
 
 const logger = createScopedLogger('api/social/get-stats');
@@ -9,9 +10,9 @@ export async function GET(req: NextRequest) {
   try {
     logger.info('Fetching social media stats');
     
-    const session = await getSession();
+    const user = await getServerUser();
     
-    if (!session?.user?.id) {
+    if (!user?.uid) {
       logger.warn('Unauthorized request to fetch social stats');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
       );
     }
     
-    const userId = session.user.id;
+    const userId = user.uid;
     
     const stats = await getSocialStats(userId);
     
