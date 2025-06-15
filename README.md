@@ -181,3 +181,28 @@ There are three main labels:
 - `fullstack`: This label is added to issues which require touching both the frontend and agent code.
 
 If you have questions about contributing, please reach out to me via email: `brace(at)langchain(dot)dev`. For general bugs/issues with the code, please [open an issue on GitHub](https://github.com/langchain-ai/open-canvas/issues/new).
+
+## Containerized Deployment
+
+The application is now fully containerized using Docker Compose. Both the web frontend and the LangGraph agent run as separate services.
+
+### Running Locally
+
+1. Copy `.env.example` to `.env` and configure your environment variables.
+2. Start all services:
+
+```sh
+docker-compose up --build
+```
+
+- Web app: http://localhost:3000
+- Agent: http://localhost:54367
+
+### Services
+- **web**: Next.js frontend (port 3000)
+- **agent**: LangGraph agent (port 54367)
+- **redis**: (optional) for caching (port 6379)
+
+### Notes
+- The `functions/` folder and Firebase Functions are no longer used.
+- The Firebase Emulator is not required for local development.

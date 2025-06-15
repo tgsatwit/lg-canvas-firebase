@@ -1,1 +1,0 @@
-"use strict";exports.id=4553,exports.ids=[4553],exports.modules={34553:(t,e,s)=>{s.r(e),s.d(e,{default:()=>a});var r=s(30513);function a(t){let{emitParseErrors:e,...s}={...this.data("settings"),...t};this.parser=function(t,a){return(0,r.c)(t,{...s,onerror:e?function(t){a.path&&(t.name=a.path+":"+t.name,t.file=a.path),a.messages.push(t)}:void 0})}}}};
