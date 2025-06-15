@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/auth';
+import { getServerUser } from '@/lib/auth';
 import { createScopedLogger } from "@/utils/logger";
 
 const logger = createScopedLogger("api/social/connect-platform");
@@ -17,8 +16,8 @@ const RequestSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const user = await getServerUser();
+    if (!user?.uid) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -39,7 +38,7 @@ export async function POST(request: NextRequest) {
     // In a real implementation, this would validate the token with the platform API
     // and store the connection details in the database
     const connected = await mockConnectPlatform(
-      session.user.id,
+      user.uid,
       platform,
       accessToken,
       accountId,
@@ -55,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info('Platform connected successfully', { 
-      userId: session.user.id,
+      userId: user.uid,
       platform
     });
 

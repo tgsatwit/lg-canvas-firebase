@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 import { cn } from "@/lib/utils";
 import { Input } from "../../ui/input";
@@ -20,6 +20,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const router = useRouter();
+  const { signIn, signInWithGoogle } = useAuth();
 
   async function onSubmit(event: React.SyntheticEvent) {
     event.preventDefault();
@@ -39,28 +40,74 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
       setIsLoading(true);
       console.log("Signing in with email:", email);
       
-      const result = await signIn("email-login", {
-        email,
-        password,
-        redirect: false,
-        callbackUrl: "/dashboard"
-      });
-
-      if (result?.error) {
-        setFormError(result.error);
-        return;
-      }
-
+      await signIn(email, password);
+      
       // Redirect to dashboard on success
-      if (result?.url) {
-        router.push(result.url);
-      } else {
-        router.push("/dashboard");
-      }
+      router.push("/dashboard");
       router.refresh();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      setFormError("An error occurred during sign in.");
+      
+      // Handle Firebase Auth errors
+      let errorMessage = "An error occurred during sign in.";
+      if (error.code) {
+        switch (error.code) {
+          case 'auth/user-not-found':
+          case 'auth/wrong-password':
+          case 'auth/invalid-credential':
+            errorMessage = "Invalid email or password. Please try again.";
+            break;
+          case 'auth/user-disabled':
+            errorMessage = "This account has been disabled. Please contact support.";
+            break;
+          case 'auth/too-many-requests':
+            errorMessage = "Too many failed attempts. Please try again later.";
+            break;
+          case 'auth/network-request-failed':
+            errorMessage = "Network error. Please check your connection and try again.";
+            break;
+          default:
+            errorMessage = error.message || errorMessage;
+        }
+      }
+      
+      setFormError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function onGoogleSignIn() {
+    try {
+      setIsLoading(true);
+      setFormError(null);
+      
+      await signInWithGoogle();
+      
+      // Redirect to dashboard on success
+      router.push("/dashboard");
+      router.refresh();
+    } catch (error: any) {
+      console.error("Google sign in error:", error);
+      
+      let errorMessage = "Failed to sign in with Google.";
+      if (error.code) {
+        switch (error.code) {
+          case 'auth/popup-closed-by-user':
+            errorMessage = "Sign in was cancelled.";
+            break;
+          case 'auth/popup-blocked':
+            errorMessage = "Popup was blocked. Please allow popups and try again.";
+            break;
+          case 'auth/network-request-failed':
+            errorMessage = "Network error. Please check your connection and try again.";
+            break;
+          default:
+            errorMessage = error.message || errorMessage;
+        }
+      }
+      
+      setFormError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -184,7 +231,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
           </div>
         )}
         
-        <div className="relative">
+        <div className="space-y-4">
           <Button 
             disabled={isLoading} 
             type="submit" 
@@ -198,28 +245,61 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                 )
               `,
               backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
               boxShadow: `
-                0 6px 20px rgba(0, 0, 0, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2),
-                inset 0 -1px 0 rgba(255, 255, 255, 0.1)
+                0 8px 24px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2)
               `,
-              color: 'white',
             }}
           >
             {isLoading && (
-              <Icons.spinner className="mr-3 h-5 w-5 animate-spin" />
+              <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
             )}
-            Login with Email
+            Sign In
           </Button>
-          
-          {/* Button specular highlight */}
-          <div 
-            className="absolute top-0 left-0 right-0 h-px opacity-40 rounded-t-2xl"
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-white/20" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span 
+                className="bg-transparent px-2 text-white/60"
+                style={{ backdropFilter: 'blur(10px)' }}
+              >
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isLoading}
+            onClick={onGoogleSignIn}
+            className="h-16 text-lg font-semibold w-full rounded-2xl border-0 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
             style={{
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)'
+              background: `
+                linear-gradient(135deg, 
+                  rgba(255, 255, 255, 0.2) 0%,
+                  rgba(255, 255, 255, 0.1) 100%
+                )
+              `,
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              color: 'rgba(0, 0, 0, 0.8)',
+              boxShadow: `
+                0 4px 16px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4)
+              `,
             }}
-          />
+          >
+            {isLoading && (
+              <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            <Icons.google className="mr-2 h-4 w-4" />
+            Google
+          </Button>
         </div>
       </form>
     </div>

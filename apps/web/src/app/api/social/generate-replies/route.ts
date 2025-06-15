@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import OpenAI from 'openai';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/auth';
+import { getServerUser } from '@/lib/auth';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -27,9 +26,9 @@ const RequestSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession(authOptions);
+    const user = await getServerUser();
     
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }

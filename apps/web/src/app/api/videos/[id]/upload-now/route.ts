@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminFirestore } from '@/lib/firebase/admin';
 import { getYouTubeService } from '@/lib/youtube/youtube-service';
 import { cookies } from 'next/headers';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/auth';
+import { getServerUser } from '@/lib/auth';
 import { createScopedLogger } from "@/utils/logger";
 
 const logger = createScopedLogger("api/videos/upload-now");
@@ -11,7 +10,7 @@ const logger = createScopedLogger("api/videos/upload-now");
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
-    const session = await getServerSession(authOptions);
+    const session = await getServerUser();
     
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

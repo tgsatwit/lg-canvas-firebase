@@ -4,12 +4,10 @@ import {
   createContext,
   ReactNode,
   useContext,
-  useEffect,
-  useState,
 } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "./AuthContext";
 
-// Define a simplified user type that matches both NextAuth and our needs
+// Define a simplified user type that matches Firebase User
 export type UserInfo = {
   id: string;
   name?: string | null;
@@ -25,24 +23,15 @@ type UserContextType = {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserInfo | null | undefined>(undefined);
-  const [loading, setLoading] = useState(true);
-  const { data: session, status } = useSession();
+  const { user: firebaseUser, loading } = useAuth();
 
-  useEffect(() => {
-    if (status === "loading") {
-      setLoading(true);
-    } else {
-      setLoading(false);
-      
-      if (status === "authenticated" && session?.user) {
-        // Map session user to our UserInfo format
-        setUser(session.user as UserInfo);
-      } else {
-        setUser(null);
-      }
-    }
-  }, [session, status]);
+  // Map Firebase User to our UserInfo format
+  const user: UserInfo | null = firebaseUser ? {
+    id: firebaseUser.uid,
+    name: firebaseUser.displayName,
+    email: firebaseUser.email,
+    image: firebaseUser.photoURL,
+  } : null;
 
   const contextValue: UserContextType = {
     user,

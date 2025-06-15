@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/contexts/AuthContext';
 import { ChatInterface, ChatSidebar } from '@/components/chat';
 import { LoadingContent } from '@/components/ui/loading-content';
 import { useToast } from '@/hooks/use-toast';
 import { useChatStore } from '@/stores/chatStore';
 
 export default function ChatPage() {
-  const { data: session, status } = useSession();
+  const { user, loading } = useAuth();
   const { toast } = useToast();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true); // Start collapsed and hidden
   const [isLoading, setIsLoading] = useState(true);
@@ -25,14 +25,14 @@ export default function ChatPage() {
 
   // Auto-create a new conversation when the page loads
   useEffect(() => {
-    if (session?.user?.id && !activeConversationId && !newConversationId) {
+    if (user?.uid && !activeConversationId && !newConversationId) {
       const initializeChat = async () => {
         try {
           // Load existing conversations first
-          await loadConversations(session.user.id);
+          await loadConversations(user.uid);
           
           // Create a new conversation to start with
-          const conversationId = await createConversation(session.user.id, {
+          const conversationId = await createConversation(user.uid, {
             title: 'New Chat',
           });
           setNewConversationId(conversationId);
@@ -45,14 +45,14 @@ export default function ChatPage() {
       };
 
       initializeChat();
-    } else if (session?.user?.id) {
-      loadConversations(session.user.id).finally(() => setIsLoading(false));
+    } else if (user?.uid) {
+      loadConversations(user.uid).finally(() => setIsLoading(false));
     }
-  }, [session?.user?.id, activeConversationId, newConversationId, loadConversations, createConversation, setActiveConversation]);
+  }, [user?.uid, activeConversationId, newConversationId, loadConversations, createConversation, setActiveConversation]);
 
   // Handle conversation deletion with proper navigation
   const handleDeleteConversation = async (conversationId: string) => {
-    if (!session?.user?.id) return;
+    if (!user?.uid) return;
 
     try {
       await deleteConversation(conversationId);
@@ -66,7 +66,7 @@ export default function ChatPage() {
       // If we deleted the active conversation, create a new one
       if (conversationId === activeConversationId || conversationId === newConversationId) {
         try {
-          const newId = await createConversation(session.user.id, {
+          const newId = await createConversation(user.uid, {
             title: 'New Chat',
           });
           setNewConversationId(newId);
@@ -88,7 +88,7 @@ export default function ChatPage() {
     }
   };
 
-  if (status === 'loading' || isLoading) {
+  if (loading || isLoading) {
     return (
       <div 
         className="flex h-screen items-center justify-center relative"
@@ -140,7 +140,7 @@ export default function ChatPage() {
     );
   }
 
-  if (!session?.user) {
+  if (!user) {
     return (
       <div 
         className="flex h-screen items-center justify-center relative"
@@ -216,26 +216,26 @@ export default function ChatPage() {
         />
       </div>
 
-      {/* Sidebar - only show when not collapsed */}
-      {!sidebarCollapsed && (
-        <div className="relative z-10">
+      {/* Sidebar */}
+      <div className={`relative z-10 transition-all duration-300 ${sidebarCollapsed ? 'w-0' : 'w-80'} flex-shrink-0`}>
+        <div className={`h-full ${sidebarCollapsed ? 'hidden' : 'block'}`}>
           <ChatSidebar
             conversations={conversations}
-            activeConversationId={activeConversationId || newConversationId}
+            activeConversationId={activeConversationId || newConversationId || ''}
             onSelectConversation={setActiveConversation}
             onDeleteConversation={handleDeleteConversation}
-            collapsed={false}
+            collapsed={sidebarCollapsed}
             onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-            userId={session.user.id}
+            userId={user.uid}
           />
         </div>
-      )}
-      
+      </div>
+
       {/* Main Chat Area */}
-      <div className="relative z-10 flex-1 h-full">
+      <div className="flex-1 relative z-10">
         <ChatInterface
-          userId={session.user.id}
-          conversationId={activeConversationId || newConversationId}
+          conversationId={activeConversationId || newConversationId || ''}
+          userId={user.uid}
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
         />

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/auth';
+import { getServerUser } from '@/lib/auth';
 
 // Define the schema for the request body
 const RequestSchema = z.object({
@@ -17,9 +16,9 @@ const RequestSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession(authOptions);
+    const user = await getServerUser();
     
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
@@ -52,7 +51,7 @@ export async function POST(req: NextRequest) {
     
     // Log the reply (in a real implementation, this would store in a database)
     console.log(`[MOCK DB] Storing reply in database:`, {
-      userId: session.user.id,
+      userId: user.uid,
       platform,
       commentId: String(commentId),
       commentAuthor: author,

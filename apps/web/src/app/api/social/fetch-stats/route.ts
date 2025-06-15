@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/auth';
+import { getServerUser } from '@/lib/auth';
 import { createScopedLogger } from "@/utils/logger";
 
 const logger = createScopedLogger("api/social/fetch-stats");
@@ -8,31 +7,41 @@ const logger = createScopedLogger("api/social/fetch-stats");
 export async function GET(request: Request) {
   try {
     // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const user = await getServerUser();
+    if (!user?.uid) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Query parameter for time range (last day, week, month)
+    // Parse URL for query parameters
     const { searchParams } = new URL(request.url);
-    const timeRange = searchParams.get('timeRange') || 'week';
+    const platform = searchParams.get('platform');
+    const timeframe = searchParams.get('timeframe') || '7d'; // Default to 7 days
 
-    // In a real implementation, this would fetch stats from the database
-    const stats = await getMockSocialStats(session.user.id, timeRange);
+    // TODO: Implement database integration when Prisma is properly configured
+    // Mock data for now to prevent build errors
+    const stats = {
+      userId: user.uid,
+      platform: platform || 'all',
+      timeframe,
+      totalPosts: 0,
+      totalLikes: 0,
+      totalShares: 0,
+      totalComments: 0,
+      engagement: 0,
+      reach: 0
+    };
 
-    logger.info('Social stats fetched successfully', { 
-      userId: session.user.id,
-      timeRange
+    logger.info('Stats fetched successfully', { 
+      userId: user.uid,
+      platform,
+      timeframe
     });
 
-    return NextResponse.json({
-      stats,
-      timeRange
-    });
+    return NextResponse.json({ stats });
   } catch (error) {
-    logger.error('Error fetching social stats', { error });
+    logger.error('Error fetching stats', { error });
     return NextResponse.json(
-      { error: 'Failed to fetch social stats' },
+      { error: 'Failed to fetch stats' },
       { status: 500 }
     );
   }

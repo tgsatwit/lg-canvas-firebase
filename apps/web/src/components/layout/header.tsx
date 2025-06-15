@@ -19,7 +19,7 @@ export function Header() {
         <span className="font-semibold">Canvas</span>
       </div>
       <div className="flex items-center space-x-4">
-        {!loading && user && <ProfileMenu user={user} />}
+        {!loading && user && <ProfileMenu />}
         {!loading && !user && (
           <Button size="sm" className="flex items-center gap-2" onClick={handleSignIn}>
             <LogIn className="h-4 w-4" />
