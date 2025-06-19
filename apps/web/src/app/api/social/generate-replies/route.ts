@@ -3,11 +3,6 @@ import { z } from 'zod';
 import OpenAI from 'openai';
 import { getServerUser } from '@/lib/auth';
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 // Define the schema for the request body
 const RequestSchema = z.object({
   comments: z.array(
@@ -69,6 +64,10 @@ async function generateReplies(
   tone: z.infer<typeof RequestSchema>['tone'],
   maxLength: z.infer<typeof RequestSchema>['maxLength']
 ) {
+  // Initialize OpenAI client when actually needed
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
   // Create a prompt for OpenAI
   const systemPrompt = `
     You are a social media manager crafting helpful responses to comments on social media platforms.

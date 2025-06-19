@@ -14,6 +14,8 @@ const nextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
+  
+
   webpack: (config, { isServer, dev, webpack }) => {
     // Handle node: protocol imports
     config.resolve.alias = {
