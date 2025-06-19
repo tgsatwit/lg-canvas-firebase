@@ -46,6 +46,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Skip Firebase initialization if auth is not available (e.g., during build)
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
@@ -60,6 +66,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    if (!auth) throw new Error('Firebase auth is not initialized');
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
       
@@ -79,6 +86,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const signUp = async (email: string, password: string, displayName?: string) => {
+    if (!auth) throw new Error('Firebase auth is not initialized');
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
       if (displayName && result.user) {
@@ -101,6 +109,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const signOut = async () => {
+    if (!auth) throw new Error('Firebase auth is not initialized');
     try {
       // Clear session cookie
       await fetch('/api/auth/session', {
@@ -115,6 +124,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const signInWithGoogle = async () => {
+    if (!auth) throw new Error('Firebase auth is not initialized');
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
@@ -135,6 +145,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const resetPassword = async (email: string) => {
+    if (!auth) throw new Error('Firebase auth is not initialized');
     try {
       await sendPasswordResetEmail(auth, email);
     } catch (error) {

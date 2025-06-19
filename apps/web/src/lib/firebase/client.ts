@@ -8,32 +8,52 @@ import { getStorage, connectStorageEmulator } from "firebase/storage";
  * These keys are safe to expose client-side
  */
 const firebaseConfig = {
-    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-    measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID // Optional: add if using Analytics
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
+    measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || '' // Optional: add if using Analytics
 };
+
+// Check if we're in a browser environment and have valid config
+const isValidConfig = typeof window !== 'undefined' && 
+    firebaseConfig.apiKey && 
+    firebaseConfig.authDomain && 
+    firebaseConfig.projectId;
+
+// Database configuration constant
+export const CHAT_DATABASE_ID = 'pbl-backend';
 
 /**
  * Initialize Firebase Client App (Singleton Pattern)
+ * Only initialize if we have valid config and are in browser
  */
-const firebaseApp = getApps().length === 0 
-    ? initializeApp(firebaseConfig) 
-    : getApp();
+let firebaseApp: any = null;
+let auth: any = null;
+let firestore: any = null;
+let storage: any = null;
+let chatDb: any = null;
 
-/**
- * Initialize Firebase services
- */
-const auth = getAuth(firebaseApp);
-const firestore = getFirestore(firebaseApp);
-const storage = getStorage(firebaseApp);
+if (isValidConfig) {
+    firebaseApp = getApps().length === 0 
+        ? initializeApp(firebaseConfig) 
+        : getApp();
 
-// Database configuration - this should match your FIREBASE_VIDEOS_DB environment variable
-export const CHAT_DATABASE_ID = 'pbl-backend';
-const chatDb = getFirestore(firebaseApp, CHAT_DATABASE_ID);
+    /**
+     * Initialize Firebase services
+     */
+    auth = getAuth(firebaseApp);
+    firestore = getFirestore(firebaseApp);
+    storage = getStorage(firebaseApp);
+
+    // Database configuration - this should match your FIREBASE_VIDEOS_DB environment variable
+    chatDb = getFirestore(firebaseApp, CHAT_DATABASE_ID);
+} else {
+    // Provide mock objects for build time
+    console.warn('Firebase not initialized - missing configuration or running in build environment');
+}
 
 /**
  * Connect to emulators in development mode if configured
@@ -60,8 +80,8 @@ export const ensureFirebaseInitialized = () => {
   if (typeof window === 'undefined') {
     throw new Error('Firebase client can only be used in browser environment');
   }
-  if (!chatDb) {
-    throw new Error('Firebase chatDb is not initialized');
+  if (!chatDb || !auth) {
+    throw new Error('Firebase is not initialized - missing configuration');
   }
   return { chatDb, auth };
 };
