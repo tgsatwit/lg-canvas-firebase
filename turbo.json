@@ -19,5 +19,8 @@
     "format": {
       "dependsOn": ["^format"]
     }
-  }
+  },
+  "globalPassThroughEnv": [
+    "NODE_ENV"
+  ]
 }

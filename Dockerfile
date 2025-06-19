@@ -17,8 +17,11 @@ RUN yarn install --frozen-lockfile --ignore-scripts
 # Copy source code
 COPY . .
 
-# Build the applications
-RUN yarn build
+# Set NODE_ENV for build
+ENV NODE_ENV=production
+
+# Build the applications (excluding evals package)
+RUN yarn turbo build --filter=!@opencanvas/evals
 
 # Production stage
 FROM node:20-alpine AS runner
@@ -45,8 +48,8 @@ COPY --from=builder /app/apps/agents/dist ./apps/agents/dist
 COPY --from=builder /app/apps/agents/package.json ./apps/agents/package.json
 COPY --from=builder /app/apps/agents/src ./apps/agents/src
 
-# Copy packages
-COPY --from=builder /app/packages ./packages
+# Copy packages (excluding evals which is only for testing)
+COPY --from=builder /app/packages/shared ./packages/shared
 
 # Copy root files (needed for agents)
 COPY --from=builder /app/package.json ./package.json
