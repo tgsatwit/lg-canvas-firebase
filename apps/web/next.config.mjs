@@ -1,5 +1,4 @@
 /** @type {import('next').NextConfig} */
-import webpack from 'webpack';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
@@ -15,7 +14,7 @@ const nextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  webpack: (config, { isServer, dev }) => {
+  webpack: (config, { isServer, dev, webpack }) => {
     // Handle node: protocol imports
     config.resolve.alias = {
       ...config.resolve.alias,

@@ -7,14 +7,12 @@ services:
       - NODE_ENV=production
     env_file:
       - .env
-    volumes:
-      - ./apps/web/.next:/app/apps/web/.next
     restart: unless-stopped
 
   agent:
     build: .
-    command: npx @langchain/langgraph-cli dev --port 54367 --config ../../langgraph.json
-    working_dir: /app/apps/agents
+    command: npx @langchain/langgraph-cli dev --port 54367 --config /app/langgraph.json
+    working_dir: /app
     ports:
       - "54367:54367"
     environment:

@@ -32,18 +32,26 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy built applications
-COPY --from=builder /app/apps/web/.next ./apps/web/.next
+# Copy the langgraph.json to the root (needed for agent service)
+COPY --from=builder /app/langgraph.json ./langgraph.json
+
+# Copy the standalone build for the web app
+COPY --from=builder /app/apps/web/.next/standalone ./
+COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder /app/apps/web/public ./apps/web/public
-COPY --from=builder /app/apps/web/package.json ./apps/web/package.json
+
+# Copy agents build
 COPY --from=builder /app/apps/agents/dist ./apps/agents/dist
 COPY --from=builder /app/apps/agents/package.json ./apps/agents/package.json
+COPY --from=builder /app/apps/agents/src ./apps/agents/src
+
+# Copy packages
 COPY --from=builder /app/packages ./packages
+
+# Copy root files (needed for agents)
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/yarn.lock ./yarn.lock
-
-# Install only production dependencies
-RUN yarn install --frozen-lockfile --production --ignore-scripts && yarn cache clean
+COPY --from=builder /app/turbo.json ./turbo.json
 
 # Change ownership
 RUN chown -R nextjs:nodejs /app
@@ -56,5 +64,5 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Start the application
-CMD ["yarn", "workspace", "@opencanvas/web", "start"] 
+# Start the standalone server
+CMD ["node", "apps/web/server.js"] 
