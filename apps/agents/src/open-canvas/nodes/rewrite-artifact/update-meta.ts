@@ -60,5 +60,6 @@ export async function optionallyUpdateArtifactMeta(
     recentHumanMessage,
   ]);
 
-  return optionallyUpdateArtifactResponse;
+  // Ensure the response matches the expected schema
+  return OPTIONALLY_UPDATE_ARTIFACT_META_SCHEMA.parse(optionallyUpdateArtifactResponse);
 }

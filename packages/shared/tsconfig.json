@@ -19,7 +19,8 @@
     "useDefineForClassFields": true,
     "strictPropertyInitialization": false,
     "allowJs": true,
-    "strict": true
+    "strict": true,
+    "skipLibCheck": true
   },
   "include": [
     "src/"
