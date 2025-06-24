@@ -1,0 +1,33 @@
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  agent:
+    build: .
+    command: npx @langchain/langgraph-cli dev --port 54367 --config /app/langgraph.json
+    working_dir: /app
+    ports:
+      - "54367:54367"
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  # Optional: Redis for caching
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+networks:
+  default:
+    name: pbl-canvas-network 
