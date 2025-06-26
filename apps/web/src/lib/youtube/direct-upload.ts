@@ -18,8 +18,27 @@ export class DirectYouTubeUploader {
   private storage: Storage;
 
   constructor() {
-    // Initialize Google Cloud Storage
-    this.storage = new Storage();
+    // Initialize Google Cloud Storage with proper credentials handling
+    let storageOptions: any = {};
+    
+    // Check if we have GOOGLE_APPLICATION_CREDENTIALS as JSON content
+    const googleCreds = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    if (googleCreds && googleCreds.trim().startsWith('{')) {
+      try {
+        // Parse JSON credentials directly
+        const credentials = JSON.parse(googleCreds);
+        storageOptions = {
+          projectId: credentials.project_id,
+          keyFilename: undefined,
+          credentials: credentials
+        };
+        console.log('Using parsed Google Cloud credentials from environment variable');
+      } catch (error) {
+        console.warn('Failed to parse GOOGLE_APPLICATION_CREDENTIALS JSON, falling back to default:', error);
+      }
+    }
+    
+    this.storage = new Storage(storageOptions);
   }
 
   /**
