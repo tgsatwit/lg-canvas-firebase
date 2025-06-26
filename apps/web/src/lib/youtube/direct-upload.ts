@@ -87,7 +87,9 @@ export class DirectYouTubeUploader {
       console.log(`[${uploadId}] File size: ${Math.round(fileSize / 1024 / 1024)}MB`);
 
       // Download file to temporary location for resumable upload
-      const tempFilePath = `/tmp/${uploadId}_${fileName}`;
+      // Extract just the filename from the path to avoid nested directories
+      const justFileName = fileName.split('/').pop() || fileName;
+      const tempFilePath = `/tmp/${uploadId}_${justFileName}`;
       console.log(`[${uploadId}] Downloading file to temporary location: ${tempFilePath}`);
       
       await file.download({ destination: tempFilePath });
