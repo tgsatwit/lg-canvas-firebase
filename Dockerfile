@@ -14,7 +14,7 @@ COPY packages/shared/package.json ./packages/shared/
 # Install dependencies without running build scripts
 RUN yarn install --frozen-lockfile --ignore-scripts
 
-# Copy source code
+# Copy source code 
 COPY . .
 
 # Set NODE_ENV for build
