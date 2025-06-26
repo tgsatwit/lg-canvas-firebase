@@ -20,8 +20,8 @@ COPY . .
 # Set NODE_ENV for build
 ENV NODE_ENV=production
 
-# Build the applications (excluding evals package)
-RUN yarn turbo build --filter=!@opencanvas/evals
+# Build the applications
+RUN yarn turbo build
 
 # Production stage
 FROM node:20-alpine AS runner
@@ -48,7 +48,7 @@ COPY --from=builder /app/apps/agents/dist ./apps/agents/dist
 COPY --from=builder /app/apps/agents/package.json ./apps/agents/package.json
 COPY --from=builder /app/apps/agents/src ./apps/agents/src
 
-# Copy packages (excluding evals which is only for testing)
+# Copy packages
 COPY --from=builder /app/packages/shared ./packages/shared
 
 # Copy root files (needed for agents)

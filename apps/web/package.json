@@ -11,9 +11,7 @@
     "start": "next start",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
-    "format": "prettier --config .prettierrc --write \"src\"",
-    "eval": "vitest run --config ls.vitest.config.ts",
-    "eval:highlights": "yarn tsx evals/highlights.ts"
+    "format": "prettier --config .prettierrc --write \"src\""
   },
   "dependencies": {
     "@assistant-ui/react": "^0.7.68",
