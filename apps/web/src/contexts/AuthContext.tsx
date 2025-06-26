@@ -70,7 +70,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signIn = async (email: string, password: string) => {
     const auth = getAuth();
-    if (!auth) throw new Error('Firebase auth is not initialized');
+    if (!auth) {
+      console.error('❌ Firebase Auth Error: Configuration missing');
+      throw new Error('Authentication service is not available. Please check your Firebase configuration or contact support.');
+    }
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
       
@@ -91,7 +94,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signUp = async (email: string, password: string, displayName?: string) => {
     const auth = getAuth();
-    if (!auth) throw new Error('Firebase auth is not initialized');
+    if (!auth) {
+      console.error('❌ Firebase Auth Error: Configuration missing');
+      throw new Error('Authentication service is not available. Please check your Firebase configuration or contact support.');
+    }
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
       if (displayName && result.user) {
@@ -115,7 +121,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signOut = async () => {
     const auth = getAuth();
-    if (!auth) throw new Error('Firebase auth is not initialized');
+    if (!auth) {
+      console.error('❌ Firebase Auth Error: Configuration missing');
+      throw new Error('Authentication service is not available. Please check your Firebase configuration or contact support.');
+    }
     try {
       // Clear session cookie
       await fetch('/api/auth/session', {
@@ -131,7 +140,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signInWithGoogle = async () => {
     const auth = getAuth();
-    if (!auth) throw new Error('Firebase auth is not initialized');
+    if (!auth) {
+      console.error('❌ Firebase Auth Error: Configuration missing');
+      throw new Error('Authentication service is not available. Please check your Firebase configuration or contact support.');
+    }
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
@@ -153,7 +165,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const resetPassword = async (email: string) => {
     const auth = getAuth();
-    if (!auth) throw new Error('Firebase auth is not initialized');
+    if (!auth) {
+      console.error('❌ Firebase Auth Error: Configuration missing');
+      throw new Error('Authentication service is not available. Please check your Firebase configuration or contact support.');
+    }
     try {
       await sendPasswordResetEmail(auth, email);
     } catch (error) {
