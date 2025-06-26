@@ -15,16 +15,17 @@ export async function POST(request: Request) {
     }
 
     // Check if Firebase auth is available
+    const authInstance = auth();
     const authStatus = {
-      authExists: !!auth,
-      authType: typeof auth,
-      hasCurrentUser: !!auth?.currentUser,
-      currentUserUid: auth?.currentUser?.uid || null,
+      authExists: !!authInstance,
+      authType: typeof authInstance,
+      hasCurrentUser: !!authInstance?.currentUser,
+      currentUserUid: authInstance?.currentUser?.uid || null,
     };
 
     console.log('🔍 API Auth Debug:', authStatus);
 
-    if (!auth) {
+    if (!authInstance) {
       return NextResponse.json({ 
         error: 'Firebase auth is not initialized',
         authStatus 
@@ -52,11 +53,12 @@ export async function GET() {
     return NextResponse.json({ error: 'Not available in production' }, { status: 403 });
   }
 
+  const authInstance = auth();
   const authStatus = {
-    authExists: !!auth,
-    authType: typeof auth,
-    hasCurrentUser: !!auth?.currentUser,
-    currentUserUid: auth?.currentUser?.uid || null,
+    authExists: !!authInstance,
+    authType: typeof authInstance,
+    hasCurrentUser: !!authInstance?.currentUser,
+    currentUserUid: authInstance?.currentUser?.uid || null,
     timestamp: new Date().toISOString(),
   };
 

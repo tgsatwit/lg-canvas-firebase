@@ -141,7 +141,7 @@ export default function YouTubeUploadMonitor() {
       try {
         const collectionName = process.env.NEXT_PUBLIC_FIREBASE_VIDEOS_COLLECTION || 'videos-master';
         const q = query(
-          collection(firestore, collectionName),
+          collection(getFirestore(), collectionName),
           where('upload_scheduled', '==', 'Yes'),
           orderBy('scheduled_date', 'asc')
         );
@@ -206,12 +206,12 @@ export default function YouTubeUploadMonitor() {
   const deleteFailedUpload = async (uploadId: string, videoId?: string) => {
     try {
       // Delete from youtube_uploads collection
-      await deleteDoc(doc(firestore, 'youtube_uploads', uploadId));
+      await deleteDoc(doc(getFirestore(), 'youtube_uploads', uploadId));
       
       // Update video status if videoId exists
       if (videoId) {
         const collectionName = process.env.NEXT_PUBLIC_FIREBASE_VIDEOS_COLLECTION || 'videos-master';
-        await updateDoc(doc(firestore, collectionName, videoId), {
+        await updateDoc(doc(getFirestore(), collectionName, videoId), {
           youtube_status: 'Not uploaded',
           upload_error: null,
           updated_at: new Date().toISOString()
@@ -237,7 +237,7 @@ export default function YouTubeUploadMonitor() {
       
       if (newDate) {
         // Update scheduled date
-        await updateDoc(doc(firestore, collectionName, videoId), {
+        await updateDoc(doc(getFirestore(), collectionName, videoId), {
           scheduled_date: newDate.toISOString(),
           upload_scheduled: 'Yes',
           updated_at: new Date().toISOString()
@@ -249,7 +249,7 @@ export default function YouTubeUploadMonitor() {
         });
       } else {
         // Remove scheduling
-        await updateDoc(doc(firestore, collectionName, videoId), {
+        await updateDoc(doc(getFirestore(), collectionName, videoId), {
           scheduled_date: null,
           upload_scheduled: null,
           updated_at: new Date().toISOString()
@@ -287,7 +287,7 @@ export default function YouTubeUploadMonitor() {
       if (result.success) {
         // Remove from scheduled
         const collectionName = process.env.NEXT_PUBLIC_FIREBASE_VIDEOS_COLLECTION || 'videos-master';
-        await updateDoc(doc(firestore, collectionName, video.id), {
+        await updateDoc(doc(getFirestore(), collectionName, video.id), {
           upload_scheduled: null,
           scheduled_date: null,
           updated_at: new Date().toISOString()
