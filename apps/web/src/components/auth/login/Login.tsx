@@ -1,6 +1,3 @@
-import { cn } from "@/lib/utils";
-import Link from "next/link";
-import { buttonVariants } from "../../ui/button";
 import { UserAuthForm } from "./user-auth-form-login";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -76,7 +73,7 @@ export function Login() {
       
       {/* Liquid Glass login container */}
       <div className="w-full flex flex-col justify-center items-center p-8 relative z-10">
-        <div className="w-full max-w-2xl relative">
+        <div className="w-full max-w-lg relative">
           {/* Outer glow effect */}
           <div 
             className="absolute inset-0 rounded-3xl opacity-60 blur-xl"
@@ -87,7 +84,7 @@ export function Login() {
           
           {/* Main Liquid Glass container */}
           <div 
-            className="relative rounded-3xl px-20 py-20 mx-auto flex flex-col gap-10 border shadow-2xl" 
+            className="relative rounded-3xl px-12 py-12 mx-auto flex flex-col gap-6 border shadow-2xl" 
             style={{ 
               background: `
                 linear-gradient(135deg, 
@@ -119,15 +116,15 @@ export function Login() {
               <Image
                 src="/Sqr_logo.png"
                 alt="PBL.ai Logo"
-                width={100}
-                height={100}
+                width={80}
+                height={80}
                 className="rounded-xl"
               />
             </div>
         
             
             {/* Form container */}
-            <div className="w-full max-w-lg mx-auto">
+            <div className="w-full max-w-sm mx-auto">
               <UserAuthForm />
               {isError && (
                 <p className="text-red-500 text-sm text-center mt-4">

@@ -12,7 +12,9 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/_next") || 
     pathname.match(/\.(svg|png|jpg|jpeg|gif|webp)$/) ||
     pathname.startsWith("/favicon.ico") ||
-    pathname.startsWith("/api/auth") // Allow Firebase auth API routes
+    pathname.startsWith("/api/auth") || // Allow Firebase auth API routes
+    (pathname.startsWith("/api/debug") && process.env.NODE_ENV === 'development') || // Allow debug endpoints in development
+    (pathname.startsWith("/debug") && process.env.NODE_ENV === 'development') // Allow debug pages in development
   ) {
     return NextResponse.next();
   }

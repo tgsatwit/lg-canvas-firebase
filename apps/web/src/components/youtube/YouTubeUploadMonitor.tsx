@@ -12,7 +12,7 @@ import {
   RefreshCw, Square, AlertTriangle, CheckCircle, Upload, Eye, Trash2, 
   Search, Calendar, Play, Edit, X, Check, Clock 
 } from 'lucide-react';
-import { firestore } from '@/lib/firebase/client';
+import { firestore as getFirestore } from '@/lib/firebase/client';
 import { 
   collection, query, orderBy, limit, onSnapshot, where, Timestamp, 
   doc, updateDoc, deleteDoc, getDocs 
@@ -93,6 +93,13 @@ export default function YouTubeUploadMonitor() {
       case 'all':
         timeLimit = new Date(0); // Beginning of time
         break;
+    }
+    
+    const firestore = getFirestore();
+    if (!firestore) {
+      setError('Firebase Firestore is not initialized');
+      setIsLoading(false);
+      return;
     }
     
     const q = query(

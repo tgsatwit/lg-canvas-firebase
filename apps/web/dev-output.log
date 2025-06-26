@@ -1,0 +1,133 @@
+
+> @opencanvas/web@0.0.1 dev
+> next dev
+
+   ▲ Next.js 15.3.4
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.31:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1346ms
+ ✓ Compiled /middleware in 94ms (153 modules)
+ ✓ Compiled in 30ms (153 modules)
+ ✓ Compiled in 88ms (153 modules)
+ ○ Compiling /api/debug/firebase-config ...
+ ✓ Compiled /api/debug/firebase-config in 661ms (408 modules)
+ GET /api/debug/firebase-config 200 in 734ms
+ ✓ Compiled in 96ms (430 modules)
+ ✓ Compiled in 39ms (153 modules)
+ ○ Compiling /debug/firebase ...
+ ✓ Compiled /debug/firebase in 1061ms (916 modules)
+🔧 Firebase Client Initialization Debug: {
+  timestamp: '2025-06-26T12:52:17.446Z',
+  environment: { isClientSide: false, nodeEnv: 'development', userAgent: 'server' },
+  configStatus: {
+    hasApiKey: true,
+    hasAuthDomain: true,
+    hasProjectId: true,
+    hasStorageBucket: true,
+    hasMessagingSenderId: true,
+    hasAppId: true
+  },
+  configValues: {
+    apiKeyPreview: 'AIzaSyA5Yr...',
+    projectId: 'face-by-lisa',
+    authDomain: 'face-by-lisa.firebaseapp.com'
+  },
+  existingApps: 0
+}
+✅ Firebase Config Validation: {
+  isValidConfig: 'face-by-lisa',
+  missingFields: { apiKey: false, authDomain: false, projectId: false }
+}
+🚀 Initializing Firebase app...
+📱 Firebase app initialized: {
+  appName: '[DEFAULT]',
+  appId: '1:591061623955:web:44614399c2967f4d509966'
+}
+🔐 Initializing Firebase Auth...
+💾 Initializing Firestore...
+📁 Initializing Storage...
+💬 Initializing Chat Database...
+✅ Firebase initialized successfully: {
+  hasApp: true,
+  hasAuth: true,
+  hasFirestore: true,
+  hasChatDb: true,
+  hasStorage: true,
+  authCurrentUser: 'not_authenticated'
+}
+ GET /debug/firebase 200 in 1315ms
+ ✓ Compiled in 372ms (346 modules)
+ ✓ Compiled in 325ms (1054 modules)
+ ✓ Compiled in 147ms (346 modules)
+ ✓ Compiled in 170ms (346 modules)
+ ✓ Compiled in 71ms (1054 modules)
+ ✓ Compiled in 143ms (346 modules)
+ ○ Compiling /api/debug/test-auth ...
+ ✓ Compiled /api/debug/test-auth in 655ms (606 modules)
+🔧 Firebase Client Initialization Debug: {
+  timestamp: '2025-06-26T12:53:35.051Z',
+  environment: { isClientSide: false, nodeEnv: 'development', userAgent: 'server' },
+  configStatus: {
+    hasApiKey: true,
+    hasAuthDomain: true,
+    hasProjectId: true,
+    hasStorageBucket: true,
+    hasMessagingSenderId: true,
+    hasAppId: true
+  },
+  configValues: {
+    apiKeyPreview: 'AIzaSyA5Yr...',
+    projectId: 'face-by-lisa',
+    authDomain: 'face-by-lisa.firebaseapp.com'
+  },
+  existingApps: 0
+}
+✅ Firebase Config Validation: {
+  isValidConfig: 'face-by-lisa',
+  missingFields: { apiKey: false, authDomain: false, projectId: false }
+}
+🚀 Initializing Firebase app...
+📱 Firebase app initialized: {
+  appName: '[DEFAULT]',
+  appId: '1:591061623955:web:44614399c2967f4d509966'
+}
+🔐 Initializing Firebase Auth...
+💾 Initializing Firestore...
+📁 Initializing Storage...
+💬 Initializing Chat Database...
+✅ Firebase initialized successfully: {
+  hasApp: true,
+  hasAuth: true,
+  hasFirestore: true,
+  hasChatDb: true,
+  hasStorage: true,
+  authCurrentUser: 'not_authenticated'
+}
+ GET /api/debug/test-auth 200 in 819ms
+ ⨯ ./src/lib/firebase/client.ts
+Module parse failed: Identifier 'firebaseApp' has already been declared (221:13)
+| };
+| // Export the Firebase services using lazy getters
+> export const firebaseApp = getFirebaseApp();
+| export const auth = getFirebaseAuth();
+| export const firestore = getFirestore();
+
+Import trace for requested module:
+./src/lib/firebase/client.ts
+./src/contexts/AuthContext.tsx
+ ✓ Compiled in 84ms (331 modules)
+ ✓ Compiled in 85ms (331 modules)
+ ✓ Compiled in 30ms (331 modules)
+ ✓ Compiled in 79ms (331 modules)
+ ✓ Compiled in 28ms (331 modules)
+ ✓ Compiled in 44ms (331 modules)
+ ✓ Compiled in 32ms (331 modules)
+ ✓ Compiled in 30ms (331 modules)
+ ✓ Compiled in 28ms (331 modules)
+ ✓ Compiled in 29ms (331 modules)
+ ✓ Compiled in 35ms (331 modules)
+ ✓ Compiled in 28ms (331 modules)
+ ✓ Compiled in 240ms (346 modules)

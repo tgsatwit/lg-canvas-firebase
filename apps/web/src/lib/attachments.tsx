@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ContextDocument } from "@opencanvas/shared/types";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL } from "@ffmpeg/util";
-import { storage } from "@/lib/firebase/client";
+import { storage as getStorage } from "@/lib/firebase/client";
 import { ref, uploadBytes } from "firebase/storage";
 
 export function arrayToFileList(files: File[] | undefined) {
@@ -62,6 +62,12 @@ export async function transcribeAudio(file: File, userId: string) {
   const storagePath = `documents/${userId}/${new Date().getTime()}-${sanitizedFileName}`;
 
   try {
+    // Get storage instance using lazy initialization
+    const storage = getStorage();
+    if (!storage) {
+      throw new Error('Firebase storage is not initialized');
+    }
+    
     // Get a reference to the storage location
     const storageRef = ref(storage, storagePath);
 

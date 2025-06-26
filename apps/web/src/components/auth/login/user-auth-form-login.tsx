@@ -257,49 +257,6 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
             )}
             Sign In
           </Button>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-white/20" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span 
-                className="bg-transparent px-2 text-white/60"
-                style={{ backdropFilter: 'blur(10px)' }}
-              >
-                Or continue with
-              </span>
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isLoading}
-            onClick={onGoogleSignIn}
-            className="h-16 text-lg font-semibold w-full rounded-2xl border-0 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-            style={{
-              background: `
-                linear-gradient(135deg, 
-                  rgba(255, 255, 255, 0.2) 0%,
-                  rgba(255, 255, 255, 0.1) 100%
-                )
-              `,
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-              color: 'rgba(0, 0, 0, 0.8)',
-              boxShadow: `
-                0 4px 16px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.4)
-              `,
-            }}
-          >
-            {isLoading && (
-              <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-            )}
-            <Icons.google className="mr-2 h-4 w-4" />
-            Google
-          </Button>
         </div>
       </form>
     </div>

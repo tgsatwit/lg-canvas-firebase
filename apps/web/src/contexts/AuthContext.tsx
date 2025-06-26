@@ -14,7 +14,7 @@ import {
   signInWithRedirect,
   getRedirectResult
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase/client';
+import { auth as getAuth } from '@/lib/firebase/client';
 
 interface AuthContextType {
   user: User | null;
@@ -46,6 +46,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Get auth instance using lazy initialization
+    const auth = getAuth();
+    
     // Skip Firebase initialization if auth is not available (e.g., during build)
     if (!auth) {
       setLoading(false);
@@ -66,6 +69,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    const auth = getAuth();
     if (!auth) throw new Error('Firebase auth is not initialized');
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
@@ -86,6 +90,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const signUp = async (email: string, password: string, displayName?: string) => {
+    const auth = getAuth();
     if (!auth) throw new Error('Firebase auth is not initialized');
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
@@ -109,6 +114,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const signOut = async () => {
+    const auth = getAuth();
     if (!auth) throw new Error('Firebase auth is not initialized');
     try {
       // Clear session cookie
@@ -124,6 +130,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const signInWithGoogle = async () => {
+    const auth = getAuth();
     if (!auth) throw new Error('Firebase auth is not initialized');
     try {
       const provider = new GoogleAuthProvider();
@@ -145,6 +152,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const resetPassword = async (email: string) => {
+    const auth = getAuth();
     if (!auth) throw new Error('Firebase auth is not initialized');
     try {
       await sendPasswordResetEmail(auth, email);

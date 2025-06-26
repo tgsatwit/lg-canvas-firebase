@@ -11,7 +11,7 @@ import {
     GoogleAuthProvider,
     GithubAuthProvider,
 } from "firebase/auth";
-import { auth } from "@/lib/firebase/client";
+import { auth as getAuth } from "@/lib/firebase/client";
 
 export interface SignupWithEmailInput {
   email: string;
@@ -52,6 +52,11 @@ export function Signup() {
   ): Promise<void> => {
     setIsError(false);
     try {
+      const auth = getAuth();
+      if (!auth) {
+        throw new Error('Firebase auth is not initialized');
+      }
+      
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         input.email,
@@ -81,6 +86,11 @@ export function Signup() {
         : new GithubAuthProvider();
 
     try {
+      const auth = getAuth();
+      if (!auth) {
+        throw new Error('Firebase auth is not initialized');
+      }
+      
       const userCredential = await signInWithPopup(auth, provider);
       const idToken = await userCredential.user.getIdToken();
       const success = await createSession(idToken);
