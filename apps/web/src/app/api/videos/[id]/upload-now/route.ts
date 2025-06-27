@@ -30,25 +30,19 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     });
     console.log('🧪 Test mode:', testMode);
     
-    // Enhanced authentication debugging
+    // Check user authentication
     console.log('Checking user authentication...');
     const session = await getServerUser();
     
-    // TEMPORARY: Allow uploads even if authentication fails for debugging
     if (!session) {
       console.error('Authentication failed: No valid session found');
-      
-      // Check if Firebase Admin is initialized
-      const firestoreAdmin = adminFirestore();
-      console.log('Firebase Admin available:', !!firestoreAdmin);
-      
-      console.warn('⚠️ TEMPORARY: Bypassing authentication for debugging');
-      
-      // Continue with a mock session for debugging
-      // TODO: Remove this bypass after fixing authentication
-    } else {
-      console.log('Authentication successful for user:', session.uid);
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
     }
+    
+    console.log('Authentication successful for user:', session.uid);
 
     logger.info(`Initiating immediate YouTube upload for video ${id}`);
 

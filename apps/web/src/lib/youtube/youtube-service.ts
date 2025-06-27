@@ -487,8 +487,6 @@ export class YouTubeService {
     session: UploadSession,
     file: any
   ): Promise<any> {
-    const axios = require('axios');
-    
     console.log('Starting direct stream upload to YouTube...');
     
     // If in test mode, simulate upload
@@ -500,28 +498,88 @@ export class YouTubeService {
     const readStream = file.createReadStream();
     
     try {
-      console.log('🚀 Starting axios stream upload to YouTube...');
+      console.log('🚀 Starting memory-optimized stream upload to YouTube...');
       console.log(`📊 Upload details: ${Math.round(session.fileSize / 1024 / 1024)}MB file`);
       
-      // Upload directly to YouTube using stream
-      const response = await axios.put(session.uploadUrl, readStream, {
-        headers: {
-          'Content-Length': session.fileSize.toString(),
-          'Content-Type': 'video/*'
-        },
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity,
-        timeout: 60 * 60 * 1000, // Increased to 60 minute timeout for production
-        onUploadProgress: (progressEvent: any) => {
-          const uploadedBytes = progressEvent.loaded;
+      // Use native Node.js streams instead of axios to avoid memory buffering
+      const https = require('https');
+      const { URL } = require('url');
+      
+      const uploadUrlParsed = new URL(session.uploadUrl);
+      
+      console.log('🔗 Parsed upload URL:', {
+        host: uploadUrlParsed.host,
+        pathname: uploadUrlParsed.pathname,
+        protocol: uploadUrlParsed.protocol
+      });
+      
+      // Create the upload using native Node.js HTTPS with streaming
+      const result = await new Promise((resolve, reject) => {
+        const options = {
+          hostname: uploadUrlParsed.hostname,
+          port: uploadUrlParsed.port || 443,
+          path: uploadUrlParsed.pathname + uploadUrlParsed.search,
+          method: 'PUT',
+          headers: {
+            'Content-Length': session.fileSize.toString(),
+            'Content-Type': 'video/*'
+          },
+          timeout: 60 * 60 * 1000, // 60 minute timeout
+        };
+        
+        console.log('📡 Creating HTTPS request with options:', options);
+        
+        const req = https.request(options, (res: any) => {
+          console.log('📥 Response status:', res.statusCode);
+          console.log('📥 Response headers:', res.headers);
+          
+          let responseData = '';
+          
+          res.on('data', (chunk: any) => {
+            responseData += chunk;
+          });
+          
+          res.on('end', () => {
+            console.log('✅ Upload response completed');
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              try {
+                const parsedData = responseData ? JSON.parse(responseData) : {};
+                resolve(parsedData);
+              } catch (e) {
+                // Some successful uploads return empty responses
+                resolve({ success: true });
+              }
+            } else {
+              reject(new Error(`HTTP ${res.statusCode}: ${responseData}`));
+            }
+          });
+        });
+        
+        req.on('error', (error: any) => {
+          console.error('💥 HTTPS request error:', error);
+          reject(error);
+        });
+        
+        req.on('timeout', () => {
+          console.error('⏰ HTTPS request timeout');
+          req.destroy();
+          reject(new Error('Upload timeout'));
+        });
+        
+        // Track upload progress
+        let uploadedBytes = 0;
+        const startTime = Date.now();
+        
+        readStream.on('data', (chunk: any) => {
+          uploadedBytes += chunk.length;
           const progress = Math.round((uploadedBytes / session.fileSize) * 100);
           const currentTime = Date.now();
-          const timeElapsed = currentTime - session.startTime;
+          const timeElapsed = currentTime - startTime;
           const uploadSpeed = uploadedBytes / (timeElapsed / 1000); // bytes per second
           const estimatedTimeRemaining = uploadSpeed > 0 ? 
             Math.round((session.fileSize - uploadedBytes) / uploadSpeed) : 0;
           
-          // Update progress
+          // Update progress callback
           if (session.onProgress) {
             session.onProgress({
               uploadId: session.uploadId,
@@ -540,15 +598,29 @@ export class YouTubeService {
           if (progress > 0 && progress % 5 === 0 && 
               currentTime - session.lastProgressUpdate > 5000) {
             console.log(
-              `Upload progress: ${progress}% (${Math.round(uploadedBytes / 1024 / 1024)}MB / ${Math.round(session.fileSize / 1024 / 1024)}MB) - ${Math.round(uploadSpeed / 1024 / 1024 * 100) / 100} MB/s`
+              `🔄 Upload progress: ${progress}% (${Math.round(uploadedBytes / 1024 / 1024)}MB / ${Math.round(session.fileSize / 1024 / 1024)}MB) - ${Math.round(uploadSpeed / 1024 / 1024 * 100) / 100} MB/s`
             );
             session.lastProgressUpdate = currentTime;
           }
-        }
+        });
+        
+        readStream.on('error', (error: any) => {
+          console.error('💥 Read stream error:', error);
+          req.destroy();
+          reject(error);
+        });
+        
+        readStream.on('end', () => {
+          console.log('📤 File stream completed');
+        });
+        
+        // Pipe the file stream to the HTTPS request (memory efficient!)
+        console.log('🚰 Piping file stream to HTTPS request...');
+        readStream.pipe(req);
       });
       
-      console.log('Direct stream upload completed successfully');
-      return response.data;
+      console.log('✅ Native HTTPS upload completed successfully');
+      return result;
       
     } catch (error: any) {
       console.error('❌ Stream upload failed:', {
