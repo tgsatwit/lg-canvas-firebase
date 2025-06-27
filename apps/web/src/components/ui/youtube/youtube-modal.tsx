@@ -201,7 +201,6 @@ const YoutubeStatusCard = ({
   const [isScheduling, setIsScheduling] = React.useState(false);
   const [isUploading, setIsUploading] = React.useState(false);
   const [isConfirming, setIsConfirming] = React.useState(false);
-  const [testMode, setTestMode] = React.useState(false);
 
   // Convert scheduled time to local datetime input format (GMT+10)
   React.useEffect(() => {
@@ -258,7 +257,7 @@ const YoutubeStatusCard = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          testMode: testMode // Use the testMode state
+          testMode: false
         })
       });
 
@@ -399,7 +398,7 @@ const YoutubeStatusCard = ({
       </div>
 
       {status === 'Uploaded' && youtubeLink && (
-        <div className="mt-3">
+        <div className="mt-3 space-y-2">
           <a 
             href={youtubeLink} 
             target="_blank" 
@@ -409,6 +408,16 @@ const YoutubeStatusCard = ({
             View on YouTube
             <ExternalLink className="h-3 w-3 ml-1" />
           </a>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleUploadNow}
+            disabled={isUploading}
+            className="w-full"
+          >
+            {isUploading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Upload className="h-3 w-3 mr-1" />}
+            Re-upload to YouTube
+          </Button>
         </div>
       )}
 
@@ -480,19 +489,6 @@ const YoutubeStatusCard = ({
               min={new Date().toISOString().slice(0, 16)}
             />
           </div>
-          {/* Test Mode Checkbox */}
-          <div className="flex items-center space-x-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <input
-              type="checkbox"
-              id="test-mode"
-              checked={testMode}
-              onChange={(e) => setTestMode(e.target.checked)}
-              className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-            />
-            <label htmlFor="test-mode" className="text-sm text-gray-700 cursor-pointer">
-              <span className="font-medium">Test Mode</span> - Simulate upload without quota usage
-            </label>
-          </div>
           <div className="flex gap-2">
             <Button 
               size="sm" 
@@ -511,7 +507,7 @@ const YoutubeStatusCard = ({
               className="flex-1"
             >
               {isUploading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Upload className="h-3 w-3 mr-1" />}
-              {testMode ? 'Test Upload' : 'Upload Now'}
+              Upload Now
             </Button>
           </div>
           <Button 

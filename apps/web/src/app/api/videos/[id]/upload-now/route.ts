@@ -24,11 +24,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const { id } = await context.params;
     console.log('📊 Video ID:', id);
     
-    const { testMode = false } = await request.json().catch((err) => {
-      console.log('⚠️ JSON parse error (using defaults):', err.message);
+    await request.json().catch((err) => {
+      console.log('⚠️ JSON parse error (ignoring):', err.message);
       return {};
     });
-    console.log('🧪 Test mode:', testMode);
     
     // Check user authentication
     console.log('Checking user authentication...');
@@ -109,11 +108,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       const youtubeService = getYouTubeService();
       console.log('✅ YouTube service created');
       
-      // Set test mode if requested
-      if (testMode) {
-        youtubeService.setTestMode(true);
-        console.log('🧪 YouTube upload running in test mode');
-      }
       
       // Get stored YouTube tokens from somewhere (you'll need to implement token storage)
       // For now, we'll return an error asking the user to authenticate

@@ -52,7 +52,7 @@ export default function YouTubeManagerPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          testMode: false // Set to true for testing without actual upload
+          testMode: false
         })
       });
 
@@ -204,7 +204,43 @@ export default function YouTubeManagerPage() {
           }}
         >
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">YouTube Manager</h1>
+            <div className="flex justify-between items-start mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">YouTube Manager</h1>
+              
+              {/* YouTube Authentication Button */}
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/auth/youtube');
+                    const data = await response.json();
+                    if (data.authUrl) {
+                      window.location.href = data.authUrl;
+                    }
+                  } catch (error) {
+                    console.error('Error getting auth URL:', error);
+                    setNotification({
+                      type: 'error',
+                      message: 'Failed to initiate YouTube authentication'
+                    });
+                  }
+                }}
+                className="px-6 py-3 rounded-lg font-medium text-white transition-all duration-200 hover:scale-105"
+                style={{
+                  background: `
+                    linear-gradient(135deg, 
+                      rgba(255, 0, 0, 0.8) 0%,
+                      rgba(204, 0, 0, 0.9) 100%
+                    )
+                  `,
+                  boxShadow: `
+                    0 4px 16px rgba(255, 0, 0, 0.3),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.2)
+                  `,
+                }}
+              >
+                🔐 Authenticate YouTube
+              </button>
+            </div>
             
             {/* Status summary */}
             <div className="flex gap-6 mt-6">
