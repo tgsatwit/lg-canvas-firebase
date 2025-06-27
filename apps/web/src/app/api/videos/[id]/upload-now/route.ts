@@ -11,9 +11,24 @@ const logger = createScopedLogger("api/videos/upload-now");
 export const maxDuration = 600;
 
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  console.log('🚀 Upload API endpoint called');
+  
+  // Add unhandled rejection handler
+  const originalHandler = process.listeners('unhandledRejection');
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('💥 UNHANDLED PROMISE REJECTION in upload endpoint:', reason);
+  });
+  
   try {
+    console.log('📝 Parsing request parameters...');
     const { id } = await context.params;
-    const { testMode = false } = await request.json().catch(() => ({}));
+    console.log('📊 Video ID:', id);
+    
+    const { testMode = false } = await request.json().catch((err) => {
+      console.log('⚠️ JSON parse error (using defaults):', err.message);
+      return {};
+    });
+    console.log('🧪 Test mode:', testMode);
     
     // Enhanced authentication debugging
     console.log('Checking user authentication...');
@@ -37,15 +52,17 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
     logger.info(`Initiating immediate YouTube upload for video ${id}`);
 
+    console.log('🔥 Initializing Firebase Admin...');
     // Get Firestore instance
     const firestoreAdmin = adminFirestore();
     if (!firestoreAdmin) {
-      console.error("Firebase admin not initialized");
+      console.error("❌ Firebase admin not initialized");
       return NextResponse.json(
         { error: "Firebase admin not initialized" },
         { status: 500 }
       );
     }
+    console.log('✅ Firebase Admin initialized successfully');
     
     const collectionName = process.env.FIREBASE_VIDEOS_COLLECTION || 'videos-master';
     
@@ -93,13 +110,15 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const gcpLink = videoData.gcpLink || videoData.gcp_link;
     
     try {
+      console.log('🎬 Initializing YouTube service...');
       // Get YouTube service
       const youtubeService = getYouTubeService();
+      console.log('✅ YouTube service created');
       
       // Set test mode if requested
       if (testMode) {
         youtubeService.setTestMode(true);
-        console.log('YouTube upload running in test mode');
+        console.log('🧪 YouTube upload running in test mode');
       }
       
       // Get stored YouTube tokens from somewhere (you'll need to implement token storage)
@@ -130,10 +149,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       console.log('Setting YouTube credentials...');
       youtubeService.setCredentials(tokens);
       
-      console.log('Starting YouTube upload...');
+      console.log('🚀 Starting YouTube upload...');
       
       // Upload video to YouTube with progress tracking
-      const { videoId, youtubeUrl, uploadId } = await youtubeService.uploadVideoFromGCS(
+      const uploadResult = await youtubeService.uploadVideoFromGCS(
         gcpLink,
         {
           title: videoData.yt_title,
@@ -147,6 +166,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
           console.log(`Upload progress for ${id}: ${progress.progress}%`);
         }
       );
+      
+      console.log('✅ YouTube upload completed:', uploadResult);
+      const { videoId, youtubeUrl, uploadId } = uploadResult;
       
       // Update Firestore with YouTube info
       await docRef.update({
@@ -162,7 +184,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
         uploadId: uploadId // Store upload ID for tracking
       });
 
-      const uploadResult = {
+      const responseData = {
         success: true,
         videoId: id,
         youtubeId: videoId,
@@ -175,7 +197,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
       logger.info(`Upload completed for video ${id} with YouTube ID ${videoId}`);
 
-      return NextResponse.json(uploadResult);
+      return NextResponse.json(responseData);
       
     } catch (uploadError: any) {
       console.error(`Error uploading to YouTube:`, uploadError);
@@ -202,10 +224,23 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       );
     }
     
-  } catch (error) {
+  } catch (error: any) {
+    console.error('💥 CRITICAL ERROR in upload endpoint:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      code: error.code
+    });
+    
     logger.error(`Error initiating upload: ${String(error)}`);
+    
     return NextResponse.json(
-      { error: "Failed to initiate upload", details: String(error) },
+      { 
+        error: "Failed to initiate upload", 
+        details: error.message || String(error),
+        errorType: error.name || 'Unknown',
+        timestamp: new Date().toISOString()
+      },
       { status: 500 }
     );
   }
