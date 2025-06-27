@@ -14,6 +14,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/favicon.ico") ||
     pathname.startsWith("/api/auth") || // Allow Firebase auth API routes
     (pathname.startsWith("/api/debug") && process.env.NODE_ENV === 'development') || // Allow debug endpoints in development
+    (pathname.startsWith("/api/youtube/debug") && process.env.NODE_ENV === 'development') || // Allow YouTube debug endpoints in development
     (pathname.startsWith("/debug") && process.env.NODE_ENV === 'development') // Allow debug pages in development
   ) {
     return NextResponse.next();

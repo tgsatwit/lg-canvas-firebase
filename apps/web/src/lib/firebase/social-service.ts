@@ -11,7 +11,6 @@ import {
   orderBy, 
   limit, 
   Timestamp,
-  serverTimestamp,
   onSnapshot,
   DocumentData
 } from 'firebase/firestore';
@@ -19,7 +18,6 @@ import { chatDb } from './config';
 import { 
   SocialAccount, 
   SocialComment, 
-  SocialPost, 
   ReplyTemplate, 
   UserPreferences,
   SocialPlatform 

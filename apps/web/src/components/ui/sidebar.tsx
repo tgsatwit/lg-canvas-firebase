@@ -51,7 +51,8 @@ export function Sidebar({ children, className }: SidebarProps) {
           backgroundColor: 'rgba(255, 255, 255, 0.25)',
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
-          borderRight: '1px solid rgba(255, 255, 255, 0.5)'
+          borderRight: '1px solid rgba(255, 255, 255, 0.5)',
+          boxShadow: '4px 0 15px rgba(0, 0, 0, 0.15), 2px 0 8px rgba(0, 0, 0, 0.1)'
         }}
       >
         {children}
@@ -62,7 +63,7 @@ export function Sidebar({ children, className }: SidebarProps) {
 
 export function SidebarBody({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col h-full p-4 space-y-4 overflow-y-auto">
+    <div className="flex flex-col h-full p-4 pr-8 space-y-4 overflow-y-auto">
       {children}
     </div>
   );
@@ -97,7 +98,7 @@ export function SidebarLink({
     >
       <Icon className={cn(
         "w-5 h-5 transition-colors duration-200",
-        isActive ? "text-current" : "text-gray-600 group-hover:text-gray-800"
+        isActive ? "text-pink-500" : "text-gray-600 group-hover:text-gray-800"
       )} />
       <div className="flex-1">{children}</div>
     </a>

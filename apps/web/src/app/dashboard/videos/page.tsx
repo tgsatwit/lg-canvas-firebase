@@ -1,14 +1,20 @@
 "use client";
 
-import { useState, useRef, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { DashboardShell } from '@/components/dashboard/shell';
-import { YouTubeTable } from '@/components/ui/youtube/youtube-table';
 import { VideoEditorModal } from '@/components/ui/youtube/youtube-modal';
 import { VideoUploadModal } from "@/components/videos/video-upload-modal";
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { useVideos } from '@/hooks/use-videos';
 
+// Import the tab content components
+import { VideosTab } from '@/components/videos/videos-tab';
+import { YouTubeLibraryTab } from '@/components/videos/youtube-library-tab';
+import { YouTubeSchedulerTab } from '@/components/videos/youtube-scheduler-tab';
+import { YouTubeUploaderTab } from '@/components/videos/youtube-uploader-tab';
+import { YouTubePlaylistsTab } from '@/components/videos/youtube-playlists-tab';
+import { PlaylistCreatorTab } from '@/components/videos/playlist-creator-tab';
 
 // Define the Video type to match the one in use-videos.ts
 type Video = {
@@ -87,13 +93,29 @@ type Video = {
   vimeoTags?: string[];
   vimeoCategories?: string[];
   storageUrl?: string;
+  
+  // YouTube metadata fields
+  yt_title?: string;
+  yt_description?: string;
+  yt_tags?: string[];
+  yt_privacyStatus?: string;
+  details_confirmed?: string;
 };
+
+
+
+
+
+
+
+
 
 function VideosPageContent() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [activeTab, setActiveTab] = useState('videos');
   const { videos, loading, error } = useVideos();
   const searchParams = useSearchParams();
   
@@ -135,16 +157,6 @@ function VideosPageContent() {
   }, [notification]);
   
   const handleEditVideo = (video: Video) => {
-    // Only log when editing a video (not on every load)
-    // console.log("Selected video data:", {
-    //   id: video.id,
-    //   title: video.title,
-    //   vimeoId: video.vimeoId,
-    //   vimeoOttId: video.vimeoOttId,
-    //   gcpLink: video.gcpLink,
-    //   hasVimeoMetadata: !!video.videoMetadata,
-    //   hasVimeoOttMetadata: !!video.vimeoOttMetadata
-    // });
     setSelectedVideo(video);
     setIsModalOpen(true);
   };
@@ -156,18 +168,54 @@ function VideosPageContent() {
   const handleUploadComplete = (videoId: string) => {
     console.log('Video uploaded successfully:', videoId);
     setIsUploadModalOpen(false);
-    // Optionally refresh the videos list or show a success message
-    // The useVideos hook should automatically refresh the list
-    window.location.reload(); // Simple refresh for now
+    window.location.reload();
+  };
+
+  const getTabTitle = () => {
+    switch (activeTab) {
+      case 'videos':
+        return 'Workout Master Library';
+      case 'youtube-library':
+        return 'YouTube Library';
+      case 'youtube-scheduler':
+        return 'YouTube Scheduler';
+      case 'youtube-uploader':
+        return 'YouTube Uploader';
+      case 'youtube-playlists':
+        return 'YouTube Playlists';
+      case 'playlist-creator':
+        return 'Playlist Creator';
+      default:
+        return 'Workout Master Library';
+    }
+  };
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'videos':
+        return <VideosTab videos={videos} loading={loading} onEditVideo={handleEditVideo} />;
+      case 'youtube-library':
+        return <YouTubeLibraryTab />;
+      case 'youtube-scheduler':
+        return <YouTubeSchedulerTab />;
+      case 'youtube-uploader':
+        return <YouTubeUploaderTab videos={videos} loading={loading} onEditVideo={handleEditVideo} />;
+      case 'youtube-playlists':
+        return <YouTubePlaylistsTab />;
+      case 'playlist-creator':
+        return <PlaylistCreatorTab />;
+      default:
+        return <VideosTab videos={videos} loading={loading} onEditVideo={handleEditVideo} />;
+    }
   };
 
   if (error) {
     return (
       <DashboardShell>
         <div className="p-6">
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-md">
-            <h3 className="text-lg font-medium text-red-800 dark:text-red-300">Error loading videos</h3>
-            <p className="mt-1 text-sm text-red-700 dark:text-red-400">{error.message}</p>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <h3 className="text-lg font-medium text-red-800">Error loading videos</h3>
+            <p className="mt-1 text-sm text-red-700">{error.message}</p>
           </div>
         </div>
       </DashboardShell>
@@ -181,9 +229,9 @@ function VideosPageContent() {
         style={{
           background: `
             linear-gradient(135deg, 
-              rgba(147, 51, 234, 0.1) 0%,
-              rgba(236, 72, 153, 0.05) 50%,
-              rgba(168, 85, 247, 0.1) 100%
+              rgba(148, 163, 184, 0.08) 0%,
+              rgba(203, 213, 225, 0.04) 50%,
+              rgba(148, 163, 184, 0.08) 100%
             )
           `,
         }}
@@ -191,127 +239,174 @@ function VideosPageContent() {
         {/* Ambient background layers */}
         <div className="absolute inset-0 pointer-events-none">
           <div
-            className="absolute inset-0 opacity-30"
+            className="absolute inset-0 opacity-20"
             style={{
               background: `
-                radial-gradient(circle at 30% 40%, rgba(147, 51, 234, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 70% 60%, rgba(236, 72, 153, 0.15) 0%, transparent 50%)
+                radial-gradient(circle at 35% 25%, rgba(148, 163, 184, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 65% 75%, rgba(203, 213, 225, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 50% 10%, rgba(156, 163, 175, 0.08) 0%, transparent 40%)
               `,
             }}
           />
         </div>
 
-        {notification && (
-          <div 
-            className={`relative z-20 mx-6 mt-6 p-6 rounded-2xl border ${
+        <div className="relative z-10 p-6">
+          {notification && (
+            <div className={`p-4 rounded-lg border mb-6 ${
               notification.type === 'success' 
-                ? 'ring-2 ring-green-200' 
-                : 'ring-2 ring-red-200'
-            }`}
+                ? 'bg-green-50 border-green-200 text-green-800' 
+                : 'bg-red-50 border-red-200 text-red-800'
+            }`}>
+              <p className="font-medium">
+                {notification.message}
+              </p>
+            </div>
+          )}
+          
+          {/* Header */}
+          <div 
+            className="p-6 rounded-2xl border mb-6"
             style={{
               background: `
                 linear-gradient(135deg, 
-                  ${notification.type === 'success' 
-                    ? 'rgba(34, 197, 94, 0.15)' 
-                    : 'rgba(239, 68, 68, 0.15)'} 0%,
-                  ${notification.type === 'success' 
-                    ? 'rgba(34, 197, 94, 0.05)' 
-                    : 'rgba(239, 68, 68, 0.05)'} 100%
+                  rgba(255, 255, 255, 0.25) 0%,
+                  rgba(255, 255, 255, 0.1) 100%
                 )
               `,
               backdropFilter: 'blur(20px) saturate(150%)',
-              border: `1px solid ${notification.type === 'success' 
-                ? 'rgba(34, 197, 94, 0.3)' 
-                : 'rgba(239, 68, 68, 0.3)'}`,
+              border: '1px solid rgba(255, 255, 255, 0.3)',
               boxShadow: `
                 0 8px 32px rgba(0, 0, 0, 0.1),
                 inset 0 1px 0 rgba(255, 255, 255, 0.4)
               `,
             }}
           >
-            <p className={`text-base font-medium ${
-              notification.type === 'success' 
-                ? 'text-green-800' 
-                : 'text-red-800'
-            }`}>
-              {notification.message}
-            </p>
-          </div>
-        )}
-        
-        <div 
-          className="relative z-10 px-6 py-8 md:px-8 md:py-10 mt-6 mx-6 rounded-2xl border"
-          style={{
-            background: `
-              linear-gradient(135deg, 
-                rgba(255, 255, 255, 0.25) 0%,
-                rgba(255, 255, 255, 0.1) 100%
-              )
-            `,
-            backdropFilter: 'blur(20px) saturate(150%)',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
-            boxShadow: `
-              0 8px 32px rgba(0, 0, 0, 0.1),
-              inset 0 1px 0 rgba(255, 255, 255, 0.4)
-            `,
-          }}
-        >
-          {loading ? (
-            <div className="space-y-4">
-              <div 
-                className="h-12 w-full sm:w-[300px] rounded-xl animate-pulse"
-                style={{
-                  background: `
-                    linear-gradient(135deg, 
-                      rgba(255, 255, 255, 0.2) 0%,
-                      rgba(255, 255, 255, 0.1) 100%
-                    )
-                  `,
-                  backdropFilter: 'blur(8px)',
-                }}
-              />
-              <div 
-                className="rounded-2xl border overflow-hidden"
-                style={{
-                  background: `
-                    linear-gradient(135deg, 
-                      rgba(255, 255, 255, 0.15) 0%,
-                      rgba(255, 255, 255, 0.05) 100%
-                    )
-                  `,
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                }}
-              >
-                <div className="h-[400px] animate-pulse" />
-              </div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">{getTabTitle()}</h1>
+              <p className="text-gray-600 mt-1">Manage your video library, YouTube uploads, and content scheduling.</p>
             </div>
-          ) : (
-            <YouTubeTable 
-              onEditVideo={handleEditVideo}
-              onCreateVideo={handleCreateVideo}
-              videos={videos}
-              isLoading={loading}
-            />
-          )}
-          
-          <VideoEditorModal 
-            open={isModalOpen} 
-            onOpenChange={setIsModalOpen}
-            videoData={selectedVideo}
+          </div>
+
+          {/* Navigation Tabs */}
+          <div 
+            className="p-6 rounded-2xl border mb-6"
+            style={{
+              background: `
+                linear-gradient(135deg, 
+                  rgba(255, 255, 255, 0.25) 0%,
+                  rgba(255, 255, 255, 0.1) 100%
+                )
+              `,
+              backdropFilter: 'blur(20px) saturate(150%)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: `
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4)
+              `,
+            }}
           >
-            <DialogPrimitive.Title 
-              className="absolute w-1 h-1 overflow-hidden m-[-1px] p-0 border-0 clip"
+            <nav className="flex space-x-8 overflow-x-auto">
+              <button
+                onClick={() => setActiveTab('videos')}
+                className={`text-sm font-medium pb-2 whitespace-nowrap ${
+                  activeTab === 'videos'
+                    ? 'text-pink-600 border-b-2 border-pink-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Videos
+              </button>
+              <button
+                onClick={() => setActiveTab('youtube-library')}
+                className={`text-sm font-medium pb-2 whitespace-nowrap ${
+                  activeTab === 'youtube-library'
+                    ? 'text-pink-600 border-b-2 border-pink-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                YouTube Library
+              </button>
+              <button
+                onClick={() => setActiveTab('youtube-scheduler')}
+                className={`text-sm font-medium pb-2 whitespace-nowrap ${
+                  activeTab === 'youtube-scheduler'
+                    ? 'text-pink-600 border-b-2 border-pink-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                YouTube Scheduler
+              </button>
+              <button
+                onClick={() => setActiveTab('youtube-uploader')}
+                className={`text-sm font-medium pb-2 whitespace-nowrap ${
+                  activeTab === 'youtube-uploader'
+                    ? 'text-pink-600 border-b-2 border-pink-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                YouTube Uploader
+              </button>
+              <button
+                onClick={() => setActiveTab('youtube-playlists')}
+                className={`text-sm font-medium pb-2 whitespace-nowrap ${
+                  activeTab === 'youtube-playlists'
+                    ? 'text-pink-600 border-b-2 border-pink-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                YouTube Playlists
+              </button>
+              <button
+                onClick={() => setActiveTab('playlist-creator')}
+                className={`text-sm font-medium pb-2 whitespace-nowrap ${
+                  activeTab === 'playlist-creator'
+                    ? 'text-pink-600 border-b-2 border-pink-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Playlist Creator
+              </button>
+            </nav>
+          </div>
+
+          {/* Content */}
+          <div 
+            className="p-6 rounded-2xl border"
+            style={{
+              background: `
+                linear-gradient(135deg, 
+                  rgba(255, 255, 255, 0.25) 0%,
+                  rgba(255, 255, 255, 0.1) 100%
+                )
+              `,
+              backdropFilter: 'blur(20px) saturate(150%)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: `
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4)
+              `,
+            }}
+          >
+            {renderTabContent()}
+            
+            <VideoEditorModal 
+              open={isModalOpen} 
+              onOpenChange={setIsModalOpen}
+              videoData={selectedVideo}
             >
-              {selectedVideo ? `Edit Video: ${selectedVideo.title}` : 'Create New Video'}
-            </DialogPrimitive.Title>
-          </VideoEditorModal>
-          
-          <VideoUploadModal
-            isOpen={isUploadModalOpen}
-            onClose={() => setIsUploadModalOpen(false)}
-            onUploadComplete={handleUploadComplete}
-          />
+              <DialogPrimitive.Title 
+                className="absolute w-1 h-1 overflow-hidden m-[-1px] p-0 border-0 clip"
+              >
+                {selectedVideo ? `Edit Video: ${selectedVideo.title}` : 'Create New Video'}
+              </DialogPrimitive.Title>
+            </VideoEditorModal>
+            
+            <VideoUploadModal
+              isOpen={isUploadModalOpen}
+              onClose={() => setIsUploadModalOpen(false)}
+              onUploadComplete={handleUploadComplete}
+            />
+          </div>
         </div>
       </div>
     </DashboardShell>

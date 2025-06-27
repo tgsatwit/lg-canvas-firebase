@@ -1,14 +1,13 @@
 import { 
   collection, 
   doc, 
-  updateDoc, 
   getDocs, 
   query, 
   where,
   writeBatch,
   serverTimestamp
 } from 'firebase/firestore';
-import { chatDb, ensureFirebaseInitialized } from './config';
+import { ensureFirebaseInitialized } from './config';
 import { Conversation, Message } from '@/types/chat';
 import { saveMessage } from './chatService';
 

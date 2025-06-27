@@ -1,12 +1,11 @@
 import { create } from 'zustand';
-import { Conversation, ConversationWithMessages, Message, MessagePage, SystemInstruction, UserReflection } from '@/types/chat';
+import { Conversation, ConversationWithMessages, Message, SystemInstruction, UserReflection } from '@/types/chat';
 import { 
   saveConversation, 
   loadUserConversations, 
   deleteConversationFromDB,
   saveMessage,
   loadRecentMessages,
-  loadConversationMessages,
   loadReflections,
   saveReflection,
   loadSystemInstructions,

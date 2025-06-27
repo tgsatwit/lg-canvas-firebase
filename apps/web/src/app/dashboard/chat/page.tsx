@@ -95,9 +95,9 @@ export default function ChatPage() {
         style={{
           background: `
             linear-gradient(135deg, 
-              rgba(6, 182, 212, 0.1) 0%,
-              rgba(99, 102, 241, 0.05) 50%,
-              rgba(34, 197, 94, 0.1) 100%
+              rgba(148, 163, 184, 0.08) 0%,
+              rgba(203, 213, 225, 0.04) 50%,
+              rgba(148, 163, 184, 0.08) 100%
             )
           `,
         }}
@@ -105,11 +105,12 @@ export default function ChatPage() {
         {/* Ambient background layers */}
         <div className="absolute inset-0 pointer-events-none">
           <div
-            className="absolute inset-0 opacity-30"
+            className="absolute inset-0 opacity-20"
             style={{
               background: `
-                radial-gradient(circle at 30% 40%, rgba(6, 182, 212, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 70% 60%, rgba(99, 102, 241, 0.15) 0%, transparent 50%)
+                radial-gradient(circle at 30% 40%, rgba(148, 163, 184, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 70% 60%, rgba(203, 213, 225, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 50% 10%, rgba(156, 163, 175, 0.08) 0%, transparent 40%)
               `,
             }}
           />
@@ -132,9 +133,10 @@ export default function ChatPage() {
             `,
           }}
         >
-          <LoadingContent loading={true} error={null}>
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 bg-pink-500 rounded-full animate-pulse"></div>
             <div className="text-gray-800 text-lg">Loading chat...</div>
-          </LoadingContent>
+          </div>
         </div>
       </div>
     );
@@ -147,9 +149,9 @@ export default function ChatPage() {
         style={{
           background: `
             linear-gradient(135deg, 
-              rgba(6, 182, 212, 0.1) 0%,
-              rgba(99, 102, 241, 0.05) 50%,
-              rgba(34, 197, 94, 0.1) 100%
+              rgba(148, 163, 184, 0.08) 0%,
+              rgba(203, 213, 225, 0.04) 50%,
+              rgba(148, 163, 184, 0.08) 100%
             )
           `,
         }}
@@ -157,11 +159,12 @@ export default function ChatPage() {
         {/* Ambient background layers */}
         <div className="absolute inset-0 pointer-events-none">
           <div
-            className="absolute inset-0 opacity-30"
+            className="absolute inset-0 opacity-20"
             style={{
               background: `
-                radial-gradient(circle at 30% 40%, rgba(6, 182, 212, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 70% 60%, rgba(99, 102, 241, 0.15) 0%, transparent 50%)
+                radial-gradient(circle at 30% 40%, rgba(148, 163, 184, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 70% 60%, rgba(203, 213, 225, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 50% 10%, rgba(156, 163, 175, 0.08) 0%, transparent 40%)
               `,
             }}
           />
@@ -191,33 +194,9 @@ export default function ChatPage() {
   }
 
   return (
-    <div 
-      className="h-[calc(100vh-4rem)] -m-6 pt-6 flex overflow-hidden relative"
-      style={{
-        background: `
-          linear-gradient(135deg, 
-            rgba(6, 182, 212, 0.1) 0%,
-            rgba(99, 102, 241, 0.05) 50%,
-            rgba(34, 197, 94, 0.1) 100%
-          )
-        `,
-      }}
-    >
-      {/* Ambient background layers */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div
-          className="absolute inset-0 opacity-30"
-          style={{
-            background: `
-              radial-gradient(circle at 30% 40%, rgba(6, 182, 212, 0.15) 0%, transparent 50%),
-              radial-gradient(circle at 70% 60%, rgba(99, 102, 241, 0.15) 0%, transparent 50%)
-            `,
-          }}
-        />
-      </div>
-
-      {/* Sidebar */}
-      <div className={`relative z-10 transition-all duration-300 ${sidebarCollapsed ? 'w-0' : 'w-80'} flex-shrink-0`}>
+    <div className="h-full flex overflow-hidden bg-white dark:bg-gray-900">
+      {/* Chat Sidebar */}
+      <div className={`transition-all duration-300 ${sidebarCollapsed ? 'w-0' : 'w-80'} flex-shrink-0 border-r border-gray-200 dark:border-gray-700`}>
         <div className={`h-full ${sidebarCollapsed ? 'hidden' : 'block'}`}>
           <ChatSidebar
             conversations={conversations}
@@ -232,7 +211,7 @@ export default function ChatPage() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 relative z-10">
+      <div className="flex-1 min-w-0">
         <ChatInterface
           conversationId={activeConversationId || newConversationId || ''}
           userId={user.uid}

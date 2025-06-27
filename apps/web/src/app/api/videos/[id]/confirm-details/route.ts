@@ -4,7 +4,7 @@ import { adminFirestore } from '@/lib/firebase/admin';
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { yt_title, yt_description, yt_tags, yt_privacyStatus } = await request.json();
+    const { yt_title, yt_description, yt_tags, yt_privacyStatus, yt_category } = await request.json();
     
     if (!yt_title || !yt_description) {
       return NextResponse.json(
@@ -36,6 +36,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       yt_description: yt_description,
       yt_tags: yt_tags || [],
       yt_privacyStatus: yt_privacyStatus || 'private',
+      yt_category: yt_category || '26', // Default to HowTo category
       details_confirmed: 'Yes',
       youtubeStatus: 'Ready for YouTube',
       updated_at: new Date().toISOString()
@@ -82,6 +83,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       yt_description: null,
       yt_tags: null,
       yt_privacyStatus: null,
+      yt_category: null,
       details_confirmed: null,
       youtubeStatus: 'Preparing for YouTube',
       updated_at: new Date().toISOString()

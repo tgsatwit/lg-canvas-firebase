@@ -4,13 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
-  RefreshCw, Square, AlertTriangle, CheckCircle, Upload, Eye, Trash2, 
-  Search, Calendar, Play, Edit, X, Check, Clock 
+  RefreshCw, Square, CheckCircle, Eye, Trash2, 
+  Search, Calendar, Play, Edit, Clock 
 } from 'lucide-react';
 import { firestore as getFirestore } from '@/lib/firebase/client';
 import { 

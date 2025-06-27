@@ -15,7 +15,6 @@ import {
   FileText, 
   Wand2,
   Video, 
-  Tag, 
   MessageSquare, 
   Save,
   Loader2

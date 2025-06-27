@@ -1,6 +1,6 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
-import { getAuth, Auth, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
+import { getAuth, Auth, onAuthStateChanged } from 'firebase/auth';
 import { getFunctions, Functions } from 'firebase/functions';
 
 // Your Firebase configuration

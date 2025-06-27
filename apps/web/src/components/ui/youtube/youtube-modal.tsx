@@ -8,15 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Separator } from "@/components/ui/separator"
 import { 
-  Youtube, Globe, X, Info, FileVideo, Clock,
-  Video, Copy, Check, Download, ExternalLink, Database, 
-  ImageIcon, Tag, Calendar, AlertCircle, PlayCircle,
+  Youtube, X, Info, FileVideo, Clock,
+  Video, Copy, Check, ExternalLink, Database, 
+  ImageIcon, Tag, Calendar, PlayCircle,
   Zap, Loader2, Upload, Edit
 } from "lucide-react"
 
@@ -82,6 +80,7 @@ interface VideoData {
   yt_description?: string;
   yt_tags?: string[];
   yt_privacyStatus?: string;
+  yt_category?: string;
   details_confirmed?: string;
 }
 
@@ -390,11 +389,13 @@ const YoutubeStatusCard = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center">
           <Youtube className={`h-5 w-5 mr-2 ${styles.icon}`} />
-          <h3 className={`font-medium ${styles.text}`}>YouTube Status</h3>
+          <h3 className={`font-medium ${styles.text}`}>YouTube</h3>
         </div>
-        <Badge variant="outline" className={`${styles.bg} ${styles.text} ${styles.border}`}>
-          {status}
-        </Badge>
+        {status !== 'Not Scheduled' && (
+          <Badge variant="outline" className={`${styles.bg} ${styles.text} ${styles.border}`}>
+            {status}
+          </Badge>
+        )}
       </div>
 
       {status === 'Uploaded' && youtubeLink && (
@@ -466,58 +467,30 @@ const YoutubeStatusCard = ({
       {status === 'Not Scheduled' && (
         <div className="mt-3 space-y-3">
           <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              YouTube metadata confirmed. Ready to schedule upload.
-            </p>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-green-700">Ready for Upload</span>
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                Ready for YouTube
+              </Badge>
+            </div>
             {ytTitle && (
-              <div className="text-xs">
+              <div className="text-xs p-2 bg-muted rounded">
                 <span className="font-medium">Title: </span>
-                <span className="text-muted-foreground">{ytTitle.substring(0, 50)}...</span>
+                <span className="text-muted-foreground">{ytTitle.substring(0, 60)}{ytTitle.length > 60 ? '...' : ''}</span>
               </div>
             )}
-          </div>
-          <div>
-            <Label htmlFor="schedule-datetime" className="text-xs text-muted-foreground">
-              Schedule Upload (GMT+10)
-            </Label>
-            <Input
-              id="schedule-datetime"
-              type="datetime-local"
-              value={scheduledDateTime}
-              onChange={(e) => setScheduledDateTime(e.target.value)}
-              className="mt-1"
-              min={new Date().toISOString().slice(0, 16)}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button 
-              size="sm" 
-              onClick={handleScheduleUpload}
-              disabled={!scheduledDateTime || isScheduling}
-              className="flex-1"
-            >
-              {isScheduling ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Clock className="h-3 w-3 mr-1" />}
-              Schedule Upload
-            </Button>
-            <Button 
-              size="sm" 
-              variant="outline"
-              onClick={handleUploadNow}
-              disabled={isUploading}
-              className="flex-1"
-            >
-              {isUploading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Upload className="h-3 w-3 mr-1" />}
-              Upload Now
-            </Button>
+            <p className="text-xs text-muted-foreground">
+              YouTube metadata confirmed. Video is ready to upload.
+            </p>
           </div>
           <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleClearDetails}
-            disabled={isConfirming}
-            className="w-full text-red-600 border-red-300 hover:bg-red-50"
+            size="sm" 
+            onClick={handleUploadNow}
+            disabled={isUploading}
+            className="w-full bg-red-600 hover:bg-red-700 text-white"
           >
-            {isConfirming ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Clear Details'}
+            {isUploading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Upload className="h-3 w-3 mr-1" />}
+            Upload Now
           </Button>
         </div>
       )}
@@ -619,7 +592,7 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
     // console.log("Direct duration value:", directDuration);
 
     // Normalize Vimeo metadata structure so the UI can reliably render it
-    let normalizedVimeoMetadata: any = vimeoMetadata || null;
+    const normalizedVimeoMetadata: any = vimeoMetadata || null;
 
     // Ensure correct data structure for Vimeo metadata
     if (normalizedVimeoMetadata) {
@@ -663,7 +636,7 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
     }
     
     // Normalize Vimeo OTT metadata structure so the UI can reliably render it
-    let normalizedVimeoOttMetadata: any = vimeoOttMetadata || null;
+    const normalizedVimeoOttMetadata: any = vimeoOttMetadata || null;
 
     if (normalizedVimeoOttMetadata) {
       // Ensure tags is an array of strings
@@ -763,12 +736,13 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
       upload_scheduled: videoData.upload_scheduled || "",
       upload_time: videoData.upload_time || "",
       
-      // New YouTube metadata fields
-      yt_title: videoData.yt_title || "",
-      yt_description: videoData.yt_description || "",
-      yt_tags: videoData.yt_tags || [],
-      yt_privacyStatus: videoData.yt_privacyStatus || "",
-      details_confirmed: videoData.details_confirmed || "",
+      // New YouTube metadata fields - use extractFirestoreData for proper handling
+      yt_title: pick(videoData.yt_title, extractFirestoreData(videoData, 'yt_title')) || "",
+      yt_description: pick(videoData.yt_description, extractFirestoreData(videoData, 'yt_description')) || "",
+      yt_tags: pick(videoData.yt_tags, extractFirestoreData(videoData, 'yt_tags')) || [],
+      yt_privacyStatus: pick(videoData.yt_privacyStatus, extractFirestoreData(videoData, 'yt_privacyStatus')) || "",
+      yt_category: pick(videoData.yt_category, extractFirestoreData(videoData, 'yt_category')) || "",
+      details_confirmed: pick(videoData.details_confirmed, extractFirestoreData(videoData, 'details_confirmed')) || "",
     };
     
     // If we don't have metadata but have an ID, create minimal metadata
@@ -864,6 +838,11 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
     setCopySuccess(fieldName);
     setTimeout(() => setCopySuccess(null), 2000);
   };
+
+  // Check if video has been uploaded to YouTube
+  const isUploadedToYouTube = data.youtubeStatus?.toLowerCase() === 'published on youtube' || 
+                              data.youtubeLink || 
+                              data.youtube_link;
 
   const tabs: TabData[] = [
     {
@@ -1287,7 +1266,8 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
             </div>
       )
     },
-    {
+    // Only show Edit Details tab if video hasn't been uploaded to YouTube
+    ...(!isUploadedToYouTube ? [{
       id: "edit-details",
       label: "Edit Details",
       icon: <Youtube className="h-4 w-4" />,
@@ -1296,7 +1276,7 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
           <YouTubeTabContent videoData={data} />
         </ScrollArea>
       )
-    },
+    }] : []),
     {
       id: "vimeo-metadata",
       label: "Vimeo",
@@ -1567,11 +1547,35 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
   const [youtubeDescription, setYoutubeDescription] = React.useState(
     videoData.yt_description || videoData.videoMetadata?.description || videoData.vimeoOttMetadata?.description || ""
   );
-  const [youtubeTags, setYoutubeTags] = React.useState<string[]>(
-    videoData.yt_tags || videoData.vimeoOttMetadata?.tags || []
-  );
+  const [youtubeTags, setYoutubeTags] = React.useState<string[]>(() => {
+    // Get tags from multiple sources with fallbacks
+    let tags: any = videoData.yt_tags || videoData.vimeoOttMetadata?.tags || [];
+    
+    // Handle different data formats from Firestore
+    if (typeof tags === 'string') {
+      // If it's a string, try to split it
+      tags = tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
+    } else if (tags && typeof tags === 'object' && !Array.isArray(tags)) {
+      // If it's an object (like Firestore might return), try to extract array
+      if (tags.arrayValue && tags.arrayValue.values) {
+        // Firestore array format
+        tags = tags.arrayValue.values.map((v: any) => v.stringValue || v).filter(Boolean);
+      } else if (Object.values(tags).length > 0) {
+        // Try to get values from object
+        tags = Object.values(tags).filter(v => typeof v === 'string' && v.length > 0);
+      } else {
+        tags = [];
+      }
+    }
+    
+    // Ensure we have an array of strings
+    return Array.isArray(tags) ? tags.filter(tag => typeof tag === 'string' && tag.length > 0) : [];
+  });
   const [youtubePrivacy, setYoutubePrivacy] = React.useState(
           videoData.yt_privacyStatus || "private"
+  );
+  const [youtubeCategory, setYoutubeCategory] = React.useState(
+          videoData.yt_category || "26" // Default to "HowTo" category
   );
   
   const [newTag, setNewTag] = React.useState("");
@@ -1616,6 +1620,7 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
           yt_description: youtubeDescription,
           yt_tags: youtubeTags,
           yt_privacyStatus: youtubePrivacy,
+          yt_category: youtubeCategory,
         }),
       });
 
@@ -1725,8 +1730,6 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
           );
         })()}
       </div>
-      
-      {getYoutubeStatusUI()}
       
       <div className="space-y-4">
         <div className="space-y-2">
@@ -1904,7 +1907,35 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
             </SelectContent>
           </Select>
         </div>
-        
+
+        <div className="space-y-2">
+          <Label htmlFor="youtube-category">YouTube Category</Label>
+          <Select 
+            value={youtubeCategory} 
+            onValueChange={setYoutubeCategory} 
+            disabled={isConfirming}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">Film & Animation</SelectItem>
+              <SelectItem value="2">Autos & Vehicles</SelectItem>
+              <SelectItem value="10">Music</SelectItem>
+              <SelectItem value="15">Pets & Animals</SelectItem>
+              <SelectItem value="17">Sports</SelectItem>
+              <SelectItem value="19">Travel & Events</SelectItem>
+              <SelectItem value="20">Gaming</SelectItem>
+              <SelectItem value="22">People & Blogs</SelectItem>
+              <SelectItem value="23">Comedy</SelectItem>
+              <SelectItem value="24">Entertainment</SelectItem>
+              <SelectItem value="25">News & Politics</SelectItem>
+              <SelectItem value="26">HowTo & Style</SelectItem>
+              <SelectItem value="27">Education</SelectItem>
+              <SelectItem value="28">Science & Technology</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
       </div>
       
@@ -1918,17 +1949,26 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
             </Button>
           </>
         ) : (
-          <Button 
-            variant="outline" 
-            onClick={() => {
-              // Clear confirmed details to allow editing again
-              fetch(`/api/videos/${videoData.document_id}/confirm-details`, { method: 'DELETE' })
-                .then(() => window.location.reload());
-            }}
-          >
-            <Edit className="h-3 w-3 mr-1" />
-            Edit Details
-          </Button>
+          <>
+            {videoData.youtubeStatus?.toLowerCase() === 'ready for youtube' ? (
+              <Button onClick={handleConfirmDetails} disabled={isConfirming}>
+                {isConfirming ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Edit className="h-3 w-3 mr-1" />}
+                Update
+              </Button>
+            ) : (
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  // Clear confirmed details to allow editing again
+                  fetch(`/api/videos/${videoData.document_id}/confirm-details`, { method: 'DELETE' })
+                    .then(() => window.location.reload());
+                }}
+              >
+                <Edit className="h-3 w-3 mr-1" />
+                Edit Details
+              </Button>
+            )}
+          </>
         )}
       </div>
       

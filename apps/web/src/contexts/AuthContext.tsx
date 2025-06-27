@@ -11,7 +11,6 @@ import {
   sendPasswordResetEmail,
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithRedirect,
   getRedirectResult
 } from 'firebase/auth';
 import { auth as getAuth } from '@/lib/firebase/client';

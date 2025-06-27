@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { 
   Menu, 
-  Settings, 
   Mic, 
   MicOff, 
   Volume2, 

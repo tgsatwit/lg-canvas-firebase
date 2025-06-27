@@ -3,7 +3,7 @@
 import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { VideoTable } from './video-table';
 import { VideoModal } from './video-modal';
-import { getAllVideos, updateVideo, VideoItem } from '@/lib/firebase/video-service';
+import { VideoItem } from '@/lib/firebase/video-service';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingContent } from '@/components/ui/loading-content';
 

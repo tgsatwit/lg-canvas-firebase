@@ -5,7 +5,7 @@ import { SidebarProvider, DesktopSidebar } from "@/components/ui/sidebar";
 import { SidebarToggle } from "@/components/ui/sidebar-toggle";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Filter, Calendar, Tags } from "lucide-react";
+import { Plus, Search, Filter, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface DashboardLayoutProps {
@@ -96,6 +96,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       };
     }
     
+    if (pathname.includes('/videos/library')) {
+      return {
+        title: 'YouTube Studio',
+        actions: null // The refresh button is handled in the page itself
+      };
+    }
+    
     if (pathname.includes('/videos')) {
       return {
         title: 'Video Library',
@@ -166,53 +173,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   
   return (
     <SidebarProvider>
-      <div className="flex h-screen relative overflow-hidden">
-        {/* Enhanced background with light liquid glass effect */}
-        <div className="absolute inset-0 w-full h-full z-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-100"/>
-          <div className="absolute inset-0 bg-gradient-to-tr from-blue-100/60 via-purple-50/40 to-pink-100/60"/>
-          <div className="absolute top-0 left-1/3 w-96 h-96 bg-blue-200/40 rounded-full blur-3xl"/>
-          <div className="absolute bottom-0 right-1/3 w-96 h-96 bg-purple-200/40 rounded-full blur-3xl"/>
-          <div className="absolute top-1/2 left-0 w-64 h-64 bg-pink-200/30 rounded-full blur-2xl"/>
-        </div>
-
+      <div className="flex h-screen bg-white dark:bg-gray-900">
         <DesktopSidebar>
           <DashboardSidebar />
         </DesktopSidebar>
-        <div className="flex-1 flex flex-col overflow-hidden relative z-10">
-          {/* Enhanced header with light liquid glass effect */}
-          <header className="relative border-b border-gray-200/60">
-            <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-white/80 to-white/70 backdrop-blur-xl"/>
-            <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-transparent to-transparent"/>
-            <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-gray-300/60 to-transparent"/>
-            <div className="relative flex items-center justify-between h-16 px-6">
-              <div className="flex items-center gap-4">
-                <SidebarToggle />
-                <div className="hidden sm:block">
-                  <h1 className="text-xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                    {pageInfo.title}
-                  </h1>
-                </div>
-                <div className="sm:hidden">
-                  <h1 className="text-lg font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                    {pageInfo.title}
-                  </h1>
-                </div>
-              </div>
-              
-              {pageInfo.actions && (
-                <div className="flex items-center">
-                  {pageInfo.actions}
-                </div>
-              )}
-            </div>
-          </header>
-          {/* Enhanced main content area */}
-          <main className="flex-1 overflow-auto relative">
-            <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-white/30 pointer-events-none"/>
-            <div className="relative z-10">
-              {children}
-            </div>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <main className="flex-1 overflow-auto">
+            {children}
           </main>
         </div>
       </div>

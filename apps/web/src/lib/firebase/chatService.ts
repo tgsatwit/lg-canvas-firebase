@@ -3,7 +3,6 @@ import {
   doc, 
   addDoc, 
   updateDoc, 
-  deleteDoc, 
   getDocs, 
   getDoc,
   query, 
@@ -12,13 +11,10 @@ import {
   limit,
   writeBatch,
   serverTimestamp,
-  onSnapshot,
-  Timestamp,
   startAfter,
-  DocumentSnapshot,
   QueryDocumentSnapshot
 } from 'firebase/firestore';
-import { chatDb, auth, ensureFirebaseInitialized } from './config';
+import { auth, ensureFirebaseInitialized } from './config';
 import { Conversation, Message, MessagePage, UserReflection, SystemInstruction } from '@/types/chat';
 
 // Collection names

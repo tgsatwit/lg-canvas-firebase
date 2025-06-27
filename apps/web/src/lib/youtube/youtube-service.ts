@@ -38,9 +38,11 @@ interface UploadSession {
 
 export class YouTubeService {
   private oauth2Client: any;
+  private serviceAccountAuth: any;
   private storage: Storage;
   private activeSessions: Map<string, UploadSession> = new Map();
   private testMode: boolean = false;
+  private useServiceAccount: boolean = false;
 
   constructor() {
     // Initialize OAuth2 client (traditional constructor)
@@ -49,6 +51,9 @@ export class YouTubeService {
       process.env.YOUTUBE_CLIENT_SECRET,
       process.env.YOUTUBE_REDIRECT_URL || 'http://localhost:3000/api/auth/youtube/callback'
     );
+
+    // Initialize Service Account if available
+    this.initializeServiceAccount();
 
     // Initialize Google Cloud Storage
     // If credentials are not provided, GCS will try to use default credentials
@@ -119,6 +124,259 @@ export class YouTubeService {
     this.testMode = process.env.YOUTUBE_TEST_MODE === 'true';
     if (this.testMode) {
       console.log('⚠️ YouTube Service running in TEST MODE');
+    }
+  }
+
+  /**
+   * Initialize service account authentication if credentials are available
+   */
+  private initializeServiceAccount() {
+    try {
+      if (process.env.YOUTUBE_SERVICE_ACCOUNT) {
+        console.log('🔐 Initializing YouTube service account...');
+        
+        let serviceAccountKey;
+        if (typeof process.env.YOUTUBE_SERVICE_ACCOUNT === 'string') {
+          serviceAccountKey = JSON.parse(process.env.YOUTUBE_SERVICE_ACCOUNT);
+        } else {
+          serviceAccountKey = process.env.YOUTUBE_SERVICE_ACCOUNT;
+        }
+
+        this.serviceAccountAuth = new google.auth.GoogleAuth({
+          credentials: serviceAccountKey,
+          scopes: [
+            'https://www.googleapis.com/auth/youtube.readonly',
+            'https://www.googleapis.com/auth/youtube',
+            'https://www.googleapis.com/auth/youtube.upload',
+            'https://www.googleapis.com/auth/youtube.force-ssl'
+          ],
+        });
+
+        this.useServiceAccount = true;
+        console.log('✅ Service account initialized successfully');
+      } else {
+        console.log('⚠️ No service account credentials found, using OAuth2');
+      }
+    } catch (error) {
+      console.error('❌ Failed to initialize service account:', error);
+      this.useServiceAccount = false;
+    }
+  }
+
+  /**
+   * Get the appropriate auth client (service account or OAuth2)
+   */
+  private async getAuthClient() {
+    if (this.useServiceAccount && this.serviceAccountAuth) {
+      console.log('Using service account authentication');
+      return await this.serviceAccountAuth.getClient();
+    } else {
+      console.log('Using OAuth2 authentication');
+      return this.oauth2Client;
+    }
+  }
+
+  /**
+   * Test connection with service account
+   */
+  async testServiceAccountConnection(): Promise<{ success: boolean; error?: string; user?: any }> {
+    if (!this.useServiceAccount || !this.serviceAccountAuth) {
+      return {
+        success: false,
+        error: 'Service account not configured'
+      };
+    }
+
+    try {
+      console.log('🧪 Testing YouTube service account connection...');
+      
+      const authClient = await this.serviceAccountAuth.getClient();
+      
+      // Try to get channel information
+      const response = await youtube.channels.list({
+        auth: authClient,
+        part: ['snippet', 'statistics'],
+        mine: true,
+      });
+      
+      const channel = response.data.items?.[0];
+      if (!channel) {
+        // If no channel found with 'mine: true', try with forUsername or id
+        // Service accounts typically can't use 'mine: true'
+        return {
+          success: false,
+          error: 'Service account cannot access channel data. YouTube Data API v3 requires OAuth2 for personal channels.'
+        };
+      }
+      
+      console.log('✅ YouTube service account connection successful');
+      return {
+        success: true,
+        user: {
+          channelId: channel.id,
+          channelTitle: channel.snippet?.title,
+          description: channel.snippet?.description,
+        }
+      };
+      
+    } catch (error: any) {
+      console.error('❌ YouTube service account connection failed:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Fetch videos using service account or OAuth2
+   */
+  async fetchChannelVideos(channelId?: string, maxResults: number = 50) {
+    try {
+      console.log('🎬 Fetching YouTube videos...');
+      
+      const authClient = await this.getAuthClient();
+      
+      if (this.useServiceAccount && !channelId) {
+        return {
+          success: false,
+          error: 'Channel ID required when using service account. Service accounts cannot use "mine: true".'
+        };
+      }
+
+      // First, get the channel information
+      let channelResponse;
+      if (this.useServiceAccount && channelId) {
+        channelResponse = await youtube.channels.list({
+          auth: authClient,
+          part: ['contentDetails', 'snippet', 'statistics'],
+          id: [channelId],
+        });
+      } else {
+        channelResponse = await youtube.channels.list({
+          auth: authClient,
+          part: ['contentDetails', 'snippet', 'statistics'],
+          mine: true,
+        });
+      }
+
+      const channel = channelResponse.data.items?.[0];
+      if (!channel) {
+        return {
+          success: false,
+          error: 'No YouTube channel found'
+        };
+      }
+
+      const uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads;
+      if (!uploadsPlaylistId) {
+        return {
+          success: false,
+          error: 'No uploads playlist found'
+        };
+      }
+
+      // Get videos from the uploads playlist
+      const playlistResponse = await youtube.playlistItems.list({
+        auth: authClient,
+        part: ['snippet', 'contentDetails'],
+        playlistId: uploadsPlaylistId,
+        maxResults: maxResults,
+      });
+
+      const playlistItems = playlistResponse.data.items || [];
+      
+      // Get detailed video information
+      const videoIds = playlistItems
+        .map(item => item.contentDetails?.videoId)
+        .filter((id): id is string => Boolean(id));
+
+      let videos: any[] = [];
+      
+      if (videoIds.length > 0) {
+        const videosResponse = await youtube.videos.list({
+          auth: authClient,
+          part: ['snippet', 'statistics', 'status', 'contentDetails'],
+          id: videoIds,
+        } as any);
+
+        videos = (videosResponse.data.items || []).map((video: any) => ({
+          id: video.id,
+          title: video.snippet?.title || 'Untitled',
+          description: video.snippet?.description || '',
+          thumbnail: {
+            default: video.snippet?.thumbnails?.default?.url,
+            medium: video.snippet?.thumbnails?.medium?.url,
+            high: video.snippet?.thumbnails?.high?.url,
+            standard: video.snippet?.thumbnails?.standard?.url,
+            maxres: video.snippet?.thumbnails?.maxres?.url,
+          },
+          publishedAt: video.snippet?.publishedAt,
+          channelId: video.snippet?.channelId,
+          channelTitle: video.snippet?.channelTitle,
+          tags: video.snippet?.tags || [],
+          categoryId: video.snippet?.categoryId,
+          defaultLanguage: video.snippet?.defaultLanguage,
+          
+          // Statistics
+          viewCount: parseInt(video.statistics?.viewCount || '0'),
+          likeCount: parseInt(video.statistics?.likeCount || '0'),
+          dislikeCount: parseInt(video.statistics?.dislikeCount || '0'),
+          favoriteCount: parseInt(video.statistics?.favoriteCount || '0'),
+          commentCount: parseInt(video.statistics?.commentCount || '0'),
+          
+          // Status
+          uploadStatus: video.status?.uploadStatus,
+          privacyStatus: video.status?.privacyStatus,
+          license: video.status?.license,
+          embeddable: video.status?.embeddable,
+          publicStatsViewable: video.status?.publicStatsViewable,
+          
+          // Content Details
+          duration: video.contentDetails?.duration,
+          dimension: video.contentDetails?.dimension,
+          definition: video.contentDetails?.definition,
+          caption: video.contentDetails?.caption,
+          
+          // Video URL
+          url: `https://www.youtube.com/watch?v=${video.id}`,
+          
+          // Studio URL
+          studioUrl: `https://studio.youtube.com/video/${video.id}/edit`,
+        }));
+      }
+
+      // Channel information
+      const channelInfo = {
+        id: channel.id,
+        title: channel.snippet?.title,
+        description: channel.snippet?.description,
+        customUrl: channel.snippet?.customUrl,
+        publishedAt: channel.snippet?.publishedAt,
+        thumbnails: channel.snippet?.thumbnails,
+        country: channel.snippet?.country,
+        
+        // Statistics
+        viewCount: parseInt(channel.statistics?.viewCount || '0'),
+        subscriberCount: parseInt(channel.statistics?.subscriberCount || '0'),
+        hiddenSubscriberCount: channel.statistics?.hiddenSubscriberCount,
+        videoCount: parseInt(channel.statistics?.videoCount || '0'),
+      };
+
+      return {
+        success: true,
+        channel: channelInfo,
+        videos,
+        authMethod: this.useServiceAccount ? 'service_account' : 'oauth2'
+      };
+
+    } catch (error: any) {
+      console.error('Error fetching YouTube videos:', error);
+      return {
+        success: false,
+        error: error.message,
+        authMethod: this.useServiceAccount ? 'service_account' : 'oauth2'
+      };
     }
   }
 
@@ -242,11 +500,23 @@ export class YouTubeService {
   }
 
   /**
-   * Test the connection to YouTube API
+   * Test the connection to YouTube API (tries service account first, then OAuth2)
    */
-  async testConnection(): Promise<{ success: boolean; error?: string; user?: any }> {
+  async testConnection(): Promise<{ success: boolean; error?: string; user?: any; authMethod?: string }> {
+    // Try service account first
+    if (this.useServiceAccount) {
+      console.log('🧪 Testing YouTube service account connection...');
+      const result = await this.testServiceAccountConnection();
+      if (result.success) {
+        return { ...result, authMethod: 'service_account' };
+      } else {
+        console.log('Service account failed, falling back to OAuth2:', result.error);
+      }
+    }
+
+    // Fall back to OAuth2
     try {
-      console.log('🧪 Testing YouTube API connection...');
+      console.log('🧪 Testing YouTube OAuth2 connection...');
       
       // Check if we have credentials
       if (!this.oauth2Client.credentials?.access_token) {
@@ -265,9 +535,10 @@ export class YouTubeService {
         throw new Error('No channel found for authenticated user');
       }
       
-      console.log('✅ YouTube API connection successful');
+      console.log('✅ YouTube OAuth2 connection successful');
       return {
         success: true,
+        authMethod: 'oauth2',
         user: {
           channelId: channel.id,
           channelTitle: channel.snippet?.title,
@@ -279,6 +550,7 @@ export class YouTubeService {
       console.error('❌ YouTube API connection failed:', error);
       return {
         success: false,
+        authMethod: 'oauth2',
         error: error.message
       };
     }
@@ -1158,6 +1430,35 @@ export class YouTubeService {
         this.activeSessions.delete(uploadId);
       }
     });
+  }
+
+  /**
+   * Load credentials from cookies (for use in API routes)
+   */
+  async loadCredentialsFromCookies(cookieStore: any): Promise<boolean> {
+    try {
+      const accessToken = cookieStore.get('youtube_access_token');
+      const refreshToken = cookieStore.get('youtube_refresh_token');
+      const tokenExpiry = cookieStore.get('youtube_token_expiry');
+
+      if (!accessToken?.value) {
+        return false;
+      }
+
+      const tokens = {
+        access_token: accessToken.value,
+        refresh_token: refreshToken?.value,
+        expiry_date: tokenExpiry?.value ? parseInt(tokenExpiry.value) : undefined,
+        token_type: 'Bearer',
+        scope: 'https://www.googleapis.com/auth/youtube'
+      };
+
+      this.setCredentials(tokens);
+      return true;
+    } catch (error) {
+      console.error('Error loading credentials from cookies:', error);
+      return false;
+    }
   }
 }
 

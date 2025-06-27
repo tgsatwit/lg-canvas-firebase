@@ -2,16 +2,17 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card } from '@/components/ui/card';
 import { 
   Menu, 
-  Settings, 
   Mic, 
   MicOff, 
   Volume2, 
   VolumeX,
-  MessageSquare
+  MessageSquare,
+  Search,
+  MoreHorizontal,
+  Edit3,
+  Bookmark
 } from 'lucide-react';
 import { useChatStore } from '@/stores/chatStore';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
@@ -33,22 +34,21 @@ interface ChatInterfaceProps {
 export function ChatInterface({
   userId,
   conversationId,
-  sidebarCollapsed,
   onToggleSidebar,
 }: ChatInterfaceProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [streamingMessage, setStreamingMessage] = useState<Message | null>(null);
   const [voiceMode, setVoiceMode] = useState(false);
+  const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(false);
+  const [showTypingIndicator, setShowTypingIndicator] = useState(false);
   const { toast } = useToast();
   
   const {
     conversations,
     activeConversation,
     addMessage,
-    updateMessage,
     createConversation,
     setActiveConversation,
-    loadConversationMessages,
     reflections,
     loadUserReflections,
   } = useChatStore();
@@ -124,7 +124,7 @@ export function ChatInterface({
       handleSendMessage(transcript);
       resetTranscript();
     }
-  }, [transcript, isListening]);
+  }, [transcript, isListening, resetTranscript]);
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || isGenerating) return;
@@ -159,6 +159,7 @@ export function ChatInterface({
 
     // Start generating AI response
     setIsGenerating(true);
+    setShowTypingIndicator(true);
     
     const assistantMessage: Message = {
       id: crypto.randomUUID(),
@@ -171,9 +172,46 @@ export function ChatInterface({
     setStreamingMessage(assistantMessage);
 
     try {
+      // Determine if we need web search
+      let enhancedContent = content;
+      let searchResults = '';
+
+      if (isWebSearchEnabled) {
+        try {
+          // Call web search agent to determine if search is needed and perform it
+          const webSearchResponse = await fetch('/api/agents/web-search', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              message: content,
+              userId: userId,
+            }),
+          });
+
+          if (webSearchResponse.ok) {
+            const searchData = await webSearchResponse.json();
+            if (searchData.searchResults && searchData.searchResults.length > 0) {
+              searchResults = '\n\nWeb Search Results:\n' + 
+                searchData.searchResults.map((result: any, index: number) => 
+                  `${index + 1}. ${result.title}\n   ${result.snippet}\n   Source: ${result.url}`
+                ).join('\n\n');
+              
+              enhancedContent = content + '\n\n[Assistant: I searched the web for current information to provide you with the most up-to-date response.]' + searchResults;
+            }
+          }
+        } catch (searchError) {
+          console.error('Web search failed:', searchError);
+          // Continue without search results
+        }
+      }
+
       await generateChatResponse({
-        messages: [...conversation.messages, userMessage],
-        systemInstructions: conversation.systemInstructions,
+        messages: [...conversation.messages, { ...userMessage, content: enhancedContent }],
+        systemInstructions: isWebSearchEnabled 
+          ? conversation.systemInstructions + '\n\nYou have access to current web search results. Use them to provide accurate, up-to-date information. Cite sources when relevant.'
+          : conversation.systemInstructions,
         userId,
         reflections,
         model: conversation.model,
@@ -189,6 +227,7 @@ export function ChatInterface({
           
           await addMessage(currentConversationId!, finalMessage);
           setStreamingMessage(null);
+          setShowTypingIndicator(false);
           
           // Speak the response if voice mode is enabled
           if (voiceMode && speechSynthesisSupported) {
@@ -206,6 +245,7 @@ export function ChatInterface({
       };
       await addMessage(currentConversationId, errorMessage);
       setStreamingMessage(null);
+      setShowTypingIndicator(false);
     } finally {
       setIsGenerating(false);
     }
@@ -232,103 +272,163 @@ export function ChatInterface({
     }
   };
 
-  // Show simple new chat interface when no conversation or empty conversation
+  // Show ChatGPT-like welcome interface when no conversation or empty conversation
   if (!conversationId || !activeConversation || activeConversation.messages.length === 0) {
     return (
-      <div className="h-full relative overflow-hidden">
-        {/* Enhanced background with light liquid glass effect */}
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-b from-white via-slate-50/80 to-white"/>
-          <div className="absolute inset-0 bg-gradient-to-br from-pink-50/60 via-rose-25/30 to-purple-50/60"/>
-          <div className="absolute inset-0 backdrop-blur-xl"/>
-          <div className="absolute top-0 right-0 w-32 h-32 bg-pink-100/60 rounded-full blur-2xl"/>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-rose-100/60 rounded-full blur-xl"/>
-        </div>
-
-        <div className="h-full grid grid-rows-[auto_1fr_auto] relative z-10">
-          {/* Enhanced header with liquid glass effect */}
-          <header className="relative border-b border-gray-200/60">
-            <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-white/80 to-white/70 backdrop-blur-xl"/>
-            <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-transparent to-transparent"/>
-            <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-gray-300/60 to-transparent"/>
-            <div className="relative flex items-center justify-between px-6 py-4">
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onToggleSidebar}
-                  className="text-gray-700 hover:bg-white/60 hover:text-gray-900 rounded-xl transition-all duration-200"
-                >
-                  <Menu className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                {browserSupportsSpeechRecognition && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleVoiceToggle}
-                    className={cn(
-                      "text-gray-700 rounded-xl transition-all duration-200",
-                      isListening 
-                        ? "bg-gradient-to-r from-red-50/80 to-orange-50/60 text-red-600 hover:bg-red-100/80" 
-                        : hasPermission === false 
-                          ? "bg-gradient-to-r from-orange-50/80 to-yellow-50/60 text-orange-600 hover:bg-orange-100/80"
-                          : "hover:bg-white/60 hover:text-gray-900"
-                    )}
-                    title={
-                      hasPermission === false 
-                        ? "Microphone access denied. Click to request permission."
-                        : isListening 
-                          ? "Stop listening"
-                          : "Start voice input"
-                    }
-                  >
-                    {isListening ? (
-                      <MicOff className="h-4 w-4" />
-                    ) : (
-                      <Mic className="h-4 w-4" />
-                    )}
-                  </Button>
-                )}
-              </div>
-            </div>
-          </header>
+      <div className="h-full bg-white dark:bg-gray-900 flex flex-col">
+        {/* Modern header */}
+        <header className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onToggleSidebar}
+              className="text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          </div>
           
-          {/* Enhanced welcome content with glass styling */}
-          <div className="flex items-center justify-center px-6 relative">
-            <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-white/30 pointer-events-none"/>
-            <div className="max-w-2xl text-center relative z-10">
-              <div className="relative mb-6">
-                <div className="absolute inset-0 bg-gradient-to-r from-pink-50/60 to-rose-50/40 rounded-2xl backdrop-blur-sm border border-pink-200/40 shadow-sm blur-sm"/>
-                <div className="relative bg-gradient-to-r from-white/60 via-white/80 to-white/60 rounded-2xl p-8 backdrop-blur-sm border border-gray-200/60">
-                  <h2 className="text-2xl font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-3">
-                    How can I help you today?
-                  </h2>
-                  <p className="text-gray-600">Start a conversation by typing a message below.</p>
-                </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsWebSearchEnabled(!isWebSearchEnabled)}
+              className={cn(
+                "text-gray-500 rounded-lg",
+                isWebSearchEnabled 
+                  ? "bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400" 
+                  : "hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300"
+              )}
+              title="Toggle web search"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+            
+            {browserSupportsSpeechRecognition && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleVoiceToggle}
+                className={cn(
+                  "text-gray-700 dark:text-gray-300 rounded-lg",
+                  isListening 
+                    ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" 
+                    : hasPermission === false 
+                      ? "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400"
+                      : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                )}
+                title={
+                  hasPermission === false 
+                    ? "Microphone access denied. Click to request permission."
+                    : isListening 
+                      ? "Stop listening"
+                      : "Start voice input"
+                }
+              >
+                {isListening ? (
+                  <MicOff className="h-4 w-4" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
+              </Button>
+            )}
+          </div>
+        </header>
+        
+        {/* Welcome content */}
+        <div className="flex-1 flex items-center justify-center px-6">
+          <div className="max-w-3xl text-center">
+            <div className="mb-8">
+              <div className="w-16 h-16 bg-gradient-to-r from-pink-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <MessageSquare className="h-8 w-8 text-white" />
               </div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                How can I help you today?
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                Start a conversation, ask questions, or get help with your projects.
+              </p>
+            </div>
+
+            {/* Quick action suggestions */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+              <button
+                onClick={() => handleSendMessage("Help me brainstorm ideas for a new project")}
+                className="p-4 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-left transition-colors"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-6 h-6 bg-pink-100 dark:bg-pink-900 rounded-md flex items-center justify-center">
+                    <Edit3 className="h-3 w-3 text-pink-600 dark:text-pink-400" />
+                  </div>
+                  <span className="font-medium text-gray-900 dark:text-white">Brainstorm ideas</span>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Generate creative ideas for your next project
+                </p>
+              </button>
+
+              <button
+                onClick={() => handleSendMessage("Search the web for the latest news in AI")}
+                className="p-4 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-left transition-colors"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-6 h-6 bg-pink-100 dark:bg-pink-900 rounded-md flex items-center justify-center">
+                    <Search className="h-3 w-3 text-pink-600 dark:text-pink-400" />
+                  </div>
+                  <span className="font-medium text-gray-900 dark:text-white">Search the web</span>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Get the latest information from the internet
+                </p>
+              </button>
+
+              <button
+                onClick={() => handleSendMessage("Help me write a professional email")}
+                className="p-4 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-left transition-colors"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-6 h-6 bg-pink-100 dark:bg-pink-900 rounded-md flex items-center justify-center">
+                    <MessageSquare className="h-3 w-3 text-pink-600 dark:text-pink-400" />
+                  </div>
+                  <span className="font-medium text-gray-900 dark:text-white">Write content</span>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Create professional emails, documents, and more
+                </p>
+              </button>
+
+              <button
+                onClick={() => handleSendMessage("Explain a complex topic in simple terms")}
+                className="p-4 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl text-left transition-colors"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-6 h-6 bg-pink-100 dark:bg-pink-900 rounded-md flex items-center justify-center">
+                    <Bookmark className="h-3 w-3 text-pink-600 dark:text-pink-400" />
+                  </div>
+                  <span className="font-medium text-gray-900 dark:text-white">Learn something</span>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Get explanations for complex topics
+                </p>
+              </button>
             </div>
           </div>
+        </div>
 
-          {/* Enhanced input area with glass styling */}
-          <div className="relative border-t border-gray-200/60">
-            <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-white/80 to-white/70 backdrop-blur-xl"/>
-            <div className="absolute inset-0 bg-gradient-to-t from-white/60 via-transparent to-transparent"/>
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gray-300/60 to-transparent"/>
-            <div className="relative p-6">
-              <div className="max-w-4xl mx-auto">
-                <MessageInput
-                  onSendMessage={handleSendMessage}
-                  disabled={isGenerating}
-                  isListening={isListening}
-                  onVoiceToggle={handleVoiceToggle}
-                  browserSupportsSpeechRecognition={browserSupportsSpeechRecognition}
-                  transcript={transcript}
-                />
-              </div>
-            </div>
+        {/* Modern input area */}
+        <div className="border-t border-gray-200 dark:border-gray-700 p-6">
+          <div className="max-w-4xl mx-auto">
+            <MessageInput
+              onSendMessage={handleSendMessage}
+              disabled={isGenerating}
+              isListening={isListening}
+              onVoiceToggle={handleVoiceToggle}
+              browserSupportsSpeechRecognition={browserSupportsSpeechRecognition}
+              transcript={transcript}
+              placeholder="Message PBL Chat..."
+              showWebSearch={isWebSearchEnabled}
+            />
           </div>
         </div>
       </div>
@@ -344,116 +444,140 @@ export function ChatInterface({
     : activeConversation.messages;
 
   return (
-    <div className="h-full relative overflow-hidden">
-      {/* Enhanced background with light liquid glass effect */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-white via-slate-50/80 to-white"/>
-        <div className="absolute inset-0 bg-gradient-to-br from-pink-50/60 via-rose-25/30 to-purple-50/60"/>
-        <div className="absolute inset-0 backdrop-blur-xl"/>
-        <div className="absolute top-0 right-0 w-32 h-32 bg-pink-100/60 rounded-full blur-2xl"/>
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-rose-100/60 rounded-full blur-xl"/>
-      </div>
-
-      <div className="h-full grid grid-rows-[auto_1fr_auto] relative z-10">
-        {/* Enhanced header with liquid glass effect */}
-        <header className="relative border-b border-gray-200/60">
-          <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-white/80 to-white/70 backdrop-blur-xl"/>
-          <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-transparent to-transparent"/>
-          <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-gray-300/60 to-transparent"/>
-          <div className="relative flex items-center justify-between px-6 py-4">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onToggleSidebar}
-                className="text-gray-700 hover:bg-white/60 hover:text-gray-900 rounded-xl transition-all duration-200"
-              >
-                <Menu className="h-4 w-4" />
-              </Button>
-              <h1 className="text-lg font-semibold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent truncate">
-                {activeConversation.title}
-              </h1>
+    <div className="h-full bg-white dark:bg-gray-900 flex flex-col">
+      {/* Modern chat header */}
+      <header className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onToggleSidebar}
+            className="text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex-shrink-0"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <MessageSquare className="h-4 w-4 text-white" />
             </div>
-            
-            <div className="flex items-center gap-2">
-              {speechSynthesisSupported && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleVoiceModeToggle}
-                  className={cn(
-                    "text-gray-700 rounded-xl transition-all duration-200",
-                    voiceMode 
-                      ? "bg-gradient-to-r from-pink-50/80 to-rose-50/60 text-pink-600 hover:bg-pink-100/80"
-                      : "hover:bg-white/60 hover:text-gray-900"
-                  )}
-                >
-                  {isSpeaking ? (
-                    <VolumeX className="h-4 w-4" />
-                  ) : (
-                    <Volume2 className="h-4 w-4" />
-                  )}
-                </Button>
-              )}
-              
-              {browserSupportsSpeechRecognition && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleVoiceToggle}
-                  className={cn(
-                    "text-gray-700 rounded-xl transition-all duration-200",
-                    isListening 
-                      ? "bg-gradient-to-r from-red-50/80 to-orange-50/60 text-red-600 hover:bg-red-100/80" 
-                      : hasPermission === false 
-                        ? "bg-gradient-to-r from-orange-50/80 to-yellow-50/60 text-orange-600 hover:bg-orange-100/80"
-                        : "hover:bg-white/60 hover:text-gray-900"
-                  )}
-                  title={
-                    hasPermission === false 
-                      ? "Microphone access denied. Click to request permission."
-                      : isListening 
-                        ? "Stop listening"
-                        : "Start voice input"
-                  }
-                >
-                  {isListening ? (
-                    <MicOff className="h-4 w-4" />
-                  ) : (
-                    <Mic className="h-4 w-4" />
-                  )}
-                </Button>
-              )}
-            </div>
-          </div>
-        </header>
-
-        {/* Enhanced messages area with glass effect */}
-        <div className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-white/30 pointer-events-none"/>
-          <div className="relative z-10">
-            <MessageList messages={allMessages} />
-            <div ref={messagesEndRef} />
+            <h1 className="font-semibold text-gray-900 dark:text-white truncate">
+              {activeConversation.title}
+            </h1>
           </div>
         </div>
+        
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsWebSearchEnabled(!isWebSearchEnabled)}
+            className={cn(
+              "text-gray-500 rounded-lg",
+              isWebSearchEnabled 
+                ? "bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400" 
+                : "hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300"
+            )}
+            title="Toggle web search"
+          >
+            <Search className="h-4 w-4" />
+          </Button>
 
-        {/* Enhanced input area with glass styling */}
-        <div className="relative border-t border-gray-200/60">
-          <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-white/80 to-white/70 backdrop-blur-xl"/>
-          <div className="absolute inset-0 bg-gradient-to-t from-white/60 via-transparent to-transparent"/>
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gray-300/60 to-transparent"/>
-          <div className="relative p-6">
-            <div className="max-w-4xl mx-auto">
-              <MessageInput
-                onSendMessage={handleSendMessage}
-                disabled={isGenerating}
-                isListening={isListening}
-                onVoiceToggle={handleVoiceToggle}
-                browserSupportsSpeechRecognition={browserSupportsSpeechRecognition}
-                transcript={transcript}
-              />
+          {speechSynthesisSupported && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleVoiceModeToggle}
+              className={cn(
+                "text-gray-500 rounded-lg",
+                voiceMode 
+                  ? "bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400"
+                  : "hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300"
+              )}
+              title="Toggle voice mode"
+            >
+              {isSpeaking ? (
+                <VolumeX className="h-4 w-4" />
+              ) : (
+                <Volume2 className="h-4 w-4" />
+              )}
+            </Button>
+          )}
+          
+          {browserSupportsSpeechRecognition && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleVoiceToggle}
+              className={cn(
+                "text-gray-500 rounded-lg",
+                isListening 
+                  ? "bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400" 
+                  : hasPermission === false 
+                    ? "bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400"
+                    : "hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300"
+              )}
+              title={
+                hasPermission === false 
+                  ? "Microphone access denied. Click to request permission."
+                  : isListening 
+                    ? "Stop listening"
+                    : "Start voice input"
+              }
+            >
+              {isListening ? (
+                <MicOff className="h-4 w-4" />
+              ) : (
+                <Mic className="h-4 w-4" />
+              )}
+            </Button>
+          )}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+            title="More options"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </div>
+      </header>
+
+      {/* Messages area */}
+      <div className="flex-1 overflow-hidden relative">
+        <div className="h-full">
+          <MessageList messages={allMessages} />
+          <div ref={messagesEndRef} />
+        </div>
+        
+        {/* Typing indicator */}
+        {(isGenerating || showTypingIndicator) && (
+          <div className="absolute bottom-0 left-0 right-0 p-4">
+            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+              <div className="flex space-x-1">
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+              </div>
+              <span className="text-sm">PBL Chat is typing...</span>
             </div>
           </div>
+        )}
+      </div>
+
+      {/* Modern input area */}
+      <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex-shrink-0">
+        <div className="max-w-4xl mx-auto">
+          <MessageInput
+            onSendMessage={handleSendMessage}
+            disabled={isGenerating}
+            isListening={isListening}
+            onVoiceToggle={handleVoiceToggle}
+            browserSupportsSpeechRecognition={browserSupportsSpeechRecognition}
+            transcript={transcript}
+            placeholder="Message PBL Chat..."
+            showWebSearch={isWebSearchEnabled}
+          />
         </div>
       </div>
     </div>

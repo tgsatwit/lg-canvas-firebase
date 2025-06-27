@@ -20,8 +20,6 @@ import {
   ChevronLeft,
   ChevronRight,
   PlusCircle,
-  Search,
-  Calendar as CalendarIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -96,10 +94,10 @@ const colStartClasses = [
 
 // Event Type Colors
 const eventTypeColors = {
-  task: "bg-blue-500",
-  event: "bg-purple-500",
-  reminder: "bg-amber-500",
-  default: "bg-gray-500"
+  task: "bg-pink-500",
+  event: "bg-pink-500",
+  reminder: "bg-pink-500",
+  default: "bg-pink-500"
 }
 
 // Add Event Form Component
@@ -155,7 +153,7 @@ function AddEventForm({ date, onClose, onAddTask }: {
           id="event-type"
           value={eventType}
           onChange={(e) => setEventType(e.target.value as "task" | "event" | "reminder")}
-          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-pink-500 focus:outline-none focus:ring-1 focus:ring-pink-500"
         >
           <option value="task">Task</option>
           <option value="event">Event</option>
@@ -273,7 +271,7 @@ export function DashboardCalendar({ data, onAddEvent, onAddTask }: DashboardCale
           <Separator orientation="vertical" className="hidden h-6 md:block" />
 
           <Button 
-            className="w-full gap-2 md:w-auto bg-blue-600 hover:bg-blue-700"
+            className="w-full gap-2 md:w-auto bg-pink-600 hover:bg-pink-700"
             onClick={() => handleAddEvent(selectedDay)}
           >
             <PlusCircle size={16} strokeWidth={2} aria-hidden="true" />
@@ -309,7 +307,7 @@ export function DashboardCalendar({ data, onAddEvent, onAddTask }: DashboardCale
                     !isSameMonth(day, firstDayCurrentMonth) &&
                     "bg-gray-50 text-gray-400",
                   "relative flex flex-col border-b border-r border-gray-200 hover:bg-gray-50 focus:z-10 cursor-pointer group",
-                  isEqual(day, selectedDay) && "bg-blue-50",
+                  isEqual(day, selectedDay) && "bg-pink-50",
                   isToday(day) && !isEqual(day, selectedDay) && "bg-yellow-50"
                 )}
               >
@@ -328,11 +326,11 @@ export function DashboardCalendar({ data, onAddEvent, onAddTask }: DashboardCale
                         "text-gray-400",
                       isEqual(day, selectedDay) &&
                         isToday(day) &&
-                        "border-none bg-blue-600",
+                        "border-none bg-pink-600",
                       isEqual(day, selectedDay) &&
                         !isToday(day) &&
-                        "bg-blue-600 text-white",
-                      isToday(day) && !isEqual(day, selectedDay) && "border border-blue-600 text-blue-600",
+                        "bg-pink-600 text-white",
+                      isToday(day) && !isEqual(day, selectedDay) && "border border-pink-600 text-pink-600",
                       "flex h-7 w-7 items-center justify-center rounded-full text-xs hover:border"
                     )}
                   >
@@ -345,7 +343,7 @@ export function DashboardCalendar({ data, onAddEvent, onAddTask }: DashboardCale
                       e.stopPropagation()
                       handleAddEvent(day)
                     }}
-                    className="opacity-0 group-hover:opacity-100 hover:text-blue-600 transition-opacity"
+                    className="opacity-0 group-hover:opacity-100 hover:text-pink-600 transition-opacity"
                   >
                     <PlusCircle size={14} />
                   </button>
@@ -406,7 +404,7 @@ export function DashboardCalendar({ data, onAddEvent, onAddTask }: DashboardCale
                   (isEqual(day, selectedDay) || isToday(day)) &&
                     "font-semibold",
                   "flex h-14 flex-col border-b border-r border-gray-200 px-3 py-2 hover:bg-gray-50 focus:z-10",
-                  isEqual(day, selectedDay) && "bg-blue-50"
+                  isEqual(day, selectedDay) && "bg-pink-50"
                 )}
               >
                 <time
@@ -415,11 +413,11 @@ export function DashboardCalendar({ data, onAddEvent, onAddTask }: DashboardCale
                     "ml-auto flex size-6 items-center justify-center rounded-full",
                     isEqual(day, selectedDay) &&
                       isToday(day) &&
-                      "bg-blue-600 text-white",
+                      "bg-pink-600 text-white",
                     isEqual(day, selectedDay) &&
                       !isToday(day) &&
-                      "bg-blue-600 text-white",
-                    isToday(day) && !isEqual(day, selectedDay) && "border border-blue-600 text-blue-600"
+                      "bg-pink-600 text-white",
+                    isToday(day) && !isEqual(day, selectedDay) && "border border-pink-600 text-pink-600"
                   )}
                 >
                   {format(day, "d")}

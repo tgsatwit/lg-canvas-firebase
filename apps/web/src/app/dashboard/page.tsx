@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Calendar, CheckCircle2, MessageSquare, Video, Grid3x3, Search, ChevronRight, Clock, AlertCircle, Plus } from "lucide-react";
+import { Calendar, CheckCircle2, MessageSquare, Video, Grid3x3, Search, ChevronRight, Clock, Plus } from "lucide-react";
 import { useTaskContext } from "./tasks/context/task-context";
 import { useVideos } from "@/hooks/use-videos";
 import { useSocialApi } from "@/hooks/use-social-api";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -132,9 +131,9 @@ export default function DashboardPage() {
   };
 
   const priorityColors = {
-    high: "text-red-600 bg-red-50 border-red-200",
-    medium: "text-amber-600 bg-amber-50 border-amber-200",
-    low: "text-emerald-600 bg-emerald-50 border-emerald-200",
+    high: "text-pink-600 bg-pink-50 border-pink-200",
+    medium: "text-pink-600 bg-pink-50 border-pink-200",
+    low: "text-pink-600 bg-pink-50 border-pink-200",
   };
 
   const getNextSevenDays = () => {
@@ -153,9 +152,9 @@ export default function DashboardPage() {
       style={{
         background: `
           linear-gradient(135deg, 
-            rgba(236, 72, 153, 0.1) 0%,
-            rgba(147, 51, 234, 0.05) 50%,
-            rgba(219, 39, 119, 0.1) 100%
+            rgba(148, 163, 184, 0.08) 0%,
+            rgba(203, 213, 225, 0.04) 50%,
+            rgba(148, 163, 184, 0.08) 100%
           )
         `,
       }}
@@ -163,11 +162,12 @@ export default function DashboardPage() {
       {/* Ambient background layers */}
       <div className="absolute inset-0 pointer-events-none">
         <div
-          className="absolute inset-0 opacity-30"
+          className="absolute inset-0 opacity-20"
           style={{
             background: `
-              radial-gradient(circle at 20% 30%, rgba(236, 72, 153, 0.15) 0%, transparent 50%),
-              radial-gradient(circle at 80% 70%, rgba(147, 51, 234, 0.15) 0%, transparent 50%)
+              radial-gradient(circle at 20% 30%, rgba(148, 163, 184, 0.12) 0%, transparent 50%),
+              radial-gradient(circle at 80% 70%, rgba(203, 213, 225, 0.12) 0%, transparent 50%),
+              radial-gradient(circle at 50% 10%, rgba(156, 163, 175, 0.08) 0%, transparent 40%)
             `,
           }}
         />
@@ -251,15 +251,15 @@ export default function DashboardPage() {
                   style={{
                     background: `
                       linear-gradient(135deg, 
-                        rgba(59, 130, 246, 0.2) 0%,
-                        rgba(59, 130, 246, 0.1) 100%
+                        rgba(236, 72, 153, 0.2) 0%,
+                        rgba(236, 72, 153, 0.1) 100%
                       )
                     `,
                     backdropFilter: 'blur(8px)',
-                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                    border: '1px solid rgba(236, 72, 153, 0.2)',
                   }}
                 >
-                  <CheckCircle2 className="h-6 w-6 text-blue-600" />
+                  <CheckCircle2 className="h-6 w-6 text-pink-600" />
                 </div>
                 <h3 className="text-base font-medium text-gray-800">Open Tasks</h3>
               </div>
@@ -300,17 +300,17 @@ export default function DashboardPage() {
                   style={{
                     background: `
                       linear-gradient(135deg, 
-                        ${totalUnansweredComments > 0 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(107, 114, 128, 0.2)'} 0%,
-                        ${totalUnansweredComments > 0 ? 'rgba(245, 158, 11, 0.1)' : 'rgba(107, 114, 128, 0.1)'} 100%
+                        ${totalUnansweredComments > 0 ? 'rgba(236, 72, 153, 0.2)' : 'rgba(236, 72, 153, 0.2)'} 0%,
+                        ${totalUnansweredComments > 0 ? 'rgba(236, 72, 153, 0.1)' : 'rgba(236, 72, 153, 0.1)'} 100%
                       )
                     `,
                     backdropFilter: 'blur(8px)',
-                    border: `1px solid ${totalUnansweredComments > 0 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(107, 114, 128, 0.2)'}`,
+                    border: `1px solid ${totalUnansweredComments > 0 ? 'rgba(236, 72, 153, 0.2)' : 'rgba(236, 72, 153, 0.2)'}`,
                   }}
                 >
                   <MessageSquare className={cn(
                     "h-6 w-6",
-                    totalUnansweredComments > 0 ? "text-amber-600" : "text-gray-600"
+                    totalUnansweredComments > 0 ? "text-pink-600" : "text-pink-600"
                   )} />
                 </div>
                 <h3 className="text-base font-medium text-gray-800">Unactioned Comments</h3>
@@ -347,15 +347,15 @@ export default function DashboardPage() {
                   style={{
                     background: `
                       linear-gradient(135deg, 
-                        rgba(147, 51, 234, 0.2) 0%,
-                        rgba(147, 51, 234, 0.1) 100%
+                        rgba(236, 72, 153, 0.2) 0%,
+                        rgba(236, 72, 153, 0.1) 100%
                       )
                     `,
                     backdropFilter: 'blur(8px)',
-                    border: '1px solid rgba(147, 51, 234, 0.2)',
+                    border: '1px solid rgba(236, 72, 153, 0.2)',
                   }}
                 >
-                  <Video className="h-6 w-6 text-purple-600" />
+                  <Video className="h-6 w-6 text-pink-600" />
                 </div>
                 <h3 className="text-base font-medium text-gray-800">Video Library</h3>
               </div>
@@ -394,15 +394,15 @@ export default function DashboardPage() {
                   style={{
                     background: `
                       linear-gradient(135deg, 
-                        rgba(16, 185, 129, 0.2) 0%,
-                        rgba(16, 185, 129, 0.1) 100%
+                        rgba(236, 72, 153, 0.2) 0%,
+                        rgba(236, 72, 153, 0.1) 100%
                       )
                     `,
                     backdropFilter: 'blur(8px)',
-                    border: '1px solid rgba(16, 185, 129, 0.2)',
+                    border: '1px solid rgba(236, 72, 153, 0.2)',
                   }}
                 >
-                  <Grid3x3 className="h-6 w-6 text-emerald-600" />
+                  <Grid3x3 className="h-6 w-6 text-pink-600" />
                 </div>
                 <h3 className="text-base font-medium text-gray-800">Canvas</h3>
               </div>
@@ -487,18 +487,18 @@ export default function DashboardPage() {
                       key={dateStr} 
                       className={cn(
                         "border rounded-xl p-4 transition-all duration-300",
-                        isToday ? "ring-2 ring-blue-200" : "",
+                        isToday ? "ring-2 ring-pink-200" : "",
                         !hasItems && "opacity-60"
                       )}
                       style={{
                         background: `
                           linear-gradient(135deg, 
-                            ${isToday ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255, 255, 255, 0.1)'} 0%,
-                            ${isToday ? 'rgba(59, 130, 246, 0.05)' : 'rgba(255, 255, 255, 0.05)'} 100%
+                            ${isToday ? 'rgba(236, 72, 153, 0.1)' : 'rgba(255, 255, 255, 0.1)'} 0%,
+                            ${isToday ? 'rgba(236, 72, 153, 0.05)' : 'rgba(255, 255, 255, 0.05)'} 100%
                           )
                         `,
                         backdropFilter: 'blur(10px)',
-                        border: `1px solid ${isToday ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 255, 255, 0.2)'}`,
+                        border: `1px solid ${isToday ? 'rgba(236, 72, 153, 0.2)' : 'rgba(255, 255, 255, 0.2)'}`,
                       }}
                     >
                       <div className="flex items-center justify-between mb-2">
@@ -520,16 +520,16 @@ export default function DashboardPage() {
                           {dayTasks.slice(0, 2).map(task => (
                             <div key={task.id} className="flex items-center gap-2">
                               <div className={cn("w-2 h-2 rounded-full", {
-                                "bg-red-500": task.priority === "high",
-                                "bg-amber-500": task.priority === "medium",
-                                "bg-emerald-500": task.priority === "low"
+                                "bg-pink-500": task.priority === "high",
+                                "bg-pink-400": task.priority === "medium",
+                                "bg-pink-300": task.priority === "low"
                               })} />
                               <span className="text-sm text-gray-700 truncate">{task.title}</span>
                             </div>
                           ))}
                           {dayVideos.slice(0, 2).map(video => (
                             <div key={video.id} className="flex items-center gap-2">
-                              <Video className="h-3 w-3 text-purple-500" />
+                              <Video className="h-3 w-3 text-pink-500" />
                               <span className="text-sm text-gray-700 truncate">{video.title}</span>
                             </div>
                           ))}
@@ -636,8 +636,8 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     {task.status === "in-progress" && (
-                      <div className="flex items-center gap-1 text-blue-600">
-                        <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+                      <div className="flex items-center gap-1 text-pink-600">
+                        <div className="w-2 h-2 bg-pink-600 rounded-full animate-pulse" />
                         <span className="text-xs">In Progress</span>
                       </div>
                     )}

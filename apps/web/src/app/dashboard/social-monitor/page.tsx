@@ -6,7 +6,6 @@ import { SocialTable } from '@/components/ui/social/social-table';
 import { 
   SocialModal, 
   Dialog, 
-  DialogTrigger, 
   DialogContent 
 } from '@/components/ui/social/social-modal';
 import { useToast } from "@/hooks/use-toast";
@@ -89,9 +88,9 @@ export default function SocialMonitorPage() {
         style={{
           background: `
             linear-gradient(135deg, 
-              rgba(251, 146, 60, 0.1) 0%,
-              rgba(59, 130, 246, 0.05) 50%,
-              rgba(245, 101, 101, 0.1) 100%
+              rgba(148, 163, 184, 0.08) 0%,
+              rgba(203, 213, 225, 0.04) 50%,
+              rgba(148, 163, 184, 0.08) 100%
             )
           `,
         }}
@@ -99,16 +98,42 @@ export default function SocialMonitorPage() {
         {/* Ambient background layers */}
         <div className="absolute inset-0 pointer-events-none">
           <div
-            className="absolute inset-0 opacity-30"
+            className="absolute inset-0 opacity-20"
             style={{
               background: `
-                radial-gradient(circle at 40% 20%, rgba(251, 146, 60, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 60% 80%, rgba(59, 130, 246, 0.15) 0%, transparent 50%)
+                radial-gradient(circle at 40% 20%, rgba(148, 163, 184, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 60% 80%, rgba(203, 213, 225, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 50% 10%, rgba(156, 163, 175, 0.08) 0%, transparent 40%)
               `,
             }}
           />
         </div>
 
+        {/* Header */}
+        <div 
+          className="relative z-10 mx-6 mt-6 p-6 rounded-2xl border"
+          style={{
+            background: `
+              linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.25) 0%,
+                rgba(255, 255, 255, 0.1) 100%
+              )
+            `,
+            backdropFilter: 'blur(20px) saturate(150%)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            boxShadow: `
+              0 8px 32px rgba(0, 0, 0, 0.1),
+              inset 0 1px 0 rgba(255, 255, 255, 0.4)
+            `,
+          }}
+        >
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Social Monitor</h1>
+            <p className="text-gray-600 mt-1">Monitor and respond to comments across all your social platforms.</p>
+          </div>
+        </div>
+
+        {/* Content */}
         <div 
           className="relative z-10 px-6 py-8 md:px-8 md:py-10 mt-6 mx-6 rounded-2xl border"
           style={{

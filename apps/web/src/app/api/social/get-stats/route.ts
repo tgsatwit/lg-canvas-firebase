@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { createScopedLogger } from '@/utils/logger';
 import { getServerUser } from '@/lib/auth';
 import { getSocialStats } from '@/lib/firebase/social';

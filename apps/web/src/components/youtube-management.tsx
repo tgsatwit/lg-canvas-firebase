@@ -24,7 +24,6 @@ import {
   Send,
   Eye,
   CheckCircle2,
-  X,
   Edit, 
   Copy, 
   Trash, 

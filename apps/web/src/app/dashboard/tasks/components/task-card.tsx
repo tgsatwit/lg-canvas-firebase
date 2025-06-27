@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { Clock, CheckCircle2, ArrowRightCircle } from "lucide-react";
+import { Clock, ArrowRightCircle } from "lucide-react";
 import { useTaskContext } from "../context/task-context";
 import { Task, SubTask } from "../context/task-context";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
 import { TaskDetailsDialog } from "./task-details-dialog";
 
 interface TaskCardProps {

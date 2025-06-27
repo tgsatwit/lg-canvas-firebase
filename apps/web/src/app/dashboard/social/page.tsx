@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { SocialCommentStream } from '@/components/social/social-comment-stream';
 import { SocialStats, SocialComment, PlatformType } from '@/lib/social';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Facebook, Instagram, Youtube, MessageSquarePlus, Send, Loader2 } from 'lucide-react';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';

@@ -12,14 +12,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pagination, PaginationContent, PaginationItem } from "@/components/ui/pagination";
@@ -63,41 +57,16 @@ import {
   ChevronRight,
   ChevronUp,
   CircleX,
-  Columns3,
   Eye,
   Filter,
   ListFilter,
   Pencil,
-  Plus,
-  Upload,
   Copy,
-  ExternalLink,
-  FileText,
-  MessageSquare,
-  Video as VideoIcon,
   Youtube,
-  Zap,
-  BarChart,
-  Target,
-  Mail,
-  Image,
-  Twitter,
-  Linkedin,
-  Instagram,
-  Check,
-  Download,
-  Play,
 } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger
-} from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
+
+
 
 // Add utility function to format time
 const formatTime = (duration: string | number | undefined | null): string => {
@@ -259,15 +228,17 @@ const statusFilterFn: FilterFn<Video> = (row, columnId, filterValue) => {
 };
 
 export function YouTubeTable({
-  onCreateVideo,
   onEditVideo,
   videos = [],
   isLoading = false,
+  customActions,
+  showSearchAndFilters = false,
 }: {
-  onCreateVideo?: () => void;
   onEditVideo?: (video: Video) => void;
   videos?: Video[];
   isLoading?: boolean;
+  customActions?: (video: Video) => React.ReactNode;
+  showSearchAndFilters?: boolean;
 }) {
   const id = useId();
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -428,7 +399,7 @@ export function YouTubeTable({
       accessorKey: "title",
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
-          <div className="relative h-16 w-28 overflow-hidden rounded-md">
+          <div className="relative h-20 w-36 overflow-hidden rounded-md">
             <img 
               src={row.original.thumbnail} 
               alt={row.getValue("title")} 
@@ -526,32 +497,38 @@ export function YouTubeTable({
         
         return (
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleRowAction(row)}
-              className="h-8"
-            >
-              <Pencil className="h-4 w-4 mr-1" />
-              Edit
-            </Button>
-            {youtubeUrl && (
-              <Button
-                size="sm"
-                variant="outline"
-                asChild
-                className="h-8"
-              >
-                <a 
-                  href={youtubeUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center"
+            {customActions ? (
+              customActions(video)
+            ) : (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleRowAction(row)}
+                  className="h-8"
                 >
-                  <Youtube className="h-4 w-4 mr-1" />
-                  YouTube
-                </a>
-              </Button>
+                  <Pencil className="h-4 w-4 mr-1" />
+                  Edit
+                </Button>
+                {youtubeUrl && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    asChild
+                    className="h-8"
+                  >
+                    <a 
+                      href={youtubeUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center"
+                    >
+                      <Youtube className="h-4 w-4 mr-1" />
+                      YouTube
+                    </a>
+                  </Button>
+                )}
+              </>
             )}
           </div>
         );
@@ -717,205 +694,189 @@ export function YouTubeTable({
 
   return (
     <div className="space-y-6 w-full">
-
-      {/* Filters */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-gray-900/50 p-4 rounded-xl shadow-sm">
-        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-          {/* Filter by title */}
-          <div className="relative flex-1 min-w-[200px]">
-            <Input
-              id={`${id}-input`}
-              ref={inputRef}
-              className={cn(
-                "peer w-full ps-9 rounded-lg border-gray-200 dark:border-gray-800 focus:ring-purple-500",
-                Boolean(table.getColumn("title")?.getFilterValue()) && "pe-9",
-              )}
-              value={(table.getColumn("title")?.getFilterValue() ?? "") as string}
-              onChange={(e) => table.getColumn("title")?.setFilterValue(e.target.value)}
-              placeholder="Search videos..."
-              type="text"
-              aria-label="Filter by title"
-            />
-            <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-muted-foreground/80 peer-disabled:opacity-50">
-              <ListFilter size={16} strokeWidth={2} aria-hidden="true" />
-            </div>
-            {Boolean(table.getColumn("title")?.getFilterValue()) && (
-              <button
-                className="absolute inset-y-0 end-0 flex h-full w-9 items-center justify-center text-muted-foreground/80 hover:text-foreground transition-colors"
-                aria-label="Clear filter"
-                onClick={() => {
-                  table.getColumn("title")?.setFilterValue("");
-                  if (inputRef.current) {
-                    inputRef.current.focus();
+      {/* Search and Filter Bar */}
+      {showSearchAndFilters && (
+        <div className="bg-white dark:bg-gray-900/50 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Search Input */}
+            <div className="flex-1">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Filter className="h-4 w-4 text-gray-400" />
+                </div>
+                <Input
+                  ref={inputRef}
+                  placeholder="Search videos by title..."
+                  value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
+                  onChange={(event) =>
+                    table.getColumn("title")?.setFilterValue(event.target.value)
                   }
-                }}
-              >
-                <CircleX size={16} strokeWidth={2} aria-hidden="true" />
-              </button>
-            )}
+                  className="pl-10 h-9 border-gray-200 dark:border-gray-800"
+                />
+              </div>
+            </div>
+
+            {/* Status Filter */}
+            <div className="flex gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 border-gray-200 dark:border-gray-800"
+                  >
+                    <ListFilter className="h-4 w-4 mr-2" />
+                    Status
+                    {selectedCustomStatuses.length > 0 && (
+                      <div className="ml-2 flex h-4 w-4 items-center justify-center rounded bg-primary text-primary-foreground text-xs">
+                        {selectedCustomStatuses.length}
+                      </div>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-3" align="start">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Filter by Status</Label>
+                    <div className="space-y-2">
+                      {uniqueCustomStatusValues.map((status) => (
+                        <div key={status} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`status-${status}`}
+                            checked={selectedCustomStatuses.includes(status)}
+                            onCheckedChange={(checked) => handleCustomStatusChange(checked as boolean, status)}
+                          />
+                          <Label htmlFor={`status-${status}`} className="text-sm flex-1 cursor-pointer">
+                            {status}
+                          </Label>
+                          <div className="text-xs text-gray-500">
+                            {customStatusCounts.get(status) || 0}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Visibility Filter */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 border-gray-200 dark:border-gray-800"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Visibility
+                    {selectedVisibilities.length > 0 && (
+                      <div className="ml-2 flex h-4 w-4 items-center justify-center rounded bg-primary text-primary-foreground text-xs">
+                        {selectedVisibilities.length}
+                      </div>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-3" align="start">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Filter by Visibility</Label>
+                    <div className="space-y-2">
+                      {uniqueVisibilityValues.map((visibility) => (
+                        <div key={visibility} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`visibility-${visibility}`}
+                            checked={selectedVisibilities.includes(visibility)}
+                            onCheckedChange={(checked) => handleVisibilityChange(checked as boolean, visibility)}
+                          />
+                          <Label htmlFor={`visibility-${visibility}`} className="text-sm flex-1 cursor-pointer">
+                            {visibility}
+                          </Label>
+                          <div className="text-xs text-gray-500">
+                            {visibilityCounts.get(visibility) || 0}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* YouTube Status Filter */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 border-gray-200 dark:border-gray-800"
+                  >
+                    <Youtube className="h-4 w-4 mr-2" />
+                    YouTube
+                    {selectedYouTubeStatuses.length > 0 && (
+                      <div className="ml-2 flex h-4 w-4 items-center justify-center rounded bg-primary text-primary-foreground text-xs">
+                        {selectedYouTubeStatuses.length}
+                      </div>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-3" align="start">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Filter by YouTube Status</Label>
+                    <div className="space-y-2">
+                      {uniqueYouTubeStatusValues.map((status) => (
+                        <div key={status} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`youtube-${status}`}
+                            checked={selectedYouTubeStatuses.includes(status)}
+                            onCheckedChange={(checked) => handleYouTubeStatusChange(checked as boolean, status)}
+                          />
+                          <Label htmlFor={`youtube-${status}`} className="text-sm flex-1 cursor-pointer">
+                            {status}
+                          </Label>
+                          <div className="text-xs text-gray-500">
+                            {youtubeStatusCounts.get(status) || 0}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Clear Filters */}
+              {(columnFilters.length > 0) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.resetColumnFilters()}
+                  className="h-9 border-gray-200 dark:border-gray-800"
+                >
+                  <CircleX className="h-4 w-4 mr-2" />
+                  Clear
+                </Button>
+              )}
+            </div>
           </div>
-          
-          {/* Filter buttons with updated styling */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="h-10 border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-                <Filter className="mr-2 h-4 w-4" aria-hidden="true" />
-                Status
-                {selectedCustomStatuses.length > 0 && (
-                  <span className="ml-2 rounded-full bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-xs font-medium">
-                    {selectedCustomStatuses.length}
-                  </span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="min-w-36 p-3" align="start">
-              <div className="space-y-3">
-                <div className="text-xs font-medium text-muted-foreground">Status</div>
-                <div className="space-y-3">
-                  {uniqueCustomStatusValues.map((value, i) => (
-                    <div key={value} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`${id}-status-${i}`}
-                        checked={selectedCustomStatuses.includes(value)}
-                        onCheckedChange={(checked: boolean) => handleCustomStatusChange(checked, value)}
-                      />
-                      <Label
-                        htmlFor={`${id}-status-${i}`}
-                        className="flex grow justify-between gap-2 font-normal"
-                      >
-                        {value}{" "}
-                        <span className="ms-2 text-xs text-muted-foreground">
-                          {customStatusCounts.get(value)}
-                        </span>
-                      </Label>
-                    </div>
-                  ))}
-                </div>
+
+          {/* Filter Summary */}
+          {columnFilters.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <span>Active filters:</span>
+                {columnFilters.map((filter) => (
+                  <Badge key={filter.id} variant="secondary" className="text-xs">
+                    {filter.id === 'title' ? `Search: "${filter.value}"` : 
+                     filter.id === 'customStatus' ? `Status: ${(filter.value as string[]).join(', ')}` :
+                     filter.id === 'visibility' ? `Visibility: ${(filter.value as string[]).join(', ')}` :
+                     filter.id === 'youtubeStatus' ? `YouTube: ${(filter.value as string[]).join(', ')}` :
+                     `${filter.id}: ${filter.value}`}
+                  </Badge>
+                ))}
+                <span className="ml-2">
+                  Showing {table.getFilteredRowModel().rows.length} of {table.getCoreRowModel().rows.length} videos
+                </span>
               </div>
-            </PopoverContent>
-          </Popover>
-          
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="h-10 border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-                <Filter className="mr-2 h-4 w-4" aria-hidden="true" />
-                YouTube Status
-                {selectedYouTubeStatuses.length > 0 && (
-                  <span className="ml-2 rounded-full bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-xs font-medium">
-                    {selectedYouTubeStatuses.length}
-                  </span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="min-w-36 p-3" align="start">
-              <div className="space-y-3">
-                <div className="text-xs font-medium text-muted-foreground">YouTube Status</div>
-                <div className="space-y-3">
-                  {uniqueYouTubeStatusValues.map((value, i) => (
-                    <div key={value} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`${id}-youtube-status-${i}`}
-                        checked={selectedYouTubeStatuses.includes(value)}
-                        onCheckedChange={(checked: boolean) => handleYouTubeStatusChange(checked, value)}
-                      />
-                      <Label
-                        htmlFor={`${id}-youtube-status-${i}`}
-                        className="flex grow justify-between gap-2 font-normal"
-                      >
-                        {value}{" "}
-                        <span className="ms-2 text-xs text-muted-foreground">
-                          {youtubeStatusCounts.get(value)}
-                        </span>
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-          
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="h-10 border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-                <Filter className="mr-2 h-4 w-4" aria-hidden="true" />
-                Visibility
-                {selectedVisibilities.length > 0 && (
-                  <span className="ml-2 rounded-full bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 px-2 py-0.5 text-xs font-medium">
-                    {selectedVisibilities.length}
-                  </span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="min-w-36 p-3" align="start">
-              <div className="space-y-3">
-                <div className="text-xs font-medium text-muted-foreground">Visibility</div>
-                <div className="space-y-3">
-                  {uniqueVisibilityValues.map((value, i) => (
-                    <div key={value} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`${id}-visibility-${i}`}
-                        checked={selectedVisibilities.includes(value)}
-                        onCheckedChange={(checked: boolean) => handleVisibilityChange(checked, value)}
-                      />
-                      <Label
-                        htmlFor={`${id}-visibility-${i}`}
-                        className="flex grow justify-between gap-2 font-normal"
-                      >
-                        {value === "Unlisted" ? "Members" : value}{" "}
-                        <span className="ms-2 text-xs text-muted-foreground">
-                          {visibilityCounts.get(value)}
-                        </span>
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-          
-          {/* Columns visibility with same styling */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-10 border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-                <Columns3 className="mr-2 h-4 w-4" aria-hidden="true" />
-                Columns
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                      onSelect={(event) => event.preventDefault()}
-                    >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  );
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </div>
+          )}
         </div>
-        
-        {/* Upload Button */}
-        {onCreateVideo && (
-          <div className="flex justify-end">
-            <Button
-              onClick={onCreateVideo}
-              className="h-10 bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Video
-            </Button>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Table */}
       <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 shadow-sm overflow-hidden">

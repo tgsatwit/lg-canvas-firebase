@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Mic, MicOff, Loader2 } from 'lucide-react';
+import { Send, Mic, MicOff, Loader2, Search, Paperclip } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MessageInputProps {
@@ -13,6 +13,8 @@ interface MessageInputProps {
   onVoiceToggle?: () => void;
   browserSupportsSpeechRecognition?: boolean;
   transcript?: string;
+  placeholder?: string;
+  showWebSearch?: boolean;
 }
 
 export function MessageInput({
@@ -22,6 +24,8 @@ export function MessageInput({
   onVoiceToggle,
   browserSupportsSpeechRecognition = false,
   transcript = '',
+  placeholder = "Message PBL Chat...",
+  showWebSearch = false,
 }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -63,127 +67,119 @@ export function MessageInput({
 
   return (
     <div className="w-full">
-      <form onSubmit={handleSubmit} className="flex gap-3 items-end mb-2">
-        <div className="flex-1 relative">
-          <div className="relative">
-            {/* Glass background effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-white/60 via-white/80 to-white/60 rounded-2xl backdrop-blur-sm border border-gray-200/60 shadow-sm"/>
-            <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-transparent rounded-2xl"/>
-            
-            {/* Enhanced background for listening state */}
-            {isListening && (
-              <>
-                <div className="absolute inset-0 bg-gradient-to-r from-red-50/80 via-orange-50/60 to-red-50/80 rounded-2xl backdrop-blur-sm border border-red-200/60"/>
-                <div className="absolute inset-0 bg-gradient-to-b from-red-50/40 via-transparent to-transparent rounded-2xl"/>
-              </>
-            )}
-            
-            <Textarea
-              ref={textareaRef}
-              value={message}
-              onChange={handleTextareaChange}
-              onKeyDown={handleKeyDown}
-              placeholder={
-                isListening 
-                  ? "Listening..." 
-                  : "Message PBL Assistant..."
-              }
-              disabled={disabled}
-              className={cn(
-                "min-h-[44px] max-h-[88px] resize-none border-0 bg-transparent relative z-10",
-                "px-4 py-2.5 pr-12 text-sm placeholder:text-gray-500",
-                "focus:outline-none focus:ring-0 rounded-2xl",
-                isListening && "placeholder:text-red-400"
-              )}
-              rows={1}
-            />
-            
-            {/* Send Button */}
-            <div className="absolute right-1.5 top-1/2 -translate-y-1/2 z-20">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-gray-800/90 to-gray-900/90 rounded-lg backdrop-blur-sm"/>
-                <Button
-                  type="submit"
-                  disabled={disabled || !message.trim()}
-                  size="icon"
-                  className={cn(
-                    "relative h-6 w-6 rounded-lg border-0 bg-transparent",
-                    "text-white hover:bg-white/20 disabled:bg-gray-300/80 disabled:text-gray-500",
-                    "transition-all duration-200"
-                  )}
-                >
-                  {disabled ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Send className="h-3 w-3" />
-                  )}
-                </Button>
-              </div>
-            </div>
-            
-            {isListening && (
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 z-20">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                  <span className="text-xs text-red-600 font-medium">Recording</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Voice button */}
-        {browserSupportsSpeechRecognition && onVoiceToggle && (
-          <div className="relative">
-            <div className={cn(
-              "absolute inset-0 rounded-xl backdrop-blur-sm border",
-              isListening 
-                ? "bg-gradient-to-r from-red-50/80 via-orange-50/60 to-red-50/80 border-red-200/60" 
-                : "bg-gradient-to-r from-white/60 via-white/80 to-white/60 border-gray-200/60"
-            )}/>
-            <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-transparent rounded-xl"/>
-            
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={onVoiceToggle}
-              disabled={disabled}
-              className={cn(
-                "h-[44px] w-[44px] rounded-xl border-0 bg-transparent relative z-10",
-                isListening 
-                  ? "text-red-600 hover:bg-red-100/60" 
-                  : "text-gray-700 hover:bg-white/60"
-              )}
-            >
-              {isListening ? (
-                <MicOff className="h-4 w-4" />
-              ) : (
-                <Mic className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-        )}
-      </form>
-
-      {transcript && (
-        <div className="mb-2 relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-red-50/80 via-orange-50/60 to-red-50/80 rounded-xl backdrop-blur-sm border border-red-200/60"/>
-          <div className="absolute inset-0 bg-gradient-to-b from-red-50/40 via-transparent to-transparent rounded-xl"/>
-          <div className="relative p-2">
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />
-              <span className="text-xs text-red-700">
-                <span className="font-medium">Voice:</span> {transcript}
-              </span>
-            </div>
+      {/* Voice recording indicator */}
+      {isListening && (
+        <div className="mb-3 flex items-center justify-center">
+          <div className="flex items-center gap-2 bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 px-4 py-2 rounded-full text-sm border border-pink-200 dark:border-pink-800">
+            <div className="w-2 h-2 bg-pink-500 rounded-full animate-pulse" />
+            <span>Listening...</span>
           </div>
         </div>
       )}
-      
-      <p className="text-xs text-gray-500 text-center">
-        PBL Assistant can make mistakes. Check important info.
-      </p>
+
+      {/* Enhanced input */}
+      <form onSubmit={handleSubmit} className="relative">
+        <div className="relative bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-2xl shadow-lg hover:shadow-xl focus-within:border-pink-500 dark:focus-within:border-pink-400 transition-all duration-200">
+          {/* Left action buttons */}
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-9 w-9 p-0 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              title="Attach file"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <Textarea
+            ref={textareaRef}
+            value={message}
+            onChange={handleTextareaChange}
+            onKeyDown={handleKeyDown}
+            placeholder={isListening ? "Listening..." : placeholder}
+            disabled={disabled}
+            className={cn(
+              "min-h-[56px] max-h-[200px] resize-none border-0 bg-transparent",
+              "pl-16 pr-24 py-4 text-base placeholder:text-gray-400 dark:placeholder:text-gray-500",
+              "focus:outline-none focus:ring-0 rounded-2xl",
+              "scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600"
+            )}
+            rows={1}
+          />
+
+          {/* Right action buttons */}
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+            {/* Voice button */}
+            {browserSupportsSpeechRecognition && onVoiceToggle && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onVoiceToggle}
+                disabled={disabled}
+                className={cn(
+                  "h-9 w-9 p-0 rounded-lg transition-all duration-200",
+                  isListening 
+                    ? "text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-900/20 hover:bg-pink-100 dark:hover:bg-pink-900/30 scale-110" 
+                    : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                )}
+                title={isListening ? "Stop listening" : "Start voice input"}
+              >
+                {isListening ? (
+                  <MicOff className="h-4 w-4" />
+                ) : (
+                  <Mic className="h-4 w-4" />
+                )}
+              </Button>
+            )}
+
+            {/* Send button */}
+            <Button
+              type="submit"
+              disabled={disabled || !message.trim()}
+              size="sm"
+              className={cn(
+                "h-9 w-9 p-0 rounded-lg transition-all duration-200",
+                !disabled && message.trim()
+                  ? "bg-pink-500 hover:bg-pink-600 text-white shadow-md hover:shadow-lg scale-105" 
+                  : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+              )}
+              title="Send message"
+            >
+              {disabled ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </form>
+
+      {/* Voice transcript display */}
+      {transcript && (
+        <div className="mt-3 bg-pink-50 dark:bg-pink-900/20 border border-pink-200 dark:border-pink-800 rounded-xl p-3">
+          <div className="flex items-center gap-2 text-pink-700 dark:text-pink-300">
+            <div className="w-2 h-2 bg-pink-500 rounded-full animate-pulse" />
+            <span className="text-sm">
+              <span className="font-medium">Voice input:</span> {transcript}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Status text */}
+      <div className="mt-3 text-xs text-gray-500 dark:text-gray-400 text-center space-y-1">
+        {showWebSearch && (
+          <div className="flex items-center justify-center gap-1">
+            <Search className="h-3 w-3" />
+            <span>Web search enabled</span>
+          </div>
+        )}
+        <div>PBL Chat can make mistakes. Check important info.</div>
+      </div>
     </div>
   );
 } 

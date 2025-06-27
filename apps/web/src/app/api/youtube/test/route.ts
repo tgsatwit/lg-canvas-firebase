@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getYouTubeService } from '@/lib/youtube/youtube-service';
 import { getServerUser } from '@/lib/auth';
 import { cookies } from 'next/headers';
 import { DirectYouTubeUploader } from '@/lib/youtube/direct-upload';

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminFirestore } from '@/lib/firebase/admin';
-import { DocumentData } from 'firebase-admin/firestore';
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {

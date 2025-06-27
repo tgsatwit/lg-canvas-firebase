@@ -112,9 +112,9 @@ export default function YouTubeManagerPage() {
     return (
       <DashboardShell>
         <div className="p-6">
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-md">
-            <h3 className="text-lg font-medium text-red-800 dark:text-red-300">Error loading videos</h3>
-            <p className="mt-1 text-sm text-red-700 dark:text-red-400">{error.message}</p>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <h3 className="text-lg font-medium text-red-800">Error loading videos</h3>
+            <p className="mt-1 text-sm text-red-700">{error.message}</p>
           </div>
         </div>
       </DashboardShell>
@@ -123,91 +123,28 @@ export default function YouTubeManagerPage() {
 
   return (
     <DashboardShell>
-      <div 
-        className="relative min-h-screen"
-        style={{
-          background: `
-            linear-gradient(135deg, 
-              rgba(239, 68, 68, 0.1) 0%,
-              rgba(147, 51, 234, 0.05) 50%,
-              rgba(236, 72, 153, 0.1) 100%
-            )
-          `,
-        }}
-      >
-        {/* Ambient background layers */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div
-            className="absolute inset-0 opacity-30"
-            style={{
-              background: `
-                radial-gradient(circle at 25% 35%, rgba(239, 68, 68, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 75% 65%, rgba(147, 51, 234, 0.15) 0%, transparent 50%)
-              `,
-            }}
-          />
-        </div>
-
+      <div className="min-h-screen bg-gray-50">
         {notification && (
-          <div 
-            className={`relative z-20 mx-6 mt-6 p-6 rounded-2xl border ${
-              notification.type === 'success' 
-                ? 'ring-2 ring-green-200' 
-                : 'ring-2 ring-red-200'
-            }`}
-            style={{
-              background: `
-                linear-gradient(135deg, 
-                  ${notification.type === 'success' 
-                    ? 'rgba(34, 197, 94, 0.15)' 
-                    : 'rgba(239, 68, 68, 0.15)'} 0%,
-                  ${notification.type === 'success' 
-                    ? 'rgba(34, 197, 94, 0.05)' 
-                    : 'rgba(239, 68, 68, 0.05)'} 100%
-                )
-              `,
-              backdropFilter: 'blur(20px) saturate(150%)',
-              border: `1px solid ${notification.type === 'success' 
-                ? 'rgba(34, 197, 94, 0.3)' 
-                : 'rgba(239, 68, 68, 0.3)'}`,
-              boxShadow: `
-                0 8px 32px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.4)
-              `,
-            }}
-          >
-            <p className={`text-base font-medium ${
-              notification.type === 'success' 
-                ? 'text-green-800' 
-                : 'text-red-800'
-            }`}>
+          <div className={`mx-6 mt-6 p-4 rounded-lg border ${
+            notification.type === 'success' 
+              ? 'bg-green-50 border-green-200 text-green-800' 
+              : 'bg-red-50 border-red-200 text-red-800'
+          }`}>
+            <p className="font-medium">
               {notification.message}
             </p>
           </div>
         )}
         
-        <div 
-          className="relative z-10 px-6 py-8 md:px-8 md:py-10 mt-6 mx-6 rounded-2xl border"
-          style={{
-            background: `
-              linear-gradient(135deg, 
-                rgba(255, 255, 255, 0.25) 0%,
-                rgba(255, 255, 255, 0.1) 100%
-              )
-            `,
-            backdropFilter: 'blur(20px) saturate(150%)',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
-            boxShadow: `
-              0 8px 32px rgba(0, 0, 0, 0.1),
-              inset 0 1px 0 rgba(255, 255, 255, 0.4)
-            `,
-          }}
-        >
-          <div className="mb-8">
-            <div className="flex justify-between items-start mb-6">
-              <h1 className="text-3xl font-bold text-gray-900">YouTube Manager</h1>
-              
-              {/* YouTube Authentication Button */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900">YouTube Manager</h1>
+                <p className="text-sm text-gray-600 mt-1">
+                  Manage your YouTube uploads and scheduled content
+                </p>
+              </div>
               <button
                 onClick={async () => {
                   try {
@@ -224,107 +161,53 @@ export default function YouTubeManagerPage() {
                     });
                   }
                 }}
-                className="px-6 py-3 rounded-lg font-medium text-white transition-all duration-200 hover:scale-105"
-                style={{
-                  background: `
-                    linear-gradient(135deg, 
-                      rgba(255, 0, 0, 0.8) 0%,
-                      rgba(204, 0, 0, 0.9) 100%
-                    )
-                  `,
-                  boxShadow: `
-                    0 4px 16px rgba(255, 0, 0, 0.3),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.2)
-                  `,
-                }}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
               >
-                🔐 Authenticate YouTube
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+                Connect YouTube
               </button>
             </div>
             
-            {/* Status summary */}
+            {/* Status summary cards */}
             <div className="flex gap-6 mt-6">
-              <div 
-                className="p-6 rounded-2xl border flex-1"
-                style={{
-                  background: `
-                    linear-gradient(135deg, 
-                      rgba(59, 130, 246, 0.15) 0%,
-                      rgba(59, 130, 246, 0.05) 100%
-                    )
-                  `,
-                  backdropFilter: 'blur(15px)',
-                  border: '1px solid rgba(59, 130, 246, 0.3)',
-                  boxShadow: `
-                    0 8px 24px rgba(59, 130, 246, 0.1),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.4)
-                  `,
-                }}
-              >
-                <h3 className="text-lg font-semibold text-blue-800 mb-2">Ready for Upload</h3>
-                <p className="text-3xl font-bold text-blue-900">{readyCount}</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex-1">
+                <h3 className="text-sm font-medium text-blue-800 mb-1">Ready for Upload</h3>
+                <p className="text-2xl font-bold text-blue-900">{readyCount}</p>
               </div>
-              <div 
-                className="p-6 rounded-2xl border flex-1"
-                style={{
-                  background: `
-                    linear-gradient(135deg, 
-                      rgba(147, 51, 234, 0.15) 0%,
-                      rgba(147, 51, 234, 0.05) 100%
-                    )
-                  `,
-                  backdropFilter: 'blur(15px)',
-                  border: '1px solid rgba(147, 51, 234, 0.3)',
-                  boxShadow: `
-                    0 8px 24px rgba(147, 51, 234, 0.1),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.4)
-                  `,
-                }}
-              >
-                <h3 className="text-lg font-semibold text-purple-800 mb-2">Scheduled</h3>
-                <p className="text-3xl font-bold text-purple-900">{scheduledCount}</p>
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 flex-1">
+                <h3 className="text-sm font-medium text-purple-800 mb-1">Scheduled</h3>
+                <p className="text-2xl font-bold text-purple-900">{scheduledCount}</p>
               </div>
             </div>
           </div>
+        </div>
 
+        <div className="p-6">
           {loading ? (
             <div className="space-y-4">
-              <div 
-                className="h-12 w-full sm:w-[300px] rounded-xl animate-pulse"
-                style={{
-                  background: `
-                    linear-gradient(135deg, 
-                      rgba(255, 255, 255, 0.2) 0%,
-                      rgba(255, 255, 255, 0.1) 100%
-                    )
-                  `,
-                  backdropFilter: 'blur(8px)',
-                }}
-              />
-              <div 
-                className="rounded-2xl border overflow-hidden"
-                style={{
-                  background: `
-                    linear-gradient(135deg, 
-                      rgba(255, 255, 255, 0.15) 0%,
-                      rgba(255, 255, 255, 0.05) 100%
-                    )
-                  `,
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                }}
-              >
-                <div className="h-[400px] animate-pulse" />
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <div className="animate-pulse space-y-4">
+                  <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                  <div className="space-y-3">
+                    <div className="h-4 bg-gray-200 rounded"></div>
+                    <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                    <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+                  </div>
+                </div>
               </div>
             </div>
           ) : (
-            <YouTubeManagerTable 
-              videos={youtubeVideos}
-              isLoading={loading}
-              onEditVideo={handleEditVideo}
-              onUploadNow={handleUploadNow}
-              onScheduleUpload={handleScheduleUpload}
-            />
+            <div className="bg-white border border-gray-200 rounded-lg">
+              <YouTubeManagerTable 
+                videos={youtubeVideos}
+                isLoading={loading}
+                onEditVideo={handleEditVideo}
+                onUploadNow={handleUploadNow}
+                onScheduleUpload={handleScheduleUpload}
+              />
+            </div>
           )}
           
           <VideoEditorModal 

@@ -4,13 +4,12 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { Task, SubTask } from "../context/task-context";
 import { useTaskContext } from "../context/task-context";
-import { Calendar, Clock, Tag, Trash2, Plus, Check, AlertCircle } from "lucide-react";
+import { Calendar, Tag, Trash2, Plus, Check, AlertCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select,
