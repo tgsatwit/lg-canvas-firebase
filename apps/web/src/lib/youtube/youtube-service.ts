@@ -361,16 +361,10 @@ export class YouTubeService {
       // Generate unique upload ID
       const uploadId = `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      // For large files (>50MB), use resumable upload
-      if (fileSize > 50 * 1024 * 1024) {
-        console.log(`Large file detected (${Math.round(fileSize / 1024 / 1024)} MB). Using resumable upload.`);
-        const result = await this.uploadLargeVideoResumable(file, fileSize, options, uploadId, progressCallback);
-        return { ...result, uploadId };
-      } else {
-        console.log('Small file detected. Using simple upload.');
-        const result = await this.uploadSmallVideoDirect(file, options);
-        return { ...result, uploadId };
-      }
+      // Use streaming upload for better performance (YouTube recommends avoiding chunking)
+      console.log(`File size: ${Math.round(fileSize / 1024 / 1024)} MB. Using optimized streaming upload.`);
+      const result = await this.uploadVideoStreamOptimized(file, fileSize, options, uploadId, progressCallback);
+      return { ...result, uploadId };
       
     } catch (error) {
       console.error('Error uploading video to YouTube:', error);
@@ -438,6 +432,170 @@ export class YouTubeService {
       // Clean up session
       this.activeSessions.delete(uploadId);
     }
+  }
+
+  /**
+   * Optimized streaming upload - uploads directly without chunking for best performance
+   */
+  private async uploadVideoStreamOptimized(
+    file: any,
+    fileSize: number,
+    options: YouTubeUploadOptions,
+    uploadId: string,
+    progressCallback?: (progress: UploadProgress) => void
+  ): Promise<{ videoId: string; youtubeUrl: string }> {
+    console.log('Starting optimized streaming upload...');
+    
+    // Step 1: Create resumable upload session
+    const uploadUrl = await this.createResumableUploadSession(options, fileSize);
+    console.log('Resumable upload session created for streaming');
+    
+    // Create session tracking
+    const session: UploadSession = {
+      uploadId,
+      uploadUrl,
+      fileSize,
+      cancelled: false,
+      startTime: Date.now(),
+      lastProgressUpdate: Date.now(),
+      onProgress: progressCallback
+    };
+    
+    this.activeSessions.set(uploadId, session);
+    
+    try {
+      // Step 2: Stream upload directly to YouTube
+      const result = await this.uploadFileStreamDirect(session, file);
+      console.log('Streaming upload completed, video response:', result);
+      
+      return {
+        videoId: result.id,
+        youtubeUrl: `https://www.youtube.com/watch?v=${result.id}`
+      };
+    } catch (error) {
+      console.error('Error in streaming upload:', error);
+      throw error;
+    } finally {
+      this.activeSessions.delete(uploadId);
+    }
+  }
+
+  /**
+   * Upload file using streaming without chunking - recommended by YouTube for performance
+   */
+  private async uploadFileStreamDirect(
+    session: UploadSession,
+    file: any
+  ): Promise<any> {
+    const axios = require('axios');
+    
+    console.log('Starting direct stream upload to YouTube...');
+    
+    // If in test mode, simulate upload
+    if (this.testMode) {
+      return this.simulateStreamUpload(session);
+    }
+    
+    // Create read stream from GCS file
+    const readStream = file.createReadStream();
+    
+    try {
+      // Upload directly to YouTube using stream
+      const response = await axios.put(session.uploadUrl, readStream, {
+        headers: {
+          'Content-Length': session.fileSize.toString(),
+          'Content-Type': 'video/*'
+        },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        timeout: 30 * 60 * 1000, // 30 minute timeout
+        onUploadProgress: (progressEvent: any) => {
+          const uploadedBytes = progressEvent.loaded;
+          const progress = Math.round((uploadedBytes / session.fileSize) * 100);
+          const currentTime = Date.now();
+          const timeElapsed = currentTime - session.startTime;
+          const uploadSpeed = uploadedBytes / (timeElapsed / 1000); // bytes per second
+          const estimatedTimeRemaining = uploadSpeed > 0 ? 
+            Math.round((session.fileSize - uploadedBytes) / uploadSpeed) : 0;
+          
+          // Update progress
+          if (session.onProgress) {
+            session.onProgress({
+              uploadId: session.uploadId,
+              progress,
+              bytesUploaded: uploadedBytes,
+              totalBytes: session.fileSize,
+              status: 'uploading',
+              estimatedTimeRemaining,
+              uploadSpeed: Math.round(uploadSpeed / 1024 / 1024 * 100) / 100, // MB/s
+              currentChunk: 1,
+              totalChunks: 1
+            });
+          }
+          
+          // Throttled console logging (every 5%)
+          if (progress > 0 && progress % 5 === 0 && 
+              currentTime - session.lastProgressUpdate > 5000) {
+            console.log(
+              `Upload progress: ${progress}% (${Math.round(uploadedBytes / 1024 / 1024)}MB / ${Math.round(session.fileSize / 1024 / 1024)}MB) - ${Math.round(uploadSpeed / 1024 / 1024 * 100) / 100} MB/s`
+            );
+            session.lastProgressUpdate = currentTime;
+          }
+        }
+      });
+      
+      console.log('Direct stream upload completed successfully');
+      return response.data;
+      
+    } catch (error: any) {
+      console.error('Stream upload failed:', error);
+      
+      // Check if it's a network error that should be retried
+      if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || 
+          (error.response && error.response.status >= 500)) {
+        console.log('Network error detected, falling back to chunked upload...');
+        // Fallback to chunked upload for unreliable networks
+        return this.uploadFileInChunksWithRetry(session, file);
+      }
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Simulate streaming upload for test mode
+   */
+  private async simulateStreamUpload(session: UploadSession): Promise<any> {
+    console.log('🧪 Simulating streaming upload in test mode...');
+    
+    // Simulate upload progress
+    const totalSteps = 20;
+    for (let i = 0; i <= totalSteps; i++) {
+      const progress = Math.round((i / totalSteps) * 100);
+      const uploadedBytes = Math.round((session.fileSize * i) / totalSteps);
+      
+      if (session.onProgress) {
+        session.onProgress({
+          uploadId: session.uploadId,
+          progress,
+          bytesUploaded: uploadedBytes,
+          totalBytes: session.fileSize,
+          status: 'uploading',
+          estimatedTimeRemaining: ((totalSteps - i) * 500) / 1000,
+          uploadSpeed: 10, // Simulated 10 MB/s
+          currentChunk: 1,
+          totalChunks: 1
+        });
+      }
+      
+      // Simulate upload time
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    return {
+      id: `test_video_${Date.now()}`,
+      snippet: { title: 'Test Video' }
+    };
   }
 
   /**

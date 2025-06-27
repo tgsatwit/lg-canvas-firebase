@@ -73,6 +73,7 @@ export default function YouTubeUploadMonitor() {
   const [editingSchedule, setEditingSchedule] = useState<string | null>(null);
   const [newScheduledDate, setNewScheduledDate] = useState<Date | null>(null);
   const [selectedTimeFilter, setSelectedTimeFilter] = useState<'24h' | '7d' | '30d' | 'all'>('24h');
+  const [cancellingUploads, setCancellingUploads] = useState<Set<string>>(new Set());
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -172,33 +173,51 @@ export default function YouTubeUploadMonitor() {
   const cancelUpload = async (uploadId: string) => {
     setError(null);
     setSuccess(null);
+    
+    // Add to cancelling set
+    setCancellingUploads(prev => new Set(prev).add(uploadId));
 
     try {
-      const functionsUrl = process.env.NEXT_PUBLIC_FIREBASE_FUNCTIONS_URL || 'http://localhost:5001/face-by-lisa/us-central1';
-      
-      const response = await fetch(`${functionsUrl}/api/youtube/cancel/${uploadId}`, {
-        method: 'POST',
+      const response = await fetch(`/api/youtube/uploads?uploadId=${uploadId}`, {
+        method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
       const result = await response.json();
 
-      if (result.success) {
-        toast({
-          title: "Upload Cancelled",
-          description: `Upload ${uploadId} has been cancelled`,
-        });
-      } else {
-        throw new Error(result.error || 'Failed to cancel upload');
-      }
+      toast({
+        title: "Upload Cancelled",
+        description: `Upload ${uploadId} has been cancelled successfully`,
+      });
+
+      // Immediately update the UI to reflect the cancelled status
+      setUploads(prevUploads => 
+        prevUploads.map(upload => 
+          upload.uploadId === uploadId 
+            ? { ...upload, status: 'cancelled' as const, error: 'Cancelled by user' }
+            : upload
+        )
+      );
     } catch (err: any) {
       console.error('Cancel upload error:', err);
       toast({
-        title: "Error",
-        description: `Failed to cancel upload: ${err.message}`,
+        title: "Cancellation Failed",
+        description: err.message || "Failed to cancel upload. The upload may complete anyway.",
         variant: "destructive",
+      });
+    } finally {
+      // Remove from cancelling set
+      setCancellingUploads(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(uploadId);
+        return newSet;
       });
     }
   };
@@ -377,15 +396,26 @@ export default function YouTubeUploadMonitor() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">YouTube Upload Monitor</h2>
-        <div className="flex items-center space-x-2">
-          <Badge variant="outline">{uploads.length} Total</Badge>
-          <Badge variant={activeCount > 0 ? "default" : "secondary"}>
-            {activeCount} Active
-          </Badge>
-          <Badge variant="outline">
-            <Clock className="h-3 w-3 mr-1" />
-            {scheduledVideos.length} Scheduled
-          </Badge>
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
+            <Badge variant="outline">{uploads.length} Total</Badge>
+            <Badge variant={activeCount > 0 ? "default" : "secondary"}>
+              {activeCount} Active
+            </Badge>
+            <Badge variant="outline">
+              <Clock className="h-3 w-3 mr-1" />
+              {scheduledVideos.length} Scheduled
+            </Badge>
+          </div>
+          <Button
+            onClick={() => window.location.reload()}
+            variant="outline"
+            size="sm"
+            className="flex items-center space-x-1"
+          >
+            <RefreshCw className="h-3 w-3" />
+            <span className="text-xs">Refresh</span>
+          </Button>
         </div>
       </div>
 
@@ -558,12 +588,24 @@ export default function YouTubeUploadMonitor() {
                         </Badge>
                         {['initializing', 'uploading'].includes(upload.status) && (
                           <Button
-                            onClick={() => cancelUpload(upload.uploadId)}
+                            onClick={() => {
+                              if (confirm(`Are you sure you want to cancel the upload for "${upload.videoTitle}"?`)) {
+                                cancelUpload(upload.uploadId);
+                              }
+                            }}
                             variant="destructive"
                             size="sm"
-                            className="h-8 w-8 p-0"
+                            className="flex items-center space-x-1 px-3"
+                            disabled={cancellingUploads.has(upload.uploadId)}
                           >
-                            <Square className="h-4 w-4" />
+                            {cancellingUploads.has(upload.uploadId) ? (
+                              <RefreshCw className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Square className="h-3 w-3" />
+                            )}
+                            <span className="text-xs">
+                              {cancellingUploads.has(upload.uploadId) ? 'Cancelling...' : 'Cancel'}
+                            </span>
                           </Button>
                         )}
                         {['failed', 'cancelled'].includes(upload.status) && (
@@ -579,47 +621,72 @@ export default function YouTubeUploadMonitor() {
                       </div>
                     </div>
 
-                    {upload.status === 'uploading' && (
-                      <>
-                        <Progress value={upload.progress} className="w-full" />
-                        
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                          <div>
-                            <span className="text-gray-600">Progress:</span>
-                            <span className="ml-1 font-medium">{upload.progress}%</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-600">Uploaded:</span>
-                            <span className="ml-1 font-medium">
-                              {formatBytes(upload.bytesUploaded)} / {formatBytes(upload.totalBytes)}
+                    {(upload.status === 'uploading' || upload.status === 'initializing') && (
+                      <div className="space-y-3">
+                        {/* Progress Bar with Percentage */}
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium text-gray-700">
+                              {upload.status === 'initializing' ? 'Initializing upload...' : 'Uploading to YouTube'}
+                            </span>
+                            <span className="text-sm font-bold text-blue-600">
+                              {upload.progress || 0}%
                             </span>
                           </div>
-                          {upload.currentChunk && upload.totalChunks && (
-                            <div>
-                              <span className="text-gray-600">Chunk:</span>
-                              <span className="ml-1 font-medium">
-                                {upload.currentChunk} / {upload.totalChunks}
+                          <Progress 
+                            value={upload.progress || 0} 
+                            className="w-full h-2"
+                          />
+                        </div>
+                        
+                        {/* Upload Statistics */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm bg-gray-50 p-3 rounded-lg">
+                          <div className="flex flex-col">
+                            <span className="text-gray-500 text-xs uppercase tracking-wide">Data Transfer</span>
+                            <span className="font-medium text-gray-900">
+                              {formatBytes(upload.bytesUploaded || 0)} / {formatBytes(upload.totalBytes || 0)}
+                            </span>
+                          </div>
+                          
+                          {upload.uploadSpeed && upload.uploadSpeed > 0 && (
+                            <div className="flex flex-col">
+                              <span className="text-gray-500 text-xs uppercase tracking-wide">Upload Speed</span>
+                              <span className="font-medium text-green-600">
+                                {formatBytes(upload.uploadSpeed * 1024 * 1024)}/s
                               </span>
                             </div>
                           )}
-                          {upload.uploadSpeed && (
-                            <div>
-                              <span className="text-gray-600">Speed:</span>
-                              <span className="ml-1 font-medium">
-                                {formatBytes(upload.uploadSpeed)}/s
-                              </span>
-                            </div>
-                          )}
-                          {upload.estimatedTimeRemaining && (
-                            <div className="col-span-2">
-                              <span className="text-gray-600">ETA:</span>
-                              <span className="ml-1 font-medium">
+                          
+                          {upload.estimatedTimeRemaining && upload.estimatedTimeRemaining > 0 && (
+                            <div className="flex flex-col">
+                              <span className="text-gray-500 text-xs uppercase tracking-wide">Time Remaining</span>
+                              <span className="font-medium text-blue-600">
                                 {formatTime(upload.estimatedTimeRemaining)}
                               </span>
                             </div>
                           )}
+                          
+                          {upload.currentChunk && upload.totalChunks && upload.totalChunks > 1 && (
+                            <div className="flex flex-col">
+                              <span className="text-gray-500 text-xs uppercase tracking-wide">Chunk Progress</span>
+                              <span className="font-medium text-purple-600">
+                                {upload.currentChunk} / {upload.totalChunks}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                      </>
+                        
+                        {/* Upload Method Indicator */}
+                        <div className="flex items-center space-x-2 text-xs text-gray-500">
+                          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                          <span>
+                            {upload.totalChunks && upload.totalChunks > 1 
+                              ? `Chunked upload (${upload.totalChunks} parts)` 
+                              : 'Streaming upload (optimized)'
+                            }
+                          </span>
+                        </div>
+                      </div>
                     )}
 
                     {upload.status === 'completed' && upload.youtubeUrl && (
