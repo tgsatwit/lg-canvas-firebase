@@ -500,6 +500,9 @@ export class YouTubeService {
     const readStream = file.createReadStream();
     
     try {
+      console.log('🚀 Starting axios stream upload to YouTube...');
+      console.log(`📊 Upload details: ${Math.round(session.fileSize / 1024 / 1024)}MB file`);
+      
       // Upload directly to YouTube using stream
       const response = await axios.put(session.uploadUrl, readStream, {
         headers: {
@@ -508,7 +511,7 @@ export class YouTubeService {
         },
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
-        timeout: 30 * 60 * 1000, // 30 minute timeout
+        timeout: 60 * 60 * 1000, // Increased to 60 minute timeout for production
         onUploadProgress: (progressEvent: any) => {
           const uploadedBytes = progressEvent.loaded;
           const progress = Math.round((uploadedBytes / session.fileSize) * 100);
@@ -548,13 +551,27 @@ export class YouTubeService {
       return response.data;
       
     } catch (error: any) {
-      console.error('Stream upload failed:', error);
+      console.error('❌ Stream upload failed:', {
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
       
-      // Check if it's a network error that should be retried
-      if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || 
-          (error.response && error.response.status >= 500)) {
-        console.log('Network error detected, falling back to chunked upload...');
-        // Fallback to chunked upload for unreliable networks
+      // Check if it's a network error that should be retried with chunked upload
+      if (error.code === 'ECONNRESET' || 
+          error.code === 'ETIMEDOUT' || 
+          error.code === 'ECONNABORTED' ||
+          (error.response && error.response.status >= 500) ||
+          error.message?.includes('timeout')) {
+        console.log('🔄 Network/timeout error detected, falling back to chunked upload...');
+        
+        // Reset the session for chunked upload
+        session.startTime = Date.now();
+        session.lastProgressUpdate = Date.now();
+        
+        // Fallback to chunked upload for unreliable networks or timeouts
         return this.uploadFileInChunksWithRetry(session, file);
       }
       

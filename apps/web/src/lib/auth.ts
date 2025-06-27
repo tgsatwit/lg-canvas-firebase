@@ -17,21 +17,33 @@ export interface ServerUser {
  */
 export async function getServerUser(): Promise<ServerUser | null> {
   try {
+    console.log('🔍 Starting server-side authentication check...');
+    
     const cookieStore = await cookies();
     const sessionCookie = cookieStore.get('__session');
     
+    console.log('🍪 Session cookie exists:', !!sessionCookie?.value);
+    console.log('🍪 Cookie value preview:', sessionCookie?.value?.substring(0, 50) + '...');
+    
     if (!sessionCookie?.value) {
+      console.log('❌ No session cookie found');
       return null;
     }
 
     const auth = adminAuth();
+    console.log('🔥 Firebase Admin Auth initialized:', !!auth);
+    
     if (!auth) {
       logger.error('Firebase Admin Auth not initialized');
       return null;
     }
 
+    console.log('🔐 Attempting to verify session cookie...');
+    
     // Verify the session cookie
     const decodedClaims = await auth.verifySessionCookie(sessionCookie.value, true);
+    
+    console.log('✅ Session verified successfully for user:', decodedClaims.uid);
     
     return {
       uid: decodedClaims.uid,
@@ -40,6 +52,7 @@ export async function getServerUser(): Promise<ServerUser | null> {
       photoURL: decodedClaims.picture,
     };
   } catch (error) {
+    console.error('❌ Session verification failed:', error);
     logger.error('Error verifying session:', { error });
     return null;
   }
