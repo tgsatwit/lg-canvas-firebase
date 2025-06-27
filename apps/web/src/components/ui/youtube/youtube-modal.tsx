@@ -252,7 +252,7 @@ const YoutubeStatusCard = ({
   const handleUploadNow = async () => {
     setIsUploading(true);
     try {
-      const response = await fetch(`/api/videos/${videoId}/upload-firebase`, {
+      const response = await fetch(`/api/videos/${videoId}/upload-now`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

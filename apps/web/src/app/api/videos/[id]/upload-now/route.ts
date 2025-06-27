@@ -13,6 +13,7 @@ export const maxDuration = 600;
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
+    const { testMode = false } = await request.json().catch(() => ({}));
     const session = await getServerUser();
     
     if (!session) {
@@ -79,6 +80,12 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     try {
       // Get YouTube service
       const youtubeService = getYouTubeService();
+      
+      // Set test mode if requested
+      if (testMode) {
+        youtubeService.setTestMode(true);
+        console.log('YouTube upload running in test mode');
+      }
       
       // Get stored YouTube tokens from somewhere (you'll need to implement token storage)
       // For now, we'll return an error asking the user to authenticate

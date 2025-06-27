@@ -274,7 +274,7 @@ export default function YouTubeUploadMonitor() {
 
   const initiateUploadNow = async (video: VideoData) => {
     try {
-      const response = await fetch(`/api/videos/${video.id}/upload-firebase`, {
+      const response = await fetch(`/api/videos/${video.id}/upload-now`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
