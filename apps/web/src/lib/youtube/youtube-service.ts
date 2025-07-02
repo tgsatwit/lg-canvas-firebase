@@ -37,7 +37,7 @@ interface UploadSession {
 }
 
 export class YouTubeService {
-  private oauth2Client: any;
+  public oauth2Client: any; // Make this public so TranscriptService can access it
   private serviceAccountAuth: any;
   private storage: Storage;
   private activeSessions: Map<string, UploadSession> = new Map();
@@ -49,8 +49,16 @@ export class YouTubeService {
     this.oauth2Client = new google.auth.OAuth2(
       process.env.YOUTUBE_CLIENT_ID,
       process.env.YOUTUBE_CLIENT_SECRET,
-      process.env.YOUTUBE_REDIRECT_URL || 'http://localhost:3000/api/auth/youtube/callback'
+      process.env.YOUTUBE_REDIRECT_URL || 'http://localhost:3000/api/youtube/auth/callback'
     );
+
+    // Set refresh token if available
+    if (process.env.YOUTUBE_REFRESH_TOKEN) {
+      console.log('🔑 Setting YouTube refresh token from environment');
+      this.oauth2Client.setCredentials({
+        refresh_token: process.env.YOUTUBE_REFRESH_TOKEN
+      });
+    }
 
     // Initialize Service Account if available
     this.initializeServiceAccount();
@@ -93,12 +101,22 @@ export class YouTubeService {
       // If it starts with '{', it's JSON content, not a file path
       if (credentials.startsWith('{')) {
         try {
-          // First, let's validate that the JSON looks complete
-          if (!credentials.includes('"private_key"') || !credentials.endsWith('}')) {
+          // Clean the credentials string to handle concatenation issues
+          let cleanCredentials = credentials.trim();
+          
+          // If there's extra content after the JSON, trim it
+          const lastBraceIndex = cleanCredentials.lastIndexOf('}');
+          if (lastBraceIndex !== -1 && lastBraceIndex < cleanCredentials.length - 1) {
+            console.log('⚠️ Detected extra content after JSON, trimming...');
+            cleanCredentials = cleanCredentials.substring(0, lastBraceIndex + 1);
+          }
+          
+          // Validate that the cleaned JSON looks complete
+          if (!cleanCredentials.includes('"private_key"') || !cleanCredentials.endsWith('}')) {
             throw new Error('JSON appears to be incomplete - missing private_key or ending brace');
           }
           
-          storageConfig.credentials = JSON.parse(credentials);
+          storageConfig.credentials = JSON.parse(cleanCredentials);
           console.log('Using Google Cloud credentials from JSON string');
         } catch (error) {
           console.error('Failed to parse GOOGLE_APPLICATION_CREDENTIALS as JSON:', error);
@@ -147,8 +165,8 @@ export class YouTubeService {
           scopes: [
             'https://www.googleapis.com/auth/youtube.readonly',
             'https://www.googleapis.com/auth/youtube',
-            'https://www.googleapis.com/auth/youtube.upload',
-            'https://www.googleapis.com/auth/youtube.force-ssl'
+            'https://www.googleapis.com/auth/youtube.force-ssl',
+            'https://www.googleapis.com/auth/yt-analytics.readonly'
           ],
         });
 
@@ -172,6 +190,20 @@ export class YouTubeService {
       return await this.serviceAccountAuth.getClient();
     } else {
       console.log('Using OAuth2 authentication');
+      
+      // Try to refresh token if we have a refresh token but no access token
+      if (this.oauth2Client.credentials?.refresh_token && !this.oauth2Client.credentials?.access_token) {
+        console.log('🔄 Refreshing OAuth2 access token...');
+        try {
+          const { credentials } = await this.oauth2Client.refreshAccessToken();
+          this.oauth2Client.setCredentials(credentials);
+          console.log('✅ OAuth2 token refreshed successfully');
+        } catch (error) {
+          console.error('❌ Failed to refresh OAuth2 token:', error);
+          throw new Error('Failed to refresh YouTube OAuth2 token');
+        }
+      }
+      
       return this.oauth2Client;
     }
   }
@@ -467,10 +499,10 @@ export class YouTubeService {
     return this.oauth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: [
-        'https://www.googleapis.com/auth/youtube.upload',
         'https://www.googleapis.com/auth/youtube',
         'https://www.googleapis.com/auth/youtube.readonly',
-        'https://www.googleapis.com/auth/youtube.force-ssl'
+        'https://www.googleapis.com/auth/youtube.force-ssl',
+        'https://www.googleapis.com/auth/yt-analytics.readonly'
       ],
       prompt: 'consent',
       include_granted_scopes: true,
@@ -500,6 +532,274 @@ export class YouTubeService {
   }
 
   /**
+   * Fetch YouTube Analytics data for the past week
+   */
+  async fetchWeeklyAnalytics(): Promise<{
+    success: boolean;
+    error?: string;
+    details?: string;
+    analytics?: {
+      currentWeek: any;
+      previousWeek: any;
+      trends: any;
+      summary: any;
+    };
+  }> {
+    try {
+      console.log('📊 Fetching YouTube Analytics data...');
+      
+      const authClient = await this.getAuthClient();
+      const { google } = require('googleapis');
+      const youtubeAnalytics = google.youtubeAnalytics('v2');
+      
+      // Calculate date ranges for the past week and previous week
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      // Current week (last 7 days)
+      const currentWeekStart = new Date(today);
+      currentWeekStart.setDate(today.getDate() - 7);
+      
+      // Previous week (7-14 days ago)
+      const previousWeekStart = new Date(today);
+      previousWeekStart.setDate(today.getDate() - 14);
+      const previousWeekEnd = new Date(today);
+      previousWeekEnd.setDate(today.getDate() - 7);
+      
+      // Format dates for API
+      const currentWeekStartStr = currentWeekStart.toISOString().split('T')[0];
+      const todayStr = today.toISOString().split('T')[0];
+      const previousWeekStartStr = previousWeekStart.toISOString().split('T')[0];
+      const previousWeekEndStr = previousWeekEnd.toISOString().split('T')[0];
+
+      // Get current week analytics
+      const currentWeekResponse = await youtubeAnalytics.reports.query({
+        auth: authClient,
+        ids: 'channel==MINE',
+        startDate: currentWeekStartStr,
+        endDate: todayStr,
+        metrics: 'views,likes,comments,subscribersGained,subscribersLost,estimatedMinutesWatched,averageViewDuration',
+        dimensions: 'day',
+      });
+
+      // Get previous week analytics
+      const previousWeekResponse = await youtubeAnalytics.reports.query({
+        auth: authClient,
+        ids: 'channel==MINE',
+        startDate: previousWeekStartStr,
+        endDate: previousWeekEndStr,
+        metrics: 'views,likes,comments,subscribersGained,subscribersLost,estimatedMinutesWatched,averageViewDuration',
+        dimensions: 'day',
+      });
+
+      // Process current week data
+      const currentWeekData = currentWeekResponse.data.rows || [];
+      const currentWeekTotals = currentWeekData.reduce((totals: any, row: any) => {
+        return {
+          views: (totals.views || 0) + (row[1] || 0),
+          likes: (totals.likes || 0) + (row[2] || 0),
+          comments: (totals.comments || 0) + (row[3] || 0),
+          subscribersGained: (totals.subscribersGained || 0) + (row[4] || 0),
+          subscribersLost: (totals.subscribersLost || 0) + (row[5] || 0),
+          estimatedMinutesWatched: (totals.estimatedMinutesWatched || 0) + (row[6] || 0),
+          averageViewDuration: Math.max(totals.averageViewDuration || 0, row[7] || 0),
+        };
+      }, {});
+
+      // Process previous week data
+      const previousWeekData = previousWeekResponse.data.rows || [];
+      const previousWeekTotals = previousWeekData.reduce((totals: any, row: any) => {
+        return {
+          views: (totals.views || 0) + (row[1] || 0),
+          likes: (totals.likes || 0) + (row[2] || 0),
+          comments: (totals.comments || 0) + (row[3] || 0),
+          subscribersGained: (totals.subscribersGained || 0) + (row[4] || 0),
+          subscribersLost: (totals.subscribersLost || 0) + (row[5] || 0),
+          estimatedMinutesWatched: (totals.estimatedMinutesWatched || 0) + (row[6] || 0),
+          averageViewDuration: Math.max(totals.averageViewDuration || 0, row[7] || 0),
+        };
+      }, {});
+
+      // Calculate net subscribers
+      currentWeekTotals.netSubscribers = currentWeekTotals.subscribersGained - currentWeekTotals.subscribersLost;
+      previousWeekTotals.netSubscribers = previousWeekTotals.subscribersGained - previousWeekTotals.subscribersLost;
+
+      // Calculate trends
+      const calculateChange = (current: number, previous: number) => {
+        if (previous === 0) return current > 0 ? 100 : 0;
+        return Math.round(((current - previous) / previous) * 100);
+      };
+
+      const trends = {
+        viewsChange: calculateChange(currentWeekTotals.views, previousWeekTotals.views),
+        likesChange: calculateChange(currentWeekTotals.likes, previousWeekTotals.likes),
+        commentsChange: calculateChange(currentWeekTotals.comments, previousWeekTotals.comments),
+        subscribersChange: calculateChange(currentWeekTotals.netSubscribers, previousWeekTotals.netSubscribers),
+        watchTimeChange: calculateChange(currentWeekTotals.estimatedMinutesWatched, previousWeekTotals.estimatedMinutesWatched),
+      };
+
+      const analytics = {
+        currentWeek: {
+          views: currentWeekTotals.views,
+          likes: currentWeekTotals.likes,
+          comments: currentWeekTotals.comments,
+          subscribersGained: currentWeekTotals.subscribersGained,
+          subscribersLost: currentWeekTotals.subscribersLost,
+          netSubscribers: currentWeekTotals.netSubscribers,
+          estimatedMinutesWatched: currentWeekTotals.estimatedMinutesWatched,
+          averageViewDuration: currentWeekTotals.averageViewDuration,
+          dateRange: { start: currentWeekStartStr, end: todayStr }
+        },
+        previousWeek: {
+          views: previousWeekTotals.views,
+          likes: previousWeekTotals.likes,
+          comments: previousWeekTotals.comments,
+          subscribersGained: previousWeekTotals.subscribersGained,
+          subscribersLost: previousWeekTotals.subscribersLost,
+          netSubscribers: previousWeekTotals.netSubscribers,
+          estimatedMinutesWatched: previousWeekTotals.estimatedMinutesWatched,
+          averageViewDuration: previousWeekTotals.averageViewDuration,
+          dateRange: { start: previousWeekStartStr, end: previousWeekEndStr }
+        },
+        trends,
+        summary: {
+          weeklyViews: currentWeekTotals.views,
+          weeklyLikes: currentWeekTotals.likes,
+          weeklySubscribers: currentWeekTotals.netSubscribers,
+          weeklyWatchTime: Math.round(currentWeekTotals.estimatedMinutesWatched / 60), // Convert to hours
+          averageViewDuration: Math.round(currentWeekTotals.averageViewDuration)
+        }
+      };
+
+      console.log('✅ YouTube Analytics fetched successfully');
+      return {
+        success: true,
+        analytics
+      };
+      
+    } catch (error: any) {
+      console.error('❌ Error fetching YouTube Analytics:', error);
+      
+      // Provide more specific error messages for common Analytics API issues
+      if (error.code === 403 || error.message?.includes('Forbidden') || error.message?.includes('forbidden')) {
+        return {
+          success: false,
+          error: 'ANALYTICS_NOT_AVAILABLE',
+          details: 'YouTube Analytics API access is not available for this channel. This usually means the channel does not meet YouTube Partner Program requirements (1000+ subscribers and 4000+ watch hours) or Analytics API access is not enabled.'
+        };
+      }
+      
+      if (error.code === 401 || error.message?.includes('credentials') || error.message?.includes('auth')) {
+        return {
+          success: false,
+          error: 'AUTHENTICATION_REQUIRED',
+          details: 'YouTube authentication required. Please re-authenticate with the required scopes.'
+        };
+      }
+      
+      // Fallback to basic video statistics if Analytics API fails
+      console.log('📊 Falling back to basic video statistics...');
+      
+      // Since we can't use Analytics API without sensitive scopes,
+      // we'll calculate basic weekly statistics from recent video performance
+      const result = await this.fetchChannelVideos(undefined, 50);
+      
+      if (!result.success || !result.videos) {
+        return {
+          success: false,
+          error: 'FETCH_ERROR',
+          details: 'Could not fetch videos for analytics calculation'
+        };
+      }
+
+      const videos = result.videos;
+      
+      // Calculate date ranges
+      const now = new Date();
+      const currentWeekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const previousWeekStart = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+      const previousWeekEnd = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      // Filter videos by publication date (as a proxy for "weekly" data)
+      const currentWeekVideos = videos.filter(video => {
+        const publishDate = new Date(video.publishedAt);
+        return publishDate >= currentWeekStart;
+      });
+
+      const previousWeekVideos = videos.filter(video => {
+        const publishDate = new Date(video.publishedAt);
+        return publishDate >= previousWeekStart && publishDate < previousWeekEnd;
+      });
+
+      // Calculate stats for current "week" (recent videos)
+      const currentWeekStats = {
+        views: currentWeekVideos.reduce((sum, video) => sum + (video.viewCount || 0), 0),
+        likes: currentWeekVideos.reduce((sum, video) => sum + (video.likeCount || 0), 0),
+        comments: currentWeekVideos.reduce((sum, video) => sum + (video.commentCount || 0), 0),
+        videosPublished: currentWeekVideos.length,
+      };
+
+      const previousWeekStats = {
+        views: previousWeekVideos.reduce((sum, video) => sum + (video.viewCount || 0), 0),
+        likes: previousWeekVideos.reduce((sum, video) => sum + (video.likeCount || 0), 0),
+        comments: previousWeekVideos.reduce((sum, video) => sum + (video.commentCount || 0), 0),
+        videosPublished: previousWeekVideos.length,
+      };
+
+      // Calculate trends
+      const calculateChange = (current: number, previous: number) => {
+        if (previous === 0) return current > 0 ? 100 : 0;
+        return Math.round(((current - previous) / previous) * 100);
+      };
+
+      const trends = {
+        viewsChange: calculateChange(currentWeekStats.views, previousWeekStats.views),
+        likesChange: calculateChange(currentWeekStats.likes, previousWeekStats.likes),
+        commentsChange: calculateChange(currentWeekStats.comments, previousWeekStats.comments),
+        subscribersChange: 0, // Not available without Analytics API
+        watchTimeChange: 0, // Not available without Analytics API
+      };
+
+      console.log('✅ Basic YouTube statistics calculated successfully');
+
+      return {
+        success: true,
+        analytics: {
+          currentWeek: {
+            views: currentWeekStats.views,
+            likes: currentWeekStats.likes,
+            comments: currentWeekStats.comments,
+            videosPublished: currentWeekStats.videosPublished,
+            dateRange: {
+              start: currentWeekStart.toISOString().split('T')[0],
+              end: now.toISOString().split('T')[0]
+            }
+          },
+          previousWeek: {
+            views: previousWeekStats.views,
+            likes: previousWeekStats.likes,
+            comments: previousWeekStats.comments,
+            videosPublished: previousWeekStats.videosPublished,
+            dateRange: {
+              start: previousWeekStart.toISOString().split('T')[0],
+              end: previousWeekEnd.toISOString().split('T')[0]
+            }
+          },
+          trends,
+          summary: {
+            weeklyViews: currentWeekStats.views,
+            weeklyLikes: currentWeekStats.likes,
+            weeklySubscribers: 0, // Not available without Analytics API
+            weeklyWatchTime: 0, // Not available without Analytics API
+            averageViewDuration: 0, // Not available without Analytics API
+            weeklyVideos: currentWeekStats.videosPublished,
+          }
+        }
+      };
+    }
+  }
+
+  /**
    * Test the connection to YouTube API (tries service account first, then OAuth2)
    */
   async testConnection(): Promise<{ success: boolean; error?: string; user?: any; authMethod?: string }> {
@@ -518,9 +818,17 @@ export class YouTubeService {
     try {
       console.log('🧪 Testing YouTube OAuth2 connection...');
       
+      // Try to refresh token if needed
+      if (this.oauth2Client.credentials?.refresh_token && !this.oauth2Client.credentials?.access_token) {
+        console.log('🔄 Refreshing OAuth2 token for connection test...');
+        const { credentials } = await this.oauth2Client.refreshAccessToken();
+        this.oauth2Client.setCredentials(credentials);
+        console.log('✅ Token refreshed for connection test');
+      }
+      
       // Check if we have credentials
       if (!this.oauth2Client.credentials?.access_token) {
-        throw new Error('No access token available');
+        throw new Error('No access token available after refresh attempt');
       }
       
       // Try to get channel information

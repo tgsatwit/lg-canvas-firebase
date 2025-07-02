@@ -1,75 +1,110 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getYouTubeService } from '@/lib/youtube/youtube-service';
-import { cookies } from 'next/headers';
+import { adminFirestore } from '@/lib/firebase/admin';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 YouTube Debug endpoint called');
-    const youtubeService = getYouTubeService();
-    
-    // Check environment variables
-    const envCheck = {
-      clientId: !!process.env.YOUTUBE_CLIENT_ID,
-      clientSecret: !!process.env.YOUTUBE_CLIENT_SECRET,
-      redirectUrl: process.env.YOUTUBE_REDIRECT_URL,
-    };
-
-    // Check cookies
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get('youtube_access_token');
-    const refreshToken = cookieStore.get('youtube_refresh_token');
-    const tokenExpiry = cookieStore.get('youtube_token_expiry');
-
-    const cookieCheck = {
-      hasAccessToken: !!accessToken?.value,
-      hasRefreshToken: !!refreshToken?.value,
-      tokenExpiry: tokenExpiry?.value,
-      accessTokenLength: accessToken?.value?.length || 0,
-    };
-
-    // Try to load credentials and test connection
-    let connectionTest = null;
-    let serviceAccountTest = null;
-    try {
-      console.log('🧪 Testing service account...');
-      // Test service account first
-      serviceAccountTest = await youtubeService.testServiceAccountConnection();
-      console.log('Service account test result:', serviceAccountTest);
-      
-      // Test OAuth2 if service account fails
-      console.log('🧪 Testing OAuth2...');
-      const hasCredentials = await youtubeService.loadCredentialsFromCookies(cookieStore);
-      if (hasCredentials) {
-        connectionTest = await youtubeService.testConnection();
-        console.log('OAuth2 test result:', connectionTest);
-      } else {
-        console.log('No OAuth2 credentials found');
-      }
-    } catch (error: any) {
-      console.error('Error in debug test:', error);
-      connectionTest = { error: error.message };
+    const db = adminFirestore();
+    if (!db) {
+      return NextResponse.json(
+        { error: "Firebase admin not initialized" },
+        { status: 500 }
+      );
     }
-
-    return NextResponse.json({
-      success: true,
-      environment: envCheck,
-      cookies: cookieCheck,
-      serviceAccount: serviceAccountTest,
-      connection: connectionTest,
-      authUrl: youtubeService.getAuthUrl(),
-      instructions: {
-        step1: "Environment variables are configured",
-        step2: serviceAccountTest?.success ? "Service account authentication working!" : (accessToken ? "You have OAuth2 tokens" : "You need to authenticate"),
-        step3: (serviceAccountTest?.success || connectionTest?.success) ? "Connection successful" : "Use the authUrl to authenticate",
-        preferredMethod: serviceAccountTest?.success ? "service_account" : "oauth2"
+    
+    console.log('🔍 Debugging YouTube video data...');
+    
+    const videosRef = db.collection('videos-youtube');
+    const snapshot = await videosRef.get();
+    
+    const videos: any[] = [];
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      videos.push({
+        id: doc.id,
+        ...data
+      });
+    });
+    
+    // Analyze privacy statuses
+    const privacyStats = {
+      public: videos.filter(v => v.privacyStatus?.toLowerCase() === 'public').length,
+      private: videos.filter(v => v.privacyStatus?.toLowerCase() === 'private').length,
+      unlisted: videos.filter(v => v.privacyStatus?.toLowerCase() === 'unlisted').length,
+      members: videos.filter(v => v.privacyStatus?.toLowerCase() === 'members').length,
+      unknown: videos.filter(v => !v.privacyStatus).length,
+    };
+    
+    // Analyze durations and shorts
+    const durationStats = {
+      shorts: 0,
+      videos: 0,
+      unknown: 0
+    };
+    
+    videos.forEach(video => {
+      if (!video.duration) {
+        durationStats.unknown++;
+        return;
+      }
+      
+      const match = video.duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+      if (!match) {
+        durationStats.unknown++;
+        return;
+      }
+      
+      const hours = parseInt(match[1] || '0');
+      const minutes = parseInt(match[2] || '0');
+      const seconds = parseInt(match[3] || '0');
+      
+      const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+      
+      if (totalSeconds <= 60) {
+        durationStats.shorts++;
+      } else {
+        durationStats.videos++;
       }
     });
-
-  } catch (error: any) {
+    
+    // Sample privacy statuses
+    const privacyStatusSamples = [...new Set(videos.map(v => v.privacyStatus))].filter(Boolean);
+    
+    // Calculate total stats
+    const totalViews = videos.reduce((sum, video) => sum + (video.viewCount || 0), 0);
+    const totalLikes = videos.reduce((sum, video) => sum + (video.likeCount || 0), 0);
+    const totalComments = videos.reduce((sum, video) => sum + (video.commentCount || 0), 0);
+    
     return NextResponse.json({
-      success: false,
-      error: error.message,
-      stack: error.stack
-    }, { status: 500 });
+      success: true,
+      summary: {
+        totalVideos: videos.length,
+        totalViews,
+        totalLikes,
+        totalComments,
+        averageViews: Math.round(totalViews / videos.length)
+      },
+      privacyStats,
+      durationStats,
+      privacyStatusSamples,
+      sampleVideos: videos.slice(0, 3).map(v => ({
+        id: v.id,
+        title: v.title,
+        privacyStatus: v.privacyStatus,
+        duration: v.duration,
+        viewCount: v.viewCount,
+        likeCount: v.likeCount,
+        publishedAt: v.publishedAt
+      }))
+    });
+    
+  } catch (error: any) {
+    console.error('❌ Error debugging YouTube data:', error);
+    return NextResponse.json(
+      { 
+        error: 'Failed to debug YouTube data',
+        details: error.message 
+      },
+      { status: 500 }
+    );
   }
 } 
