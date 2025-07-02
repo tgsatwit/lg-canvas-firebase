@@ -8,20 +8,33 @@ export interface UseYouTubeVideosReturn {
   refetch: () => Promise<void>;
   searchVideos: (searchTerm: string) => Promise<void>;
   isSearching: boolean;
+  pagination: {
+    currentPage: number;
+    itemsPerPage: number;
+    totalPages: number;
+    totalItems: number;
+    setCurrentPage: (page: number) => void;
+    setItemsPerPage: (items: number) => void;
+  };
+  displayedVideos: YouTubeVideo[];
 }
 
-export function useYouTubeVideos(maxResults: number = 50): UseYouTubeVideosReturn {
+export function useYouTubeVideos(maxResults: number = 50, fetchAll: boolean = true): UseYouTubeVideosReturn {
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const fetchVideos = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const fetchedVideos = await youtubeVideosService.getYouTubeVideos(maxResults);
+      const fetchedVideos = fetchAll 
+        ? await youtubeVideosService.getAllYouTubeVideos()
+        : await youtubeVideosService.getYouTubeVideos(maxResults);
       setVideos(fetchedVideos);
       
     } catch (err) {
@@ -54,9 +67,21 @@ export function useYouTubeVideos(maxResults: number = 50): UseYouTubeVideosRetur
     }
   };
 
+  // Calculate pagination values
+  const totalItems = videos.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const displayedVideos = videos.slice(startIndex, endIndex);
+
+  // Reset to first page when videos change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [videos.length]);
+
   useEffect(() => {
     fetchVideos();
-  }, [maxResults]);
+  }, [maxResults, fetchAll]);
 
   return {
     videos,
@@ -64,7 +89,19 @@ export function useYouTubeVideos(maxResults: number = 50): UseYouTubeVideosRetur
     error,
     refetch: fetchVideos,
     searchVideos,
-    isSearching
+    isSearching,
+    pagination: {
+      currentPage,
+      itemsPerPage,
+      totalPages,
+      totalItems,
+      setCurrentPage,
+      setItemsPerPage: (items: number) => {
+        setItemsPerPage(items);
+        setCurrentPage(1); // Reset to first page when changing items per page
+      }
+    },
+    displayedVideos
   };
 }
 
@@ -181,38 +218,43 @@ export interface UseYouTubeAnalyticsReturn {
       views: number;
       likes: number;
       comments: number;
-      subscribersGained: number;
-      subscribersLost: number;
-      netSubscribers: number;
-      estimatedMinutesWatched: number;
-      averageViewDuration: number;
+      subscribersGained?: number;
+      subscribersLost?: number;
+      netSubscribers?: number;
+      estimatedMinutesWatched?: number;
+      averageViewDuration?: number;
+      videosPublished?: number;
       dateRange: { start: string; end: string };
     };
     previousWeek: {
       views: number;
       likes: number;
       comments: number;
-      subscribersGained: number;
-      subscribersLost: number;
-      netSubscribers: number;
-      estimatedMinutesWatched: number;
-      averageViewDuration: number;
+      subscribersGained?: number;
+      subscribersLost?: number;
+      netSubscribers?: number;
+      estimatedMinutesWatched?: number;
+      averageViewDuration?: number;
+      videosPublished?: number;
       dateRange: { start: string; end: string };
     };
     trends: {
       viewsChange: number;
       likesChange: number;
       commentsChange: number;
-      subscribersChange: number;
-      watchTimeChange: number;
+      subscribersChange?: number;
+      watchTimeChange?: number;
     };
     summary: {
       weeklyViews: number;
       weeklyLikes: number;
-      weeklySubscribers: number;
-      weeklyWatchTime: number;
-      averageViewDuration: number;
+      weeklySubscribers?: number;
+      weeklyWatchTime?: number;
+      averageViewDuration?: number;
+      weeklyVideos?: number;
     };
+    fallback?: boolean;
+    message?: string;
   } | null;
   loading: boolean;
   error: Error | null;

@@ -21,7 +21,9 @@ import {
   Tag,
   Play,
   Copy,
-  CheckCircle
+  CheckCircle,
+  Download,
+  Loader2
 } from 'lucide-react';
 import { useState } from 'react';
 import { YouTubeVideo } from '@/lib/firebase/youtube-videos-service';
@@ -34,6 +36,12 @@ interface YouTubeVideoModalProps {
 
 export function YouTubeVideoModal({ open, onOpenChange, video }: YouTubeVideoModalProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [fetchingTranscript, setFetchingTranscript] = useState(false);
+  const [transcriptData, setTranscriptData] = useState<{
+    transcript?: string;
+    transcriptMethod?: string;
+    transcriptFetched?: boolean;
+  }>({});
 
   if (!video) return null;
 
@@ -112,6 +120,44 @@ export function YouTubeVideoModal({ open, onOpenChange, video }: YouTubeVideoMod
     }
   };
 
+  const fetchTranscript = async () => {
+    if (!video.youtubeId || fetchingTranscript) return;
+    
+    setFetchingTranscript(true);
+    try {
+      const response = await fetch(`/api/youtube/transcripts?videoId=${video.youtubeId}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setTranscriptData({
+          transcript: data.transcript || 'Transcript fetched successfully but is empty.',
+          transcriptMethod: data.method,
+          transcriptFetched: true
+        });
+      } else {
+        setTranscriptData({
+          transcript: `Error: ${data.error}`,
+          transcriptMethod: 'error',
+          transcriptFetched: true
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch transcript:', error);
+      setTranscriptData({
+        transcript: 'Failed to fetch transcript. Please try again.',
+        transcriptMethod: 'error',
+        transcriptFetched: true
+      });
+    } finally {
+      setFetchingTranscript(false);
+    }
+  };
+
+  // Use transcript from video data or fetched transcript
+  const currentTranscript = transcriptData.transcript || video.transcript;
+  const currentTranscriptMethod = transcriptData.transcriptMethod || video.transcriptMethod;
+  const hasTranscript = !!(currentTranscript || transcriptData.transcriptFetched || video.transcriptFetched);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
@@ -125,9 +171,9 @@ export function YouTubeVideoModal({ open, onOpenChange, video }: YouTubeVideoMod
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="description">Description</TabsTrigger>
-            <TabsTrigger value="transcript" disabled={!video.transcript}>
+            <TabsTrigger value="transcript">
               Transcript
-              {video.transcript && <Badge variant="secondary" className="ml-2">✓</Badge>}
+              {hasTranscript && <Badge variant="secondary" className="ml-2">✓</Badge>}
             </TabsTrigger>
             <TabsTrigger value="technical">Technical</TabsTrigger>
           </TabsList>
@@ -291,29 +337,60 @@ export function YouTubeVideoModal({ open, onOpenChange, video }: YouTubeVideoMod
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <FileText className="h-5 w-5" />
                   Transcript
-                  {video.transcriptMethod && (
+                  {currentTranscriptMethod && (
                     <Badge variant="outline" className="text-xs">
-                      {video.transcriptMethod}
+                      {currentTranscriptMethod}
                     </Badge>
                   )}
                 </h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copyToClipboard(video.transcript || '', 'transcript')}
-                  disabled={!video.transcript}
-                >
-                  {copiedField === 'transcript' ? (
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
+                <div className="flex items-center gap-2">
+                  {!hasTranscript && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={fetchTranscript}
+                      disabled={fetchingTranscript}
+                    >
+                      {fetchingTranscript ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Fetching...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4 mr-2" />
+                          Fetch Transcript
+                        </>
+                      )}
+                    </Button>
                   )}
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyToClipboard(currentTranscript || '', 'transcript')}
+                    disabled={!currentTranscript}
+                  >
+                    {copiedField === 'transcript' ? (
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
               <div className="bg-gray-50 rounded-lg p-4 min-h-[400px] max-h-[600px] overflow-y-auto">
-                <p className="text-sm whitespace-pre-wrap">
-                  {video.transcript || 'No transcript available'}
-                </p>
+                {fetchingTranscript ? (
+                  <div className="flex items-center justify-center h-[200px]">
+                    <div className="text-center">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                      <p className="text-sm text-gray-600">Fetching transcript...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm whitespace-pre-wrap">
+                    {currentTranscript || 'No transcript available. Click "Fetch Transcript" to retrieve it.'}
+                  </p>
+                )}
               </div>
             </TabsContent>
 

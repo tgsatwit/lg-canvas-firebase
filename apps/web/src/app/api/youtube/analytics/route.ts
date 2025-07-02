@@ -24,6 +24,18 @@ export async function GET(request: NextRequest) {
     const analyticsResult = await youtubeService.fetchWeeklyAnalytics();
     
     if (!analyticsResult.success) {
+      // Check if it's a specific Analytics API error
+      if (analyticsResult.error === 'ANALYTICS_NOT_AVAILABLE') {
+        console.log('📊 Analytics API not available, returning fallback data');
+        return NextResponse.json({
+          success: true,
+          analytics: analyticsResult.analytics || {},
+          fallback: true,
+          message: 'Analytics API not available - using basic video statistics instead',
+          details: analyticsResult.details
+        });
+      }
+      
       // Check if it's a permission error
       if (analyticsResult.error?.includes('insufficient') || analyticsResult.error?.includes('forbidden')) {
         return NextResponse.json({

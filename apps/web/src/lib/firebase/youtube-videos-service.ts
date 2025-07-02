@@ -80,9 +80,20 @@ export class YouTubeVideosService {
   /**
    * Fetch all YouTube videos via API
    */
-  async getYouTubeVideos(maxResults: number = 50): Promise<YouTubeVideo[]> {
+  async getYouTubeVideos(maxResults: number = 50, fetchAll: boolean = false): Promise<YouTubeVideo[]> {
     try {
-      console.log('📚 Fetching YouTube videos via API...');
+      console.log(`📚 Fetching YouTube videos via API... ${fetchAll ? '(ALL)' : `(limit: ${maxResults})`}`);
+      
+      if (fetchAll) {
+        const response = await fetch('/api/youtube/videos/stored?all=true');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log(`✅ Fetched ${data.videos?.length || 0} YouTube videos via API (ALL)`);
+        return data.videos || [];
+      }
       
       const response = await fetch(`/api/youtube/videos/stored?limit=${maxResults}`);
       if (!response.ok) {
@@ -96,6 +107,28 @@ export class YouTubeVideosService {
     } catch (error) {
       console.error('❌ Error fetching YouTube videos:', error);
       throw new Error('Failed to fetch YouTube videos');
+    }
+  }
+
+  /**
+   * Fetch all YouTube videos with pagination support
+   */
+  async getAllYouTubeVideos(): Promise<YouTubeVideo[]> {
+    try {
+      console.log('📚 Fetching ALL YouTube videos via API...');
+      
+      const response = await fetch('/api/youtube/videos/stored?all=true');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log(`✅ Fetched ${data.videos?.length || 0} YouTube videos via API (ALL)`);
+      return data.videos || [];
+      
+    } catch (error) {
+      console.error('❌ Error fetching all YouTube videos:', error);
+      throw new Error('Failed to fetch all YouTube videos');
     }
   }
   
@@ -226,38 +259,43 @@ export class YouTubeVideosService {
       views: number;
       likes: number;
       comments: number;
-      subscribersGained: number;
-      subscribersLost: number;
-      netSubscribers: number;
-      estimatedMinutesWatched: number;
-      averageViewDuration: number;
+      subscribersGained?: number;
+      subscribersLost?: number;
+      netSubscribers?: number;
+      estimatedMinutesWatched?: number;
+      averageViewDuration?: number;
+      videosPublished?: number;
       dateRange: { start: string; end: string };
     };
     previousWeek: {
       views: number;
       likes: number;
       comments: number;
-      subscribersGained: number;
-      subscribersLost: number;
-      netSubscribers: number;
-      estimatedMinutesWatched: number;
-      averageViewDuration: number;
+      subscribersGained?: number;
+      subscribersLost?: number;
+      netSubscribers?: number;
+      estimatedMinutesWatched?: number;
+      averageViewDuration?: number;
+      videosPublished?: number;
       dateRange: { start: string; end: string };
     };
     trends: {
       viewsChange: number;
       likesChange: number;
       commentsChange: number;
-      subscribersChange: number;
-      watchTimeChange: number;
+      subscribersChange?: number;
+      watchTimeChange?: number;
     };
     summary: {
       weeklyViews: number;
       weeklyLikes: number;
-      weeklySubscribers: number;
-      weeklyWatchTime: number;
-      averageViewDuration: number;
+      weeklySubscribers?: number;
+      weeklyWatchTime?: number;
+      averageViewDuration?: number;
+      weeklyVideos?: number;
     };
+    fallback?: boolean;
+    message?: string;
   }> {
     try {
       console.log('📊 Fetching YouTube Analytics...');
@@ -265,6 +303,16 @@ export class YouTubeVideosService {
       const response = await fetch('/api/youtube/analytics');
       
       const data = await response.json();
+      
+      // Check if we got fallback data (successful response but using basic stats)
+      if (response.ok && data.fallback) {
+        console.log('📊 Using fallback analytics data');
+        return {
+          ...data.analytics,
+          fallback: true,
+          message: data.message || 'Using basic video statistics instead of Analytics API'
+        };
+      }
       
       if (!response.ok) {
         // Extract specific error information from the API response

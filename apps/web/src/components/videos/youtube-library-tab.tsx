@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,9 +34,9 @@ export function YouTubeLibraryTab() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<YouTubeVideo | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [filterType, setFilterType] = useState<'all' | 'shorts' | 'videos'>('all');
-  const [filterPrivacy, setFilterPrivacy] = useState<'all' | 'public' | 'private' | 'unlisted' | 'members'>('all');
-  const { videos, loading, error, refetch, searchVideos, isSearching } = useYouTubeVideos(50);
+  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set(['all']));
+  const [selectedPrivacy, setSelectedPrivacy] = useState<Set<string>>(new Set(['all']));
+  const { videos, loading, error, refetch, searchVideos, isSearching, pagination, displayedVideos } = useYouTubeVideos(50, true);
   const { stats, loading: statsLoading } = useYouTubeStats();
   const { channel, loading: channelLoading } = useYouTubeChannel();
   const { analytics, loading: analyticsLoading, error: analyticsError } = useYouTubeAnalytics();
@@ -98,6 +98,65 @@ export function YouTubeLibraryTab() {
     setIsModalOpen(true);
   };
 
+  // Helper functions for filter management
+  const toggleTypeFilter = (type: string) => {
+    const newSelectedTypes = new Set(selectedTypes);
+    
+    if (type === 'all') {
+      setSelectedTypes(new Set(['all']));
+    } else {
+      // Remove 'all' if selecting specific types
+      newSelectedTypes.delete('all');
+      
+      if (newSelectedTypes.has(type)) {
+        newSelectedTypes.delete(type);
+      } else {
+        newSelectedTypes.add(type);
+      }
+      
+      // If no specific types selected, default back to 'all'
+      if (newSelectedTypes.size === 0) {
+        newSelectedTypes.add('all');
+      }
+      
+      setSelectedTypes(newSelectedTypes);
+    }
+  };
+
+  const togglePrivacyFilter = (privacy: string) => {
+    const newSelectedPrivacy = new Set(selectedPrivacy);
+    
+    if (privacy === 'all') {
+      setSelectedPrivacy(new Set(['all']));
+    } else {
+      // Remove 'all' if selecting specific privacy levels
+      newSelectedPrivacy.delete('all');
+      
+      if (newSelectedPrivacy.has(privacy)) {
+        newSelectedPrivacy.delete(privacy);
+      } else {
+        newSelectedPrivacy.add(privacy);
+      }
+      
+      // If no specific privacy levels selected, default back to 'all'
+      if (newSelectedPrivacy.size === 0) {
+        newSelectedPrivacy.add('all');
+      }
+      
+      setSelectedPrivacy(newSelectedPrivacy);
+    }
+  };
+
+  const clearAllFilters = () => {
+    setSelectedTypes(new Set(['all']));
+    setSelectedPrivacy(new Set(['all']));
+  };
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    pagination.setCurrentPage(1);
+  }, [selectedTypes, selectedPrivacy, searchTerm]);
+
   // Helper function to determine if a video is a Short
   const isShort = (video: YouTubeVideo) => {
     if (!video.duration) return false;
@@ -117,18 +176,31 @@ export function YouTubeLibraryTab() {
   // Filter videos based on type and privacy
   const filteredVideos = videos.filter(video => {
     // Type filter (Shorts vs regular videos)
-    if (filterType === 'shorts' && !isShort(video)) return false;
-    if (filterType === 'videos' && isShort(video)) return false;
+    if (!selectedTypes.has('all')) {
+      const videoIsShort = isShort(video);
+      const shouldInclude = 
+        (selectedTypes.has('shorts') && videoIsShort) ||
+        (selectedTypes.has('videos') && !videoIsShort);
+      
+      if (!shouldInclude) return false;
+    }
     
     // Privacy filter
-    if (filterPrivacy !== 'all') {
-      const privacy = video.privacyStatus?.toLowerCase();
-      if (filterPrivacy === 'members' && privacy !== 'members') return false;
-      if (filterPrivacy !== 'members' && privacy !== filterPrivacy) return false;
+    if (!selectedPrivacy.has('all')) {
+      const privacy = video.privacyStatus?.toLowerCase() || 'unknown';
+      if (!selectedPrivacy.has(privacy)) return false;
     }
     
     return true;
   });
+
+  // Apply pagination to filtered videos
+  const totalFilteredItems = filteredVideos.length;
+  const totalFilteredPages = Math.ceil(totalFilteredItems / pagination.itemsPerPage);
+  const startIndex = (pagination.currentPage - 1) * pagination.itemsPerPage;
+  const endIndex = startIndex + pagination.itemsPerPage;
+  const paginatedFilteredVideos = filteredVideos.slice(startIndex, endIndex);
+
 
   // Get stats for filtered videos
   const filteredStats = {
@@ -194,51 +266,6 @@ export function YouTubeLibraryTab() {
 
   return (
     <div className="space-y-6">
-      {/* Sync Button and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Type Filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700">Type:</span>
-            <Select value={filterType} onValueChange={(value: 'all' | 'shorts' | 'videos') => setFilterType(value)}>
-              <SelectTrigger className="w-[120px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All ({filteredStats.total})</SelectItem>
-                <SelectItem value="videos">Videos ({filteredStats.videos})</SelectItem>
-                <SelectItem value="shorts">Shorts ({filteredStats.shorts})</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Privacy Filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700">Privacy:</span>
-            <Select value={filterPrivacy} onValueChange={(value: 'all' | 'public' | 'private' | 'unlisted' | 'members') => setFilterPrivacy(value)}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All ({videos.length})</SelectItem>
-                <SelectItem value="public">Public ({filteredStats.public})</SelectItem>
-                <SelectItem value="private">Private ({filteredStats.private})</SelectItem>
-                <SelectItem value="unlisted">Unlisted ({filteredStats.unlisted})</SelectItem>
-                <SelectItem value="members">Members ({filteredStats.members})</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <Button 
-          onClick={handleSync} 
-          disabled={isSyncing}
-          className="bg-red-600 hover:bg-red-700 text-white"
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-          {isSyncing ? 'Syncing...' : 'Sync Videos'}
-        </Button>
-      </div>
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -299,7 +326,7 @@ export function YouTubeLibraryTab() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Likes</CardTitle>
+            <CardTitle className="text-sm font-medium">Engagement</CardTitle>
             <ThumbsUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -308,8 +335,13 @@ export function YouTubeLibraryTab() {
             </div>
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">
-                Total likes received
-                {filteredVideos.length !== videos.length && ` (${filteredVideos.length} filtered)`}
+                Total likes • {analyticsLoading ? '...' : (analyticsError ? 'N/A' : 
+                  videos.filter(video => {
+                    const publishDate = new Date(video.publishedAt);
+                    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                    return publishDate >= weekAgo;
+                  }).length
+                )} recent videos
               </p>
               {!statsLoading && stats?.trends && renderTrend(stats.trends.likesTrend)}
             </div>
@@ -317,103 +349,36 @@ export function YouTubeLibraryTab() {
         </Card>
       </div>
 
-      {/* Recent Activity Analytics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Recent Views</CardTitle>
-            <Eye className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {analyticsLoading ? '...' : (analyticsError ? 'N/A' : formatNumber(analytics?.summary?.weeklyViews || 0))}
-            </div>
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">From new content</p>
-              {!analyticsLoading && analytics?.trends && renderTrend(analytics.trends.viewsChange)}
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Recent Likes</CardTitle>
-            <ThumbsUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {analyticsLoading ? '...' : (analyticsError ? 'N/A' : formatNumber(analytics?.summary?.weeklyLikes || 0))}
-            </div>
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">From new content</p>
-              {!analyticsLoading && analytics?.trends && renderTrend(analytics.trends.likesChange)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Videos Published</CardTitle>
-            <Video className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {analyticsLoading ? '...' : (analyticsError ? 'N/A' : 
-                videos.filter(video => {
-                  const publishDate = new Date(video.publishedAt);
-                  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-                  return publishDate >= weekAgo;
-                }).length.toString()
-              )}
-            </div>
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Past 7 days</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Performance</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {analyticsLoading ? '...' : (analyticsError || !analytics?.summary?.weeklyViews ? 'N/A' : 
-                stats?.totalVideos && stats.totalVideos > 0 
-                  ? formatNumber(Math.round((stats.totalViews || 0) / stats.totalVideos))
-                  : '0'
-              )}
-            </div>
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">Avg views per video</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Analytics Error Message */}
-      {analyticsError && (
-        <Card className="border-yellow-200 bg-yellow-50">
+      {/* Analytics Information */}
+      {(analyticsError || analytics?.fallback) && (
+        <Card className={analytics?.fallback ? "border-blue-200 bg-blue-50" : "border-yellow-200 bg-yellow-50"}>
           <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-yellow-800">
+            <div className={`flex items-center gap-2 ${analytics?.fallback ? 'text-blue-800' : 'text-yellow-800'}`}>
               <ExternalLink className="h-4 w-4" />
               <p className="text-sm font-medium">
-                {analyticsError.message?.includes('ANALYTICS_NOT_AVAILABLE') 
+                {analytics?.fallback 
+                  ? 'Using Basic Analytics' 
+                  : analyticsError?.message?.includes('ANALYTICS_NOT_AVAILABLE') 
                   ? 'YouTube Analytics Not Available' 
-                  : analyticsError.message?.includes('AUTHENTICATION_REQUIRED')
+                  : analyticsError?.message?.includes('AUTHENTICATION_REQUIRED')
                   ? 'YouTube Authentication Required'
                   : 'YouTube Analytics Unavailable'
                 }
               </p>
             </div>
-            <p className="text-xs text-yellow-700 mt-1">
-              {analyticsError.message?.includes('ANALYTICS_NOT_AVAILABLE') ? (
+            <p className={`text-xs mt-1 ${analytics?.fallback ? 'text-blue-700' : 'text-yellow-700'}`}>
+              {analytics?.fallback ? (
+                <>
+                  {analytics.message || 'YouTube Analytics API not available - using basic video statistics instead.'} 
+                  <br />Some metrics may be limited or unavailable.
+                </>
+              ) : analyticsError?.message?.includes('ANALYTICS_NOT_AVAILABLE') ? (
                 <>
                   Weekly analytics require YouTube Partner Program eligibility (1000+ subscribers and 4000+ watch hours). 
                   <br />Your channel may not meet these requirements yet.
                 </>
-              ) : analyticsError.message?.includes('AUTHENTICATION_REQUIRED') ? (
+              ) : analyticsError?.message?.includes('AUTHENTICATION_REQUIRED') ? (
                 'Please re-authenticate with YouTube to access Analytics data.'
               ) : (
                 'Weekly analytics require YouTube Analytics API access. This feature may not be available for all channels.'
@@ -423,12 +388,12 @@ export function YouTubeLibraryTab() {
         </Card>
       )}
 
-      {/* Search Bar */}
+      {/* Search Bar and Filters */}
       <Card>
         <CardHeader>
           <CardTitle>Search Videos</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <form onSubmit={handleSearch} className="flex gap-2">
             <Input
               placeholder="Search videos by title, description, or tags..."
@@ -441,33 +406,147 @@ export function YouTubeLibraryTab() {
               {isSearching ? 'Searching...' : 'Search'}
             </Button>
           </form>
+          
+          {/* Filters */}
+          <div className="pt-3 border-t space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-gray-600">Filters:</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearAllFilters}
+                className="text-xs text-gray-500 hover:text-gray-700 h-6 px-2"
+              >
+                Clear All
+              </Button>
+            </div>
+            
+            <div className="space-y-2">
+              {/* Type Filter */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-600 min-w-[60px]">Type:</span>
+                <div className="flex flex-wrap gap-1">
+                  {[
+                    { key: 'all', label: 'All', count: filteredStats.total },
+                    { key: 'videos', label: 'Videos', count: filteredStats.videos },
+                    { key: 'shorts', label: 'Shorts', count: filteredStats.shorts }
+                  ].map((type) => (
+                    <Button
+                      key={type.key}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => toggleTypeFilter(type.key)}
+                      className={`h-6 px-2 text-xs transition-all duration-200 ${
+                        selectedTypes.has(type.key) 
+                          ? 'bg-pink-600 text-white hover:bg-pink-700 border-pink-600' 
+                          : 'bg-white text-gray-600 hover:bg-pink-50 hover:text-pink-700 border-gray-200'
+                      }`}
+                    >
+                      {type.label} ({type.count})
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Privacy Filter */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-600 min-w-[60px]">Privacy:</span>
+                <div className="flex flex-wrap gap-1">
+                  {[
+                    { key: 'all', label: 'All', count: videos.length },
+                    { key: 'public', label: 'Public', count: filteredStats.public },
+                    { key: 'private', label: 'Private', count: filteredStats.private },
+                    { key: 'unlisted', label: 'Unlisted', count: filteredStats.unlisted },
+                    { key: 'members', label: 'Members', count: filteredStats.members }
+                  ].map((privacy) => (
+                    <Button
+                      key={privacy.key}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => togglePrivacyFilter(privacy.key)}
+                      className={`h-6 px-2 text-xs transition-all duration-200 ${
+                        selectedPrivacy.has(privacy.key) 
+                          ? 'bg-pink-600 text-white hover:bg-pink-700 border-pink-600' 
+                          : 'bg-white text-gray-600 hover:bg-pink-50 hover:text-pink-700 border-gray-200'
+                      }`}
+                    >
+                      {privacy.label} ({privacy.count})
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
       {/* Videos List */}
       <Card>
         <CardHeader>
-          <CardTitle>
-            Videos ({filteredVideos.length})
-            {filterType !== 'all' && (
-              <Badge variant="secondary" className="ml-2">
-                {filterType === 'shorts' ? 'Shorts' : 'Regular Videos'}
-              </Badge>
-            )}
-            {filterPrivacy !== 'all' && (
-              <Badge variant="outline" className="ml-2">
-                {filterPrivacy.charAt(0).toUpperCase() + filterPrivacy.slice(1)}
-              </Badge>
-            )}
-          </CardTitle>
-          <CardDescription>
-            {searchTerm ? `Search results for "${searchTerm}"` : 'YouTube videos from your channel'}
-            {filteredVideos.length !== videos.length && (
-              <span className="ml-2 text-blue-600">
-                (Filtered from {videos.length} total)
-              </span>
-            )}
-          </CardDescription>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle>
+                Videos ({filteredVideos.length})
+                {!selectedTypes.has('all') && selectedTypes.size > 0 && (
+                  <div className="inline-flex ml-2 gap-1">
+                    {Array.from(selectedTypes).map(type => (
+                      <Badge key={type} variant="secondary" className="text-xs">
+                        {type === 'shorts' ? 'Shorts' : type === 'videos' ? 'Videos' : type}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {!selectedPrivacy.has('all') && selectedPrivacy.size > 0 && (
+                  <div className="inline-flex ml-2 gap-1">
+                    {Array.from(selectedPrivacy).map(privacy => (
+                      <Badge key={privacy} variant="outline" className="text-xs">
+                        {privacy.charAt(0).toUpperCase() + privacy.slice(1)}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </CardTitle>
+              <CardDescription>
+                {searchTerm ? `Search results for "${searchTerm}"` : 'YouTube videos from your channel'}
+                {filteredVideos.length !== videos.length && (
+                  <span className="ml-2 text-blue-600">
+                    (Filtered from {videos.length} total)
+                  </span>
+                )}
+              </CardDescription>
+            </div>
+            
+            {/* Items per page selector and sync button */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Show:</span>
+                <Select 
+                  value={pagination.itemsPerPage.toString()} 
+                  onValueChange={(value) => pagination.setItemsPerPage(parseInt(value))}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <Button 
+                onClick={handleSync} 
+                disabled={isSyncing}
+                size="sm"
+                className="bg-pink-600 hover:bg-pink-700 text-white"
+              >
+                <RefreshCw className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? 'Syncing...' : 'Sync'}
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -504,26 +583,82 @@ export function YouTubeLibraryTab() {
               <div className="space-x-2">
                 <Button 
                   variant="outline" 
-                  onClick={() => {
-                    setFilterType('all');
-                    setFilterPrivacy('all');
-                  }}
+                  onClick={clearAllFilters}
                 >
                   Clear Filters
                 </Button>
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredVideos.map((video) => (
-                <VideoCard 
-                  key={video.id} 
-                  video={video} 
-                  onClick={() => handleVideoClick(video)}
-                  isShort={isShort(video)}
-                />
-              ))}
-            </div>
+            <>
+              <div className="space-y-4">
+                {paginatedFilteredVideos.map((video) => (
+                  <VideoCard 
+                    key={video.id} 
+                    video={video} 
+                    onClick={() => handleVideoClick(video)}
+                    isShort={isShort(video)}
+                  />
+                ))}
+              </div>
+              
+              {/* Pagination Controls */}
+              {totalFilteredPages > 1 && (
+                <div className="flex items-center justify-between mt-6 pt-6 border-t">
+                  <div className="text-sm text-gray-600">
+                    Showing {startIndex + 1} to {Math.min(endIndex, totalFilteredItems)} of {totalFilteredItems} videos
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => pagination.setCurrentPage(pagination.currentPage - 1)}
+                      disabled={pagination.currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    
+                    <div className="flex items-center gap-1">
+                      {/* Show page numbers */}
+                      {Array.from({ length: Math.min(5, totalFilteredPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalFilteredPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (pagination.currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (pagination.currentPage >= totalFilteredPages - 2) {
+                          pageNum = totalFilteredPages - 4 + i;
+                        } else {
+                          pageNum = pagination.currentPage - 2 + i;
+                        }
+                        
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={pagination.currentPage === pageNum ? "default" : "outline"}
+                            size="sm"
+                            className="w-8 h-8 p-0"
+                            onClick={() => pagination.setCurrentPage(pageNum)}
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => pagination.setCurrentPage(pagination.currentPage + 1)}
+                      disabled={pagination.currentPage === totalFilteredPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -572,6 +707,43 @@ function VideoCard({ video, onClick, isShort }: { video: YouTubeVideo; onClick: 
     return num.toString();
   };
 
+  // Enhanced thumbnail URL getter with multiple fallbacks
+  const getThumbnailUrl = (video: YouTubeVideo) => {
+    // Try stored thumbnail URLs first
+    const thumbnail = video.thumbnail;
+    if (thumbnail) {
+      const storedUrl = thumbnail.maxres || 
+                      thumbnail.high || 
+                      thumbnail.standard || 
+                      thumbnail.medium || 
+                      thumbnail.default;
+      if (storedUrl) {
+        return storedUrl;
+      }
+    }
+    
+    // Fallback to constructing URL from YouTube ID
+    if (video.youtubeId) {
+      return `https://i.ytimg.com/vi/${video.youtubeId}/mqdefault.jpg`;
+    }
+    
+    // Try to extract YouTube ID from URL
+    if (video.url) {
+      const urlMatch = video.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+      if (urlMatch && urlMatch[1]) {
+        const extractedId = urlMatch[1];
+        return `https://i.ytimg.com/vi/${extractedId}/mqdefault.jpg`;
+      }
+    }
+    
+    // Final fallback - try to extract from video.id if it contains YouTube ID
+    if (video.id && video.id.length === 11) {
+      return `https://i.ytimg.com/vi/${video.id}/mqdefault.jpg`;
+    }
+    
+    return null;
+  };
+
   return (
     <div 
       className="border rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
@@ -580,17 +752,27 @@ function VideoCard({ video, onClick, isShort }: { video: YouTubeVideo; onClick: 
       <div className="flex gap-4">
         {/* Thumbnail */}
         <div className="flex-shrink-0">
-          {video.thumbnail?.medium || video.thumbnail?.default ? (
+          {getThumbnailUrl(video) ? (
             <img
-              src={video.thumbnail.medium || video.thumbnail.default}
+              src={getThumbnailUrl(video)!}
               alt={video.title}
               className="w-32 h-24 object-cover rounded bg-gray-200"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                const parent = target.parentElement;
-                if (parent) {
-                  parent.innerHTML = '<div class="w-32 h-24 bg-gray-200 rounded flex items-center justify-center"><span class="text-gray-500 text-xs">No Image</span></div>';
+                // Try fallback URL using video ID if original fails
+                const fallbackUrl = video.youtubeId 
+                  ? `https://i.ytimg.com/vi/${video.youtubeId}/default.jpg`
+                  : null;
+                
+                if (fallbackUrl && target.src !== fallbackUrl) {
+                  target.src = fallbackUrl;
+                } else {
+                  // If fallback also fails, show no image placeholder
+                  target.style.display = 'none';
+                  const parent = target.parentElement;
+                  if (parent) {
+                    parent.innerHTML = '<div class="w-32 h-24 bg-gray-200 rounded flex items-center justify-center"><span class="text-gray-500 text-xs">No Image</span></div>';
+                  }
                 }
               }}
             />

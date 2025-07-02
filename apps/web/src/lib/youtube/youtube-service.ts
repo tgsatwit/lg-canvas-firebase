@@ -170,8 +170,10 @@ export class YouTubeService {
           ],
         });
 
-        this.useServiceAccount = true;
-        console.log('✅ Service account initialized successfully');
+        // Disable service account by default for personal channels
+        // YouTube Data API v3 requires OAuth2 for personal channels, not service accounts
+        this.useServiceAccount = false;
+        console.log('⚠️ Service account found but disabled - YouTube requires OAuth2 for personal channels');
       } else {
         console.log('⚠️ No service account credentials found, using OAuth2');
       }

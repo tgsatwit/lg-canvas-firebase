@@ -9,18 +9,21 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get('state');
     const error = searchParams.get('error');
 
+    // Get base URL for absolute redirects
+    const baseUrl = new URL(request.url).origin;
+
     // Handle OAuth errors
     if (error) {
       console.error('YouTube OAuth error:', error);
       const errorDescription = searchParams.get('error_description') || 'Unknown error';
       return NextResponse.redirect(
-        `/dashboard/videos/library?error=auth_failed&message=${encodeURIComponent(errorDescription)}`
+        new URL(`/dashboard/videos/library?error=auth_failed&message=${encodeURIComponent(errorDescription)}`, baseUrl)
       );
     }
 
     if (!code) {
       return NextResponse.redirect(
-        `/dashboard/videos/library?error=no_code&message=${encodeURIComponent('No authorization code received')}`
+        new URL(`/dashboard/videos/library?error=no_code&message=${encodeURIComponent('No authorization code received')}`, baseUrl)
       );
     }
 
@@ -60,12 +63,12 @@ export async function GET(request: NextRequest) {
       
       // Redirect to the library page with success message
       return NextResponse.redirect(
-        `/dashboard/videos/library?success=authenticated&channel=${encodeURIComponent(connectionTest.user?.channelTitle || 'YouTube Channel')}`
+        new URL(`/dashboard/videos/library?success=authenticated&channel=${encodeURIComponent(connectionTest.user?.channelTitle || 'YouTube Channel')}`, baseUrl)
       );
     } else {
       console.error('YouTube connection test failed:', connectionTest.error);
       return NextResponse.redirect(
-        `/dashboard/videos/library?error=connection_failed&message=${encodeURIComponent(connectionTest.error || 'Connection test failed')}`
+        new URL(`/dashboard/videos/library?error=connection_failed&message=${encodeURIComponent(connectionTest.error || 'Connection test failed')}`, baseUrl)
       );
     }
 
