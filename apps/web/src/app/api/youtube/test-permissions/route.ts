@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
           success: false,
           error: 'Token refresh failed',
-          details: refreshError.message
+          details: refreshError instanceof Error ? refreshError.message : String(refreshError)
         }, { status: 500 });
       }
     }
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       channelAccess = !!channelResponse.data.items?.[0];
       console.log('✅ Channel access successful');
     } catch (channelError) {
-      console.warn('⚠️ Channel access failed:', channelError.message);
+      console.warn('⚠️ Channel access failed:', channelError instanceof Error ? channelError.message : String(channelError));
     }
     
     // Test captions list access with a known video
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     const testVideoId = 'VBmaYoFZwiY'; // One of the Pilates videos
     let captionsAccess = false;
     let captionsError = '';
-    let availableCaptions = [];
+    let availableCaptions: any[] = [];
     
     try {
       const captionsResponse = await youtube.captions.list({
