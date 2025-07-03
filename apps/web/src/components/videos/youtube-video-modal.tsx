@@ -4,7 +4,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ExternalLink, 
@@ -380,9 +379,8 @@ export function YouTubeVideoModal({ open, onOpenChange, video, onVideoUpdate }: 
 
 
               {/* Transcript Content */}
-              <div className="bg-gray-50 rounded-lg p-4 min-h-[400px] max-h-[600px] overflow-hidden">
-                <ScrollArea className="h-full w-full">
-                <div className="pr-4">
+              <div className="bg-gray-50 rounded-lg p-4 min-h-[400px] max-h-[600px] overflow-y-auto border">
+                <div>
                   {fetchingTranscript ? (
                     <div className="flex items-center justify-center h-[200px]">
                       <div className="text-center">
@@ -412,7 +410,6 @@ export function YouTubeVideoModal({ open, onOpenChange, video, onVideoUpdate }: 
                     </div>
                   )}
                 </div>
-                </ScrollArea>
               </div>
             </TabsContent>
 

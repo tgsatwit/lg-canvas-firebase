@@ -1698,20 +1698,35 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium">YouTube Publishing</h3>
-        {(() => {
-          const status = (videoData.youtubeStatus || '').toLowerCase();
-          const badgeStyles: Record<string, { bg: string; text: string; border: string; label: string }> = {
-            'preparing for youtube': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', label: 'Preparing' },
-            'ready for youtube': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', label: 'Ready' },
-            'scheduled for youtube': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', label: 'Scheduled' },
-            'published on youtube': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', label: 'Published' }
-          };
-          const bs = badgeStyles[status] || badgeStyles['preparing for youtube'];
-          return (
-            <Badge variant="outline" className={`${bs.bg} ${bs.text} ${bs.border}`}>{bs.label}</Badge>
-          );
-        })()}
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-medium">YouTube Publishing</h3>
+          {(() => {
+            const status = (videoData.youtubeStatus || '').toLowerCase();
+            const badgeStyles: Record<string, { bg: string; text: string; border: string; label: string }> = {
+              'preparing for youtube': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', label: 'Preparing' },
+              'ready for youtube': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', label: 'Ready' },
+              'scheduled for youtube': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', label: 'Scheduled' },
+              'published on youtube': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', label: 'Published' }
+            };
+            const bs = badgeStyles[status] || badgeStyles['preparing for youtube'];
+            return (
+              <Badge variant="outline" className={`${bs.bg} ${bs.text} ${bs.border}`}>{bs.label}</Badge>
+            );
+          })()}
+        </div>
+        
+        {/* Confirm Details Button */}
+        {!(videoData.details_confirmed || videoData.yt_title) && (
+          <Button 
+            onClick={handleConfirmDetails}
+            disabled={isConfirming}
+            size="sm"
+            className="h-8"
+          >
+            {isConfirming ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Check className="h-3 w-3 mr-1" />}
+            Confirm Details
+          </Button>
+        )}
       </div>
       
       <div className="space-y-4">

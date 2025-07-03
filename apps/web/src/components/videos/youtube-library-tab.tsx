@@ -18,12 +18,11 @@ import {
   ThumbsUp,
   MessageCircle,
   FileText,
-  Youtube,
   TrendingUp,
   TrendingDown,
   Minus,
-  Video,
-  BarChart3
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { useYouTubeVideos, useYouTubeStats, useYouTubeChannel, useYouTubeAnalytics } from '@/hooks/use-youtube-videos';
 import { YouTubeVideo } from '@/lib/firebase/youtube-videos-service';
@@ -36,7 +35,9 @@ export function YouTubeLibraryTab() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set(['all']));
   const [selectedPrivacy, setSelectedPrivacy] = useState<Set<string>>(new Set(['all']));
-  const { videos, loading, error, refetch, searchVideos, isSearching, updateVideo, pagination, displayedVideos } = useYouTubeVideos(50, true);
+  const [isFetchingTranscripts, setIsFetchingTranscripts] = useState(false);
+  const [isSearchCollapsed, setIsSearchCollapsed] = useState(false);
+  const { videos, loading, error, refetch, searchVideos, isSearching, updateVideo, pagination } = useYouTubeVideos(50, true);
   const { stats, loading: statsLoading } = useYouTubeStats();
   const { channel, loading: channelLoading } = useYouTubeChannel();
   const { analytics, loading: analyticsLoading, error: analyticsError } = useYouTubeAnalytics();
@@ -96,6 +97,41 @@ export function YouTubeLibraryTab() {
   const handleVideoClick = (video: YouTubeVideo) => {
     setSelectedVideo(video);
     setIsModalOpen(true);
+  };
+
+  const handleFetchAllTranscripts = async () => {
+    setIsFetchingTranscripts(true);
+    try {
+      console.log('🔄 Starting bulk transcript fetch...');
+      const response = await fetch('/api/youtube/transcripts?processAll=true', {
+        method: 'GET',
+      });
+      
+      console.log('📡 Bulk transcript response status:', response.status);
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Bulk transcript fetch successful:', result);
+        await refetch(); // Refresh the videos list
+        
+        if (result.success) {
+          alert(`Successfully processed ${result.summary.totalProcessed} videos!\n` +
+                `Successful: ${result.summary.successful}\n` +
+                `Failed: ${result.summary.failed}`);
+        } else {
+          alert(`Transcript processing completed with some issues: ${result.error}`);
+        }
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Bulk transcript fetch failed:', errorData);
+        alert(`Bulk transcript fetch failed: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error: unknown) {
+      console.error('💥 Bulk transcript fetch request failed:', error);
+      alert(`Bulk transcript fetch failed: ${error instanceof Error ? error.message : 'Network error'}`);
+    } finally {
+      setIsFetchingTranscripts(false);
+    }
   };
 
   // Helper functions for filter management
@@ -213,6 +249,12 @@ export function YouTubeLibraryTab() {
     members: filteredVideos.filter(v => v.privacyStatus?.toLowerCase() === 'members').length,
   };
 
+  // Calculate transcript stats
+  const transcriptStats = {
+    withTranscripts: videos.filter(v => v.transcriptFetched && v.transcript).length,
+    withoutTranscripts: videos.filter(v => !v.transcriptFetched || !v.transcript).length,
+  };
+
   const formatNumber = (num: number) => {
     if (num >= 1000000) {
       return (num / 1000000).toFixed(1) + 'M';
@@ -222,22 +264,6 @@ export function YouTubeLibraryTab() {
     return num.toString();
   };
 
-  const formatDuration = (duration?: string) => {
-    if (!duration) return 'N/A';
-    // YouTube duration is in ISO 8601 format (PT1H2M3S)
-    const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-    if (!match) return duration;
-    
-    const hours = parseInt(match[1] || '0');
-    const minutes = parseInt(match[2] || '0');
-    const seconds = parseInt(match[3] || '0');
-    
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    } else {
-      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    }
-  };
 
   const renderTrend = (trend: number) => {
     if (trend > 0) {
@@ -268,7 +294,7 @@ export function YouTubeLibraryTab() {
     <div className="space-y-6">
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Videos</CardTitle>
@@ -347,6 +373,28 @@ export function YouTubeLibraryTab() {
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Transcripts</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {transcriptStats.withTranscripts}
+            </div>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                {transcriptStats.withoutTranscripts} pending
+              </p>
+              <div className="flex items-center gap-1 text-blue-600">
+                <span className="text-xs font-medium">
+                  {videos.length > 0 ? Math.round((transcriptStats.withTranscripts / videos.length) * 100) : 0}%
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
 
@@ -391,8 +439,23 @@ export function YouTubeLibraryTab() {
       {/* Search Bar and Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Search Videos</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Search Videos</CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsSearchCollapsed(!isSearchCollapsed)}
+              className="h-8 w-8 p-0"
+            >
+              {isSearchCollapsed ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronUp className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </CardHeader>
+        {!isSearchCollapsed && (
         <CardContent className="space-y-4">
           <form onSubmit={handleSearch} className="flex gap-2">
             <Input
@@ -421,10 +484,11 @@ export function YouTubeLibraryTab() {
               </Button>
             </div>
             
-            <div className="space-y-2">
+            {/* Filters on single row */}
+            <div className="flex flex-wrap items-center gap-4">
               {/* Type Filter */}
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-600 min-w-[60px]">Type:</span>
+                <span className="text-xs text-gray-600 min-w-[40px]">Type:</span>
                 <div className="flex flex-wrap gap-1">
                   {[
                     { key: 'all', label: 'All', count: filteredStats.total },
@@ -450,7 +514,7 @@ export function YouTubeLibraryTab() {
 
               {/* Privacy Filter */}
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-600 min-w-[60px]">Privacy:</span>
+                <span className="text-xs text-gray-600 min-w-[50px]">Privacy:</span>
                 <div className="flex flex-wrap gap-1">
                   {[
                     { key: 'all', label: 'All', count: videos.length },
@@ -478,6 +542,7 @@ export function YouTubeLibraryTab() {
             </div>
           </div>
         </CardContent>
+        )}
       </Card>
 
       {/* Videos List */}
@@ -516,7 +581,7 @@ export function YouTubeLibraryTab() {
               </CardDescription>
             </div>
             
-            {/* Items per page selector and sync button */}
+            {/* Items per page selector and action buttons */}
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">Show:</span>
@@ -535,6 +600,18 @@ export function YouTubeLibraryTab() {
                   </SelectContent>
                 </Select>
               </div>
+              
+              <Button 
+                onClick={handleFetchAllTranscripts}
+                disabled={isFetchingTranscripts || loading || transcriptStats.withoutTranscripts === 0}
+                size="sm"
+                variant="outline"
+                className="border-black text-black hover:bg-gray-100"
+                title={transcriptStats.withoutTranscripts === 0 ? 'All videos have transcripts' : `Fetch transcripts for ${transcriptStats.withoutTranscripts} videos`}
+              >
+                <FileText className={`h-3 w-3 mr-1 ${isFetchingTranscripts ? 'animate-pulse' : ''}`} />
+                {isFetchingTranscripts ? 'Fetching...' : `Fetch Transcripts (${transcriptStats.withoutTranscripts})`}
+              </Button>
               
               <Button 
                 onClick={handleSync} 
@@ -563,7 +640,7 @@ export function YouTubeLibraryTab() {
             </div>
           ) : videos.length === 0 ? (
             <div className="text-center py-8">
-              <Youtube className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+              <Play className="h-16 w-16 mx-auto mb-4 text-gray-400" />
               <p className="text-gray-600 mb-4">
                 {searchTerm ? 'No videos found matching your search.' : 'No videos found. Click "Sync Videos" to fetch your YouTube videos.'}
               </p>
@@ -576,7 +653,7 @@ export function YouTubeLibraryTab() {
             </div>
           ) : filteredVideos.length === 0 ? (
             <div className="text-center py-8">
-              <Youtube className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+              <Play className="h-16 w-16 mx-auto mb-4 text-gray-400" />
               <p className="text-gray-600 mb-4">
                 No videos match the current filters.
               </p>

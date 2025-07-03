@@ -155,13 +155,33 @@ async function processAllVideoTranscripts(yt: any, db: any) {
   try {
     // Get all videos without transcripts
     const videosRef = db.collection('videos-youtube');
-    const snapshot = await videosRef
+    
+    // First, get videos where transcriptFetched is not true
+    const snapshot1 = await videosRef
       .where('transcriptFetched', '!=', true)
       .orderBy('publishedAt', 'desc')
-      .limit(20) // Process in batches to avoid quota issues
+      .limit(15)
       .get();
+    
+    // Also get videos where transcript field is empty or null
+    const snapshot2 = await videosRef
+      .where('transcript', '==', '')
+      .orderBy('publishedAt', 'desc')
+      .limit(15)
+      .get();
+    
+    // Combine and deduplicate by YouTube ID
+    const allDocs = new Map();
+    [...snapshot1.docs, ...snapshot2.docs].forEach(doc => {
+      const data = doc.data();
+      if (data.youtubeId && !allDocs.has(data.youtubeId)) {
+        allDocs.set(data.youtubeId, doc);
+      }
+    });
+    
+    const uniqueDocs = Array.from(allDocs.values()).slice(0, 20); // Limit to 20 total
 
-    console.log(`📚 Found ${snapshot.size} videos without transcripts`);
+    console.log(`📚 Found ${uniqueDocs.length} videos without transcripts`);
 
     const results = {
       totalProcessed: 0,
@@ -171,7 +191,7 @@ async function processAllVideoTranscripts(yt: any, db: any) {
     };
 
     // Process each video
-    for (const doc of snapshot.docs) {
+    for (const doc of uniqueDocs) {
       const videoData = doc.data();
       const youtubeId = videoData.youtubeId;
       
