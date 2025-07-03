@@ -93,7 +93,7 @@ async function processVideoTranscript(yt: any, db: any, youtubeId: string, force
     // Try to get captions for the video
     const transcript = await fetchVideoTranscript(yt, youtubeId);
     
-    if (transcript.success && transcript.text) {
+    if (transcript.success && transcript.text && transcript.text.trim().length > 0) {
       // Ensure transcript text is a plain string for Firestore
       const transcriptText = typeof transcript.text === 'string' ? transcript.text : String(transcript.text);
       
@@ -118,19 +118,25 @@ async function processVideoTranscript(yt: any, db: any, youtubeId: string, force
         forced: force
       };
     } else {
-      // Mark as attempted but failed
-      await videoDoc.ref.update({
+      // Mark as attempted but failed - ensure no undefined values for Firestore
+      const updateData: any = {
         transcriptFetched: true,
         transcriptMethod: 'failed',
-        transcriptError: transcript.error,
         transcriptUpdatedAt: new Date().toISOString()
-      });
+      };
+      
+      // Only add transcriptError if it's not undefined
+      if (transcript.error) {
+        updateData.transcriptError = transcript.error;
+      }
+      
+      await videoDoc.ref.update(updateData);
 
       return {
         success: false,
         videoId: youtubeId,
         title: videoData.title,
-        error: transcript.error,
+        error: transcript.error || 'Unknown error occurred',
         method: 'failed'
       };
     }
@@ -276,6 +282,15 @@ async function fetchVideoTranscript(yt: any, videoId: string): Promise<{
 
     const transcriptText = parseVTT(vttData);
     
+    // Check if we got meaningful content
+    if (!transcriptText || transcriptText.trim().length === 0) {
+      return {
+        success: false,
+        error: 'Caption track downloaded but no text content could be extracted. The video may have empty captions or unsupported format.',
+        method: 'captions_api'
+      };
+    }
+    
     return {
       success: true,
       text: transcriptText,
@@ -321,9 +336,13 @@ function parseVTT(vttContent: string): string {
       return '';
     }
     
+    // Debug: Log first 500 characters of VTT content
+    console.log(`🔍 VTT Content Preview (${vttContent.length} chars):`, vttContent.substring(0, 500));
+    
     const lines = vttContent.split('\n');
     const textLines: string[] = [];
     const seenText = new Set<string>(); // Track seen text to prevent duplicates
+    const debugLines: string[] = []; // Track what we're processing
     
     let inCueBlock = false;
     let skipNextTextLine = false;
@@ -338,11 +357,14 @@ function parseVTT(vttContent: string): string {
         continue;
       }
       
+      debugLines.push(`Line ${i}: "${trimmedLine}"`);
+      
       // Skip WebVTT header and related metadata
       if (trimmedLine.startsWith('WEBVTT') || 
           trimmedLine.startsWith('Kind:') || 
           trimmedLine.startsWith('Language:') ||
           trimmedLine.match(/^NOTE\s/i)) {
+        console.log(`🚫 Skipping metadata line ${i}: "${trimmedLine}"`);
         continue;
       }
       
@@ -351,24 +373,32 @@ function parseVTT(vttContent: string): string {
           trimmedLine.includes('position:') || 
           trimmedLine.includes('size:') ||
           trimmedLine.includes('line:')) {
+        console.log(`🚫 Skipping cue settings line ${i}: "${trimmedLine}"`);
         continue;
       }
       
       // Check for timestamp lines (contains -->)
       if (trimmedLine.includes('-->')) {
+        console.log(`⏰ Found timestamp line ${i}: "${trimmedLine}"`);
         inCueBlock = true;
         skipNextTextLine = false;
         continue;
       }
       
-      // Skip cue identifiers (just numbers or alphanumeric IDs)
-      if (/^[\w\d-]+$/.test(trimmedLine) && !inCueBlock) {
-        skipNextTextLine = true;
+      // Skip cue identifiers (just numbers or alphanumeric IDs) - but be more lenient
+      if (/^[\w\d-]+$/.test(trimmedLine) && trimmedLine.length < 20 && !inCueBlock) {
+        console.log(`🔢 Skipping cue ID line ${i}: "${trimmedLine}"`);
+        skipNextTextLine = false; // Don't skip the next line, it might be content
         continue;
       }
       
-      // If we're in a cue block or this looks like text content
-      if (inCueBlock && !skipNextTextLine) {
+      // If this looks like text content (more lenient approach)
+      if (trimmedLine.length > 0 && 
+          !trimmedLine.includes('-->') && 
+          !trimmedLine.startsWith('WEBVTT') &&
+          !trimmedLine.startsWith('Kind:') &&
+          !trimmedLine.startsWith('Language:')) {
+        
         // Clean up HTML tags and formatting
         let cleanText = trimmedLine
           .replace(/<[^>]*>/g, '') // Remove HTML/VTT tags
@@ -387,21 +417,20 @@ function parseVTT(vttContent: string): string {
           .replace(/\s+/g, ' ') // Normalize whitespace
           .trim();
         
-        // Only add if it's valid text and we haven't seen it before
+        // More lenient validation - accept any text that's not pure numbers/timestamps
         if (cleanText && 
             cleanText.length > 1 && 
             !cleanText.includes('-->') && 
             !cleanText.match(/^[\d\s:.-]+$/) && // Skip pure timestamp/number lines
+            !cleanText.match(/^\d+$/) && // Skip pure numbers
             !seenText.has(cleanText.toLowerCase())) {
           
+          console.log(`✅ Adding text line ${i}: "${cleanText}"`);
           textLines.push(cleanText);
           seenText.add(cleanText.toLowerCase());
+        } else {
+          console.log(`🚫 Rejected text line ${i}: "${cleanText}" (length: ${cleanText.length})`);
         }
-      }
-      
-      // Reset after collecting text
-      if (inCueBlock && trimmedLine && !trimmedLine.includes('-->')) {
-        skipNextTextLine = false;
       }
     }
     
@@ -411,8 +440,22 @@ function parseVTT(vttContent: string): string {
     // Remove any remaining duplicated phrases (handles cases where content is repeated)
     finalTranscript = removeDuplicatedContent(finalTranscript);
     
-    // Log success with more details
+    // Enhanced logging
     console.log(`✅ Parsed VTT successfully: ${finalTranscript.length} characters, ${textLines.length} segments, ${seenText.size} unique`);
+    
+    // If we got no content, log debug info
+    if (finalTranscript.length === 0) {
+      console.warn('⚠️ No text content extracted from VTT. Debug info:');
+      console.warn(`- Total lines: ${lines.length}`);
+      console.warn(`- Lines processed: ${debugLines.length}`);
+      console.warn('- First 10 processed lines:', debugLines.slice(0, 10));
+      console.warn('- VTT content structure:', {
+        hasWebVTT: vttContent.includes('WEBVTT'),
+        hasTimestamps: vttContent.includes('-->'),
+        hasKind: vttContent.includes('Kind:'),
+        totalLength: vttContent.length
+      });
+    }
     
     return finalTranscript;
     
