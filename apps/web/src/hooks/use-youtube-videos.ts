@@ -8,6 +8,7 @@ export interface UseYouTubeVideosReturn {
   refetch: () => Promise<void>;
   searchVideos: (searchTerm: string) => Promise<void>;
   isSearching: boolean;
+  updateVideo: (videoId: string, updates: Partial<YouTubeVideo>) => void;
   pagination: {
     currentPage: number;
     itemsPerPage: number;
@@ -67,6 +68,16 @@ export function useYouTubeVideos(maxResults: number = 50, fetchAll: boolean = tr
     }
   };
 
+  const updateVideo = (videoId: string, updates: Partial<YouTubeVideo>) => {
+    setVideos(prevVideos => 
+      prevVideos.map(video => 
+        (video.id === videoId || video.youtubeId === videoId) 
+          ? { ...video, ...updates }
+          : video
+      )
+    );
+  };
+
   // Calculate pagination values
   const totalItems = videos.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -90,6 +101,7 @@ export function useYouTubeVideos(maxResults: number = 50, fetchAll: boolean = tr
     refetch: fetchVideos,
     searchVideos,
     isSearching,
+    updateVideo,
     pagination: {
       currentPage,
       itemsPerPage,

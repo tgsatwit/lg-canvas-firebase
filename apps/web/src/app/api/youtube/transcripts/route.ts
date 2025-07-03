@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminFirestore } from '@/lib/firebase/admin';
 import { google } from 'googleapis';
 
-const SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl'];
+// const SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl'];
 
 function getYoutubeClient() {
   const oauth2 = new google.auth.OAuth2(
@@ -239,7 +239,7 @@ async function fetchVideoTranscript(yt: any, videoId: string): Promise<{
     }
 
     // Find the best caption track (prefer English, then auto-generated)
-    let selectedCaption = captions.find((caption: any) => 
+    const selectedCaption = captions.find((caption: any) => 
       caption.snippet?.language === 'en' && caption.snippet?.trackKind === 'standard'
     ) || captions.find((caption: any) => 
       caption.snippet?.language === 'en'
@@ -264,20 +264,57 @@ async function fetchVideoTranscript(yt: any, videoId: string): Promise<{
     // Properly handle the response data which might be a Blob
     let vttData = captionResponse.data;
     
-    // Handle different response types
+    // Handle different response types with better error handling
     if (Buffer.isBuffer(vttData)) {
       vttData = vttData.toString('utf8');
-    } else if (vttData && typeof vttData === 'object' && vttData.constructor.name === 'Blob') {
-      // Handle Blob object properly
-      const arrayBuffer = await vttData.arrayBuffer();
-      vttData = new TextDecoder('utf-8').decode(arrayBuffer);
-    } else if (vttData && typeof vttData === 'object' && vttData.text) {
-      // Handle Blob-like objects with text() method
-      vttData = await vttData.text();
+    } else if (vttData && typeof vttData === 'object') {
+      // Handle various object types that might contain transcript data
+      try {
+        if (vttData.constructor.name === 'Blob' || (vttData.arrayBuffer && typeof vttData.arrayBuffer === 'function')) {
+          const arrayBuffer = await vttData.arrayBuffer();
+          vttData = new TextDecoder('utf-8').decode(arrayBuffer);
+        } else if (vttData.text && typeof vttData.text === 'function') {
+          vttData = await vttData.text();
+        } else if (vttData.data && typeof vttData.data === 'string') {
+          vttData = vttData.data;
+        } else if (vttData.toString && typeof vttData.toString === 'function') {
+          vttData = vttData.toString();
+        } else {
+          // Try to extract any string-like property
+          const stringProps = Object.keys(vttData).filter(key => 
+            typeof vttData[key] === 'string' && vttData[key].length > 50
+          );
+          if (stringProps.length > 0) {
+            vttData = vttData[stringProps[0]];
+          } else {
+            vttData = JSON.stringify(vttData);
+          }
+        }
+      } catch (conversionError) {
+        console.error('❌ Error converting response data:', conversionError);
+        vttData = String(vttData);
+      }
     } else if (typeof vttData !== 'string') {
-      // Last resort - try to convert to string (but this might still result in [object Blob])
       console.warn('⚠️ Unknown response data type:', typeof vttData, vttData?.constructor?.name);
       vttData = String(vttData);
+    }
+    
+    // Final validation
+    if (!vttData || typeof vttData !== 'string') {
+      return {
+        success: false,
+        error: 'Caption data could not be converted to readable text',
+        method: 'captions_api'
+      };
+    }
+    
+    // Check for common conversion failures
+    if (vttData === '[object Blob]' || vttData === '[object Object]' || vttData.length < 10) {
+      return {
+        success: false,
+        error: 'Caption data was not properly converted from response format',
+        method: 'captions_api'
+      };
     }
 
     const transcriptText = parseVTT(vttData);
@@ -345,7 +382,7 @@ function parseVTT(vttContent: string): string {
     const debugLines: string[] = []; // Track what we're processing
     
     let inCueBlock = false;
-    let skipNextTextLine = false;
+    // let skipNextTextLine = false;
     
     for (let i = 0; i < lines.length; i++) {
       const trimmedLine = lines[i].trim();
@@ -353,7 +390,7 @@ function parseVTT(vttContent: string): string {
       // Skip empty lines
       if (!trimmedLine) {
         inCueBlock = false;
-        skipNextTextLine = false;
+        // skipNextTextLine = false;
         continue;
       }
       
@@ -381,14 +418,14 @@ function parseVTT(vttContent: string): string {
       if (trimmedLine.includes('-->')) {
         console.log(`⏰ Found timestamp line ${i}: "${trimmedLine}"`);
         inCueBlock = true;
-        skipNextTextLine = false;
+        // skipNextTextLine = false;
         continue;
       }
       
       // Skip cue identifiers (just numbers or alphanumeric IDs) - but be more lenient
       if (/^[\w\d-]+$/.test(trimmedLine) && trimmedLine.length < 20 && !inCueBlock) {
         console.log(`🔢 Skipping cue ID line ${i}: "${trimmedLine}"`);
-        skipNextTextLine = false; // Don't skip the next line, it might be content
+        // skipNextTextLine = false; // Don't skip the next line, it might be content
         continue;
       }
       
@@ -408,6 +445,7 @@ function parseVTT(vttContent: string): string {
           .replace(/&gt;/g, '>') // Replace &gt; with >
           .replace(/&quot;/g, '"') // Replace &quot; with "
           .replace(/&#39;/g, "'") // Replace &#39; with '
+          .replace(/&apos;/g, "'") // Replace &apos; with '
           .trim();
         
         // Additional cleaning for VTT-specific artifacts
@@ -440,6 +478,9 @@ function parseVTT(vttContent: string): string {
     // Remove any remaining duplicated phrases (handles cases where content is repeated)
     finalTranscript = removeDuplicatedContent(finalTranscript);
     
+    // Improve punctuation formatting
+    finalTranscript = improvePunctuation(finalTranscript);
+    
     // Enhanced logging
     console.log(`✅ Parsed VTT successfully: ${finalTranscript.length} characters, ${textLines.length} segments, ${seenText.size} unique`);
     
@@ -465,6 +506,32 @@ function parseVTT(vttContent: string): string {
     console.error('VTT content preview:', vttContent ? String(vttContent).substring(0, 200) : 'null/undefined');
     return typeof vttContent === 'string' ? vttContent : String(vttContent || ''); // Return original if parsing fails
   }
+}
+
+// Helper function to improve punctuation and formatting
+function improvePunctuation(text: string): string {
+  if (!text || text.length < 10) {
+    return text;
+  }
+  
+  let result = text;
+  
+  // Add periods at the end of sentences that don't have punctuation
+  result = result.replace(/([a-zA-Z])\s+([A-Z][a-z])/g, '$1. $2');
+  
+  // Fix spacing around punctuation
+  result = result.replace(/\s+([.!?])/g, '$1'); // Remove space before punctuation
+  result = result.replace(/([.!?])([A-Z])/g, '$1 $2'); // Add space after punctuation before capital letter
+  
+  // Fix multiple spaces
+  result = result.replace(/\s+/g, ' ').trim();
+  
+  // Ensure the text ends with proper punctuation
+  if (result && !result.match(/[.!?]$/)) {
+    result += '.';
+  }
+  
+  return result;
 }
 
 // Helper function to remove duplicated content patterns

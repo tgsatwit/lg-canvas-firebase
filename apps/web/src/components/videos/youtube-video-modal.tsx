@@ -25,16 +25,17 @@ import {
   Download,
   Loader2
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { YouTubeVideo } from '@/lib/firebase/youtube-videos-service';
 
 interface YouTubeVideoModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   video: YouTubeVideo | null;
+  onVideoUpdate?: (videoId: string, updates: Partial<YouTubeVideo>) => void;
 }
 
-export function YouTubeVideoModal({ open, onOpenChange, video }: YouTubeVideoModalProps) {
+export function YouTubeVideoModal({ open, onOpenChange, video, onVideoUpdate }: YouTubeVideoModalProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [fetchingTranscript, setFetchingTranscript] = useState(false);
   const [transcriptData, setTranscriptData] = useState<{
@@ -42,6 +43,12 @@ export function YouTubeVideoModal({ open, onOpenChange, video }: YouTubeVideoMod
     transcriptMethod?: string;
     transcriptFetched?: boolean;
   }>({});
+
+  // Reset transcript data when video changes
+  useEffect(() => {
+    setTranscriptData({});
+    setCopiedField(null);
+  }, [video?.id]);
 
   if (!video) return null;
 
@@ -146,6 +153,22 @@ export function YouTubeVideoModal({ open, onOpenChange, video }: YouTubeVideoMod
             transcriptMethod: data.method,
             transcriptFetched: true
           });
+          
+          // Update the video in the parent component
+          if (video?.id && onVideoUpdate) {
+            onVideoUpdate(video.id, {
+              transcript: transcriptText,
+              transcriptMethod: data.method,
+              transcriptFetched: true
+            });
+          }
+          
+          // Also update the local video object for immediate UI update
+          if (video && typeof video === 'object') {
+            video.transcript = transcriptText;
+            video.transcriptMethod = data.method;
+            video.transcriptFetched = true;
+          }
         }
       } else {
         setTranscriptData({
@@ -167,9 +190,10 @@ export function YouTubeVideoModal({ open, onOpenChange, video }: YouTubeVideoMod
   };
 
   // Use transcript from video data or fetched transcript
-  const currentTranscript = transcriptData.transcript || video.transcript;
-  const currentTranscriptMethod = transcriptData.transcriptMethod || video.transcriptMethod;
-  const hasTranscript = !!(currentTranscript || transcriptData.transcriptFetched || video.transcriptFetched);
+  // Priority: fetched transcript > video transcript
+  const currentTranscript = transcriptData.transcript || video?.transcript;
+  const currentTranscriptMethod = transcriptData.transcriptMethod || video?.transcriptMethod;
+  const hasTranscript = !!(currentTranscript || transcriptData.transcriptFetched || video?.transcriptFetched);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -191,7 +215,7 @@ export function YouTubeVideoModal({ open, onOpenChange, video }: YouTubeVideoMod
             <TabsTrigger value="technical">Technical</TabsTrigger>
           </TabsList>
 
-          <ScrollArea className="max-h-[calc(90vh-180px)] mt-4">
+          <ScrollArea className="max-h-[calc(90vh-180px)] mt-4 pr-4">
             <TabsContent value="overview" className="space-y-6">
               {/* Video Preview and Basic Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -427,7 +451,8 @@ export function YouTubeVideoModal({ open, onOpenChange, video }: YouTubeVideoMod
               )}
 
               {/* Transcript Content */}
-              <div className="bg-gray-50 rounded-lg p-4 min-h-[400px] max-h-[600px] overflow-y-auto">
+              <div className="bg-gray-50 rounded-lg p-4 min-h-[400px]">
+                <ScrollArea className="max-h-[600px] pr-4">
                 {fetchingTranscript ? (
                   <div className="flex items-center justify-center h-[200px]">
                     <div className="text-center">
@@ -493,6 +518,7 @@ export function YouTubeVideoModal({ open, onOpenChange, video }: YouTubeVideoMod
                     </Button>
                   </div>
                 )}
+                </ScrollArea>
               </div>
             </TabsContent>
 

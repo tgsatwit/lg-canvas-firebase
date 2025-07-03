@@ -36,7 +36,7 @@ export function YouTubeLibraryTab() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set(['all']));
   const [selectedPrivacy, setSelectedPrivacy] = useState<Set<string>>(new Set(['all']));
-  const { videos, loading, error, refetch, searchVideos, isSearching, pagination, displayedVideos } = useYouTubeVideos(50, true);
+  const { videos, loading, error, refetch, searchVideos, isSearching, updateVideo, pagination, displayedVideos } = useYouTubeVideos(50, true);
   const { stats, loading: statsLoading } = useYouTubeStats();
   const { channel, loading: channelLoading } = useYouTubeChannel();
   const { analytics, loading: analyticsLoading, error: analyticsError } = useYouTubeAnalytics();
@@ -668,6 +668,7 @@ export function YouTubeLibraryTab() {
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         video={selectedVideo}
+        onVideoUpdate={updateVideo}
       />
     </div>
   );
