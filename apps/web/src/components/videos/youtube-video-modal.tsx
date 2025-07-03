@@ -389,18 +389,109 @@ export function YouTubeVideoModal({ open, onOpenChange, video }: YouTubeVideoMod
                   </Button>
                 </div>
               </div>
+
+              {/* Transcript Quality Information */}
+              {currentTranscript && currentTranscriptMethod && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <FileText className="h-4 w-4 text-blue-600 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-blue-900">
+                        Transcript Quality Information
+                      </div>
+                      <div className="text-xs text-blue-700 mt-1 space-y-1">
+                        <div>
+                          <span className="font-medium">Method:</span> {
+                            currentTranscriptMethod === 'captions_api' ? 'YouTube Captions API (High Quality)' :
+                            currentTranscriptMethod === 'public_api' ? 'Public Extraction (Good Quality)' :
+                            currentTranscriptMethod === 'manual' ? 'Manual/Description Extract' :
+                            currentTranscriptMethod === 'error' ? 'Error - Processing Failed' :
+                            currentTranscriptMethod
+                          }
+                        </div>
+                        <div>
+                          <span className="font-medium">Length:</span> {currentTranscript.length.toLocaleString()} characters
+                        </div>
+                        {currentTranscript.length > 0 && (
+                          <div>
+                            <span className="font-medium">Word Count:</span> ~{Math.ceil(currentTranscript.split(' ').length).toLocaleString()} words
+                          </div>
+                        )}
+                        <div className="text-xs">
+                          <span className="font-medium">Processing:</span> Cleaned, deduplicated, and formatted for readability
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Transcript Content */}
               <div className="bg-gray-50 rounded-lg p-4 min-h-[400px] max-h-[600px] overflow-y-auto">
                 {fetchingTranscript ? (
                   <div className="flex items-center justify-center h-[200px]">
                     <div className="text-center">
                       <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
-                      <p className="text-sm text-gray-600">Fetching transcript...</p>
+                      <p className="text-sm text-gray-600">Fetching and processing transcript...</p>
+                      <p className="text-xs text-gray-500 mt-1">Removing duplicates and cleaning up formatting</p>
                     </div>
                   </div>
+                ) : currentTranscript && currentTranscriptMethod === 'error' ? (
+                  <div className="text-center py-8">
+                    <div className="text-red-600 mb-2">⚠️</div>
+                    <p className="text-sm text-red-600 font-medium mb-2">Transcript Processing Error</p>
+                    <p className="text-xs text-gray-600 px-4">
+                      {currentTranscript}
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={fetchTranscript}
+                      className="mt-4"
+                    >
+                      Try Again
+                    </Button>
+                  </div>
+                ) : currentTranscript ? (
+                  <div className="space-y-4">
+                    {/* Check for common issues and show warnings */}
+                    {(currentTranscript.includes('Kind: captions') || 
+                      currentTranscript.includes('[object Blob]') ||
+                      currentTranscript.split(' ').length < 10) && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+                        <div className="flex items-start gap-2">
+                          <div className="text-yellow-600">⚠️</div>
+                          <div className="text-sm">
+                            <div className="font-medium text-yellow-800">Transcript Quality Warning</div>
+                            <div className="text-yellow-700 text-xs mt-1">
+                              This transcript may contain formatting issues or be incomplete. 
+                              Try refreshing to get an improved version.
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                      {currentTranscript}
+                    </p>
+                  </div>
                 ) : (
-                  <p className="text-sm whitespace-pre-wrap">
-                    {currentTranscript || 'No transcript available. Click "Fetch Transcript" to retrieve it.'}
-                  </p>
+                  <div className="text-center py-8">
+                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-sm text-gray-600 mb-2">No transcript available</p>
+                    <p className="text-xs text-gray-500 mb-4">
+                      Click "Fetch Transcript" to retrieve and process the video transcript
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={fetchTranscript}
+                      disabled={fetchingTranscript}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Fetch Transcript
+                    </Button>
+                  </div>
                 )}
               </div>
             </TabsContent>

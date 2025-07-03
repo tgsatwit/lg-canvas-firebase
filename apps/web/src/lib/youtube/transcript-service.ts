@@ -203,14 +203,41 @@ export class TranscriptService {
         };
       }
       
-      // Convert transcript items to plain text
-      const transcriptText = transcriptItems
-        .map((item: any) => item.text)
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+      // Convert transcript items to plain text with deduplication
+      const textSegments: string[] = [];
+      const seenText = new Set<string>();
       
-      console.log(`✅ Successfully fetched public transcript (${transcriptText.length} characters)`);
+      for (const item of transcriptItems) {
+        if (item.text) {
+          // Clean up the text
+          let cleanText = item.text
+            .replace(/<[^>]*>/g, '') // Remove HTML tags
+            .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+            .replace(/&amp;/g, '&') // Replace &amp; with &
+            .replace(/&lt;/g, '<') // Replace &lt; with <
+            .replace(/&gt;/g, '>') // Replace &gt; with >
+            .replace(/&quot;/g, '"') // Replace &quot; with "
+            .replace(/&#39;/g, "'") // Replace &#39; with '
+            .replace(/\s+/g, ' ') // Normalize whitespace
+            .trim();
+          
+          // Only add if it's valid text and we haven't seen it before
+          if (cleanText && 
+              cleanText.length > 1 && 
+              !seenText.has(cleanText.toLowerCase())) {
+            textSegments.push(cleanText);
+            seenText.add(cleanText.toLowerCase());
+          }
+        }
+      }
+      
+      // Join segments and apply final cleanup
+      let transcriptText = textSegments.join(' ').replace(/\s+/g, ' ').trim();
+      
+      // Remove duplicated content patterns
+      transcriptText = this.removeDuplicatedContent(transcriptText);
+      
+      console.log(`✅ Successfully fetched public transcript (${transcriptText.length} characters, ${textSegments.length} segments, ${seenText.size} unique)`);
       
       return {
         success: true,
@@ -292,9 +319,22 @@ export class TranscriptService {
    */
   private parseSRT(srtContent: string): string {
     try {
+      // Validate input
+      if (!srtContent) {
+        console.warn('⚠️ SRT content is empty or null');
+        return '';
+      }
+      
+      // Ensure we have a string
+      if (typeof srtContent !== 'string') {
+        console.warn('⚠️ SRT content is not a string, converting...');
+        srtContent = String(srtContent);
+      }
+      
       // Remove SRT timing information and keep only text
       const lines = srtContent.split('\n');
       const textLines: string[] = [];
+      const seenText = new Set<string>(); // Track seen text to prevent duplicates
       
       let isTextLine = false;
       
@@ -321,26 +361,90 @@ export class TranscriptService {
         // This should be a text line
         if (isTextLine || (!trimmedLine.includes('-->') && !/^\d+$/.test(trimmedLine))) {
           // Clean up HTML tags and formatting
-          const cleanText = trimmedLine
+          let cleanText = trimmedLine
             .replace(/<[^>]*>/g, '') // Remove HTML tags
             .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
             .replace(/&amp;/g, '&') // Replace &amp; with &
             .replace(/&lt;/g, '<') // Replace &lt; with <
             .replace(/&gt;/g, '>') // Replace &gt; with >
+            .replace(/&quot;/g, '"') // Replace &quot; with "
+            .replace(/&#39;/g, "'") // Replace &#39; with '
             .trim();
           
-          if (cleanText) {
+          // Additional cleaning for SRT-specific artifacts
+          cleanText = cleanText
+            .replace(/^[-\s]*/, '') // Remove leading dashes and spaces
+            .replace(/[-\s]*$/, '') // Remove trailing dashes and spaces
+            .replace(/\s+/g, ' ') // Normalize whitespace
+            .trim();
+          
+          // Only add if it's valid text and we haven't seen it before
+          if (cleanText && 
+              cleanText.length > 1 && 
+              !cleanText.includes('-->') && 
+              !cleanText.match(/^[\d\s:.-]+$/) && // Skip pure timestamp/number lines
+              !seenText.has(cleanText.toLowerCase())) {
+            
             textLines.push(cleanText);
+            seenText.add(cleanText.toLowerCase());
           }
         }
       }
       
-      return textLines.join(' ').replace(/\s+/g, ' ').trim();
+      // Join all text and perform final cleanup
+      let finalTranscript = textLines.join(' ').replace(/\s+/g, ' ').trim();
+      
+      // Remove any remaining duplicated phrases
+      finalTranscript = this.removeDuplicatedContent(finalTranscript);
+      
+      console.log(`✅ Parsed SRT successfully: ${finalTranscript.length} characters, ${textLines.length} segments, ${seenText.size} unique`);
+      
+      return finalTranscript;
       
     } catch (error) {
       console.error('Error parsing SRT:', error);
       return srtContent; // Return original if parsing fails
     }
+  }
+
+  /**
+   * Helper function to remove duplicated content patterns
+   */
+  private removeDuplicatedContent(text: string): string {
+    if (!text || text.length < 100) {
+      return text;
+    }
+    
+    // Split into sentences for analysis
+    const sentences = text.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
+    
+    if (sentences.length < 3) {
+      return text;
+    }
+    
+    // Look for repeated patterns
+    const seenSentences = new Set<string>();
+    const uniqueSentences: string[] = [];
+    
+    for (const sentence of sentences) {
+      const normalizedSentence = sentence.toLowerCase().replace(/\s+/g, ' ').trim();
+      
+      // Skip very short sentences or already seen ones
+      if (normalizedSentence.length > 10 && !seenSentences.has(normalizedSentence)) {
+        uniqueSentences.push(sentence);
+        seenSentences.add(normalizedSentence);
+      }
+    }
+    
+    // Rejoin sentences
+    let result = uniqueSentences.join('. ').trim();
+    
+    // Add final period if needed
+    if (result && !result.match(/[.!?]$/)) {
+      result += '.';
+    }
+    
+    return result;
   }
 
   /**

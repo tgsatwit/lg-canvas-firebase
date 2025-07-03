@@ -323,50 +323,96 @@ function parseVTT(vttContent: string): string {
     
     const lines = vttContent.split('\n');
     const textLines: string[] = [];
+    const seenText = new Set<string>(); // Track seen text to prevent duplicates
     
     let inCueBlock = false;
+    let skipNextTextLine = false;
     
-    for (const line of lines) {
-      const trimmedLine = line.trim();
+    for (let i = 0; i < lines.length; i++) {
+      const trimmedLine = lines[i].trim();
       
       // Skip empty lines
       if (!trimmedLine) {
         inCueBlock = false;
+        skipNextTextLine = false;
         continue;
       }
       
-      // Skip WebVTT header
-      if (trimmedLine.startsWith('WEBVTT')) {
+      // Skip WebVTT header and related metadata
+      if (trimmedLine.startsWith('WEBVTT') || 
+          trimmedLine.startsWith('Kind:') || 
+          trimmedLine.startsWith('Language:') ||
+          trimmedLine.match(/^NOTE\s/i)) {
         continue;
       }
       
-      // Skip cue identifiers (just numbers or timestamps)
-      if (/^\d+$/.test(trimmedLine) || trimmedLine.includes('-->')) {
+      // Skip cue settings lines (contain positioning/styling info)
+      if (trimmedLine.includes('align:') || 
+          trimmedLine.includes('position:') || 
+          trimmedLine.includes('size:') ||
+          trimmedLine.includes('line:')) {
+        continue;
+      }
+      
+      // Check for timestamp lines (contains -->)
+      if (trimmedLine.includes('-->')) {
         inCueBlock = true;
+        skipNextTextLine = false;
         continue;
       }
       
-      // This should be caption text
-      if (inCueBlock || (!trimmedLine.includes('-->') && !/^\d+$/.test(trimmedLine))) {
+      // Skip cue identifiers (just numbers or alphanumeric IDs)
+      if (/^[\w\d-]+$/.test(trimmedLine) && !inCueBlock) {
+        skipNextTextLine = true;
+        continue;
+      }
+      
+      // If we're in a cue block or this looks like text content
+      if (inCueBlock && !skipNextTextLine) {
         // Clean up HTML tags and formatting
-        const cleanText = trimmedLine
+        let cleanText = trimmedLine
           .replace(/<[^>]*>/g, '') // Remove HTML/VTT tags
           .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
           .replace(/&amp;/g, '&') // Replace &amp; with &
           .replace(/&lt;/g, '<') // Replace &lt; with <
           .replace(/&gt;/g, '>') // Replace &gt; with >
+          .replace(/&quot;/g, '"') // Replace &quot; with "
+          .replace(/&#39;/g, "'") // Replace &#39; with '
           .trim();
         
-        if (cleanText && !cleanText.includes('-->')) {
+        // Additional cleaning for VTT-specific artifacts
+        cleanText = cleanText
+          .replace(/^[-\s]*/, '') // Remove leading dashes and spaces
+          .replace(/[-\s]*$/, '') // Remove trailing dashes and spaces
+          .replace(/\s+/g, ' ') // Normalize whitespace
+          .trim();
+        
+        // Only add if it's valid text and we haven't seen it before
+        if (cleanText && 
+            cleanText.length > 1 && 
+            !cleanText.includes('-->') && 
+            !cleanText.match(/^[\d\s:.-]+$/) && // Skip pure timestamp/number lines
+            !seenText.has(cleanText.toLowerCase())) {
+          
           textLines.push(cleanText);
+          seenText.add(cleanText.toLowerCase());
         }
+      }
+      
+      // Reset after collecting text
+      if (inCueBlock && trimmedLine && !trimmedLine.includes('-->')) {
+        skipNextTextLine = false;
       }
     }
     
-    const finalTranscript = textLines.join(' ').replace(/\s+/g, ' ').trim();
+    // Join all text and perform final cleanup
+    let finalTranscript = textLines.join(' ').replace(/\s+/g, ' ').trim();
     
-    // Log success
-    console.log(`✅ Parsed VTT successfully: ${finalTranscript.length} characters`);
+    // Remove any remaining duplicated phrases (handles cases where content is repeated)
+    finalTranscript = removeDuplicatedContent(finalTranscript);
+    
+    // Log success with more details
+    console.log(`✅ Parsed VTT successfully: ${finalTranscript.length} characters, ${textLines.length} segments, ${seenText.size} unique`);
     
     return finalTranscript;
     
@@ -376,4 +422,42 @@ function parseVTT(vttContent: string): string {
     console.error('VTT content preview:', vttContent ? String(vttContent).substring(0, 200) : 'null/undefined');
     return typeof vttContent === 'string' ? vttContent : String(vttContent || ''); // Return original if parsing fails
   }
+}
+
+// Helper function to remove duplicated content patterns
+function removeDuplicatedContent(text: string): string {
+  if (!text || text.length < 100) {
+    return text;
+  }
+  
+  // Split into sentences for analysis
+  const sentences = text.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
+  
+  if (sentences.length < 3) {
+    return text;
+  }
+  
+  // Look for repeated patterns
+  const seenSentences = new Set<string>();
+  const uniqueSentences: string[] = [];
+  
+  for (const sentence of sentences) {
+    const normalizedSentence = sentence.toLowerCase().replace(/\s+/g, ' ').trim();
+    
+    // Skip very short sentences or already seen ones
+    if (normalizedSentence.length > 10 && !seenSentences.has(normalizedSentence)) {
+      uniqueSentences.push(sentence);
+      seenSentences.add(normalizedSentence);
+    }
+  }
+  
+  // Rejoin sentences
+  let result = uniqueSentences.join('. ').trim();
+  
+  // Add final period if needed
+  if (result && !result.match(/[.!?]$/)) {
+    result += '.';
+  }
+  
+  return result;
 }
