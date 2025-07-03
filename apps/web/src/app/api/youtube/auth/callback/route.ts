@@ -17,13 +17,13 @@ export async function GET(request: NextRequest) {
       console.error('YouTube OAuth error:', error);
       const errorDescription = searchParams.get('error_description') || 'Unknown error';
       return NextResponse.redirect(
-        new URL(`/dashboard/videos/library?error=auth_failed&message=${encodeURIComponent(errorDescription)}`, baseUrl)
+        new URL(`/dashboard/videos?error=auth_failed&message=${encodeURIComponent(errorDescription)}`, baseUrl)
       );
     }
 
     if (!code) {
       return NextResponse.redirect(
-        new URL(`/dashboard/videos/library?error=no_code&message=${encodeURIComponent('No authorization code received')}`, baseUrl)
+        new URL(`/dashboard/videos?error=no_code&message=${encodeURIComponent('No authorization code received')}`, baseUrl)
       );
     }
 
@@ -63,19 +63,19 @@ export async function GET(request: NextRequest) {
       
       // Redirect to the library page with success message
       return NextResponse.redirect(
-        new URL(`/dashboard/videos/library?success=authenticated&channel=${encodeURIComponent(connectionTest.user?.channelTitle || 'YouTube Channel')}`, baseUrl)
+        new URL(`/dashboard/videos?success=authenticated&channel=${encodeURIComponent(connectionTest.user?.channelTitle || 'YouTube Channel')}`, baseUrl)
       );
     } else {
       console.error('YouTube connection test failed:', connectionTest.error);
       return NextResponse.redirect(
-        new URL(`/dashboard/videos/library?error=connection_failed&message=${encodeURIComponent(connectionTest.error || 'Connection test failed')}`, baseUrl)
+        new URL(`/dashboard/videos?error=connection_failed&message=${encodeURIComponent(connectionTest.error || 'Connection test failed')}`, baseUrl)
       );
     }
 
   } catch (error: any) {
     console.error('Error in YouTube OAuth callback:', error);
     return NextResponse.redirect(
-      `/dashboard/videos/library?error=callback_error&message=${encodeURIComponent(error.message || 'Authentication failed')}`
+      `/dashboard/videos?error=callback_error&message=${encodeURIComponent(error.message || 'Authentication failed')}`
     );
   }
 } 

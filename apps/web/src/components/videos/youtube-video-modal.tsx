@@ -125,15 +125,28 @@ export function YouTubeVideoModal({ open, onOpenChange, video }: YouTubeVideoMod
     
     setFetchingTranscript(true);
     try {
-      const response = await fetch(`/api/youtube/transcripts?videoId=${video.youtubeId}`);
+      // Add force parameter if transcript already exists to allow refresh
+      const forceParam = hasTranscript ? '&force=true' : '';
+      const response = await fetch(`/api/youtube/transcripts?videoId=${video.youtubeId}${forceParam}`);
       const data = await response.json();
       
       if (data.success) {
-        setTranscriptData({
-          transcript: data.transcript || 'Transcript fetched successfully but is empty.',
-          transcriptMethod: data.method,
-          transcriptFetched: true
-        });
+        const transcriptText = data.transcript || 'Transcript fetched successfully but is empty.';
+        
+        // Check if we got a valid transcript
+        if (data.isValidTranscript === false || transcriptText === '[object Blob]') {
+          setTranscriptData({
+            transcript: 'Error: Transcript was not properly retrieved (Blob conversion issue). Please try again.',
+            transcriptMethod: 'error',
+            transcriptFetched: true
+          });
+        } else {
+          setTranscriptData({
+            transcript: transcriptText,
+            transcriptMethod: data.method,
+            transcriptFetched: true
+          });
+        }
       } else {
         setTranscriptData({
           transcript: `Error: ${data.error}`,
@@ -344,26 +357,24 @@ export function YouTubeVideoModal({ open, onOpenChange, video }: YouTubeVideoMod
                   )}
                 </h3>
                 <div className="flex items-center gap-2">
-                  {!hasTranscript && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={fetchTranscript}
-                      disabled={fetchingTranscript}
-                    >
-                      {fetchingTranscript ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Fetching...
-                        </>
-                      ) : (
-                        <>
-                          <Download className="h-4 w-4 mr-2" />
-                          Fetch Transcript
-                        </>
-                      )}
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchTranscript}
+                    disabled={fetchingTranscript}
+                  >
+                    {fetchingTranscript ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Fetching...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-4 w-4 mr-2" />
+                        {hasTranscript ? 'Refresh Transcript' : 'Fetch Transcript'}
+                      </>
+                    )}
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"

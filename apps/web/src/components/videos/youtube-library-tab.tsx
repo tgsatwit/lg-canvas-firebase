@@ -837,16 +837,19 @@ function VideoCard({ video, onClick, isShort }: { video: YouTubeVideo; onClick: 
                 Watch
               </Button>
               
-              {video.transcriptFetched === true && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  title="Transcript available"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <FileText className="h-4 w-4" />
-                </Button>
-              )}
+              <Button
+                size="sm"
+                variant="outline"
+                title={video.transcriptFetched ? "Transcript available - click to refresh" : "Fetch transcript"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClick(); // This will open the modal where transcript can be fetched
+                }}
+                className={video.transcriptFetched ? "bg-green-50 border-green-200 text-green-700" : ""}
+              >
+                <FileText className="h-4 w-4" />
+                {video.transcriptFetched && <span className="ml-1 text-xs">✓</span>}
+              </Button>
             </div>
           </div>
         </div>

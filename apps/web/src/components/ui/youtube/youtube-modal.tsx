@@ -856,23 +856,6 @@ const VideoEditorTabs = ({ videoData }: { videoData?: any }) => {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-semibold">{data.name || "Untitled Video"}</h2>
-                    {(() => {
-                      const status = (data.youtubeStatus || '').toLowerCase();
-                      const statusBadgeStyles: Record<string, { bg: string; text: string; border: string; icon?: React.ReactNode }> = {
-                        'preparing for youtube': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' },
-                        'ready for youtube': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
-                        'scheduled for youtube': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
-                        'published on youtube': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' }
-                      };
-
-                      const st = statusBadgeStyles[status];
-                      if (!st) return null;
-                      return (
-                        <Badge variant="outline" className={`${st.bg} ${st.text} ${st.border} capitalize`}>
-                          {status}
-                        </Badge>
-                      );
-                    })()}
                   </div>
                   
                   {/* Video thumbnail with duration overlay */}

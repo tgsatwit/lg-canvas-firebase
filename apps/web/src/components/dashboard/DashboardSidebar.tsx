@@ -20,7 +20,7 @@ export function DashboardSidebar() {
   const { user, loading } = useUserContext();
 
   // Check if we're in the videos section (including YouTube)
-  const isVideosSection = pathname === "/dashboard/videos" || pathname === "/dashboard/videos/library" || pathname.startsWith("/dashboard/videos/");
+  const isVideosSection = pathname === "/dashboard/videos" || pathname.startsWith("/dashboard/videos/");
 
   return (
     <Sidebar className="border-r border-gray-200 bg-white">

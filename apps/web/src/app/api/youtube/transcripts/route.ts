@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const videoId = searchParams.get('videoId');
     const processAll = searchParams.get('processAll') === 'true';
+    const force = searchParams.get('force') === 'true';
     
     const db = adminFirestore();
     if (!db) {
@@ -35,8 +36,8 @@ export async function GET(request: NextRequest) {
     
     if (videoId) {
       // Process single video
-      console.log(`🔍 Processing transcript for video: ${videoId}`);
-      const result = await processVideoTranscript(yt, db, videoId);
+      console.log(`🔍 Processing transcript for video: ${videoId}${force ? ' (force refresh)' : ''}`);
+      const result = await processVideoTranscript(yt, db, videoId, force);
       return NextResponse.json(result);
     }
     
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function processVideoTranscript(yt: any, db: any, youtubeId: string) {
+async function processVideoTranscript(yt: any, db: any, youtubeId: string, force = false) {
   try {
     // Get video document from Firestore
     const videosRef = db.collection('videos-youtube');
@@ -77,8 +78,8 @@ async function processVideoTranscript(yt: any, db: any, youtubeId: string) {
     const videoDoc = videoSnapshot.docs[0];
     const videoData = videoDoc.data();
     
-    // Skip if transcript already exists
-    if (videoData.transcript && videoData.transcriptFetched) {
+    // Skip if transcript already exists (unless force refresh is requested)
+    if (videoData.transcript && videoData.transcriptFetched && !force) {
       return {
         success: true,
         message: 'Transcript already exists',
@@ -87,7 +88,7 @@ async function processVideoTranscript(yt: any, db: any, youtubeId: string) {
       };
     }
 
-    console.log(`📝 Fetching transcript for: ${videoData.title}`);
+    console.log(`📝 ${force ? 'Force refreshing' : 'Fetching'} transcript for: ${videoData.title}`);
 
     // Try to get captions for the video
     const transcript = await fetchVideoTranscript(yt, youtubeId);
@@ -110,8 +111,11 @@ async function processVideoTranscript(yt: any, db: any, youtubeId: string) {
         success: true,
         videoId: youtubeId,
         title: videoData.title,
+        transcript: transcriptText, // Include the transcript in the response
         transcriptLength: transcriptText.length,
-        method: transcript.method
+        method: transcript.method,
+        isValidTranscript: transcriptText !== '[object Blob]' && transcriptText !== '[object Object]',
+        forced: force
       };
     } else {
       // Mark as attempted but failed
@@ -251,11 +255,22 @@ async function fetchVideoTranscript(yt: any, videoId: string): Promise<{
       tfmt: 'vtt', // WebVTT format
     });
 
-    // Ensure the response data is converted to string
+    // Properly handle the response data which might be a Blob
     let vttData = captionResponse.data;
+    
+    // Handle different response types
     if (Buffer.isBuffer(vttData)) {
       vttData = vttData.toString('utf8');
+    } else if (vttData && typeof vttData === 'object' && vttData.constructor.name === 'Blob') {
+      // Handle Blob object properly
+      const arrayBuffer = await vttData.arrayBuffer();
+      vttData = new TextDecoder('utf-8').decode(arrayBuffer);
+    } else if (vttData && typeof vttData === 'object' && vttData.text) {
+      // Handle Blob-like objects with text() method
+      vttData = await vttData.text();
     } else if (typeof vttData !== 'string') {
+      // Last resort - try to convert to string (but this might still result in [object Blob])
+      console.warn('⚠️ Unknown response data type:', typeof vttData, vttData?.constructor?.name);
       vttData = String(vttData);
     }
 
@@ -288,10 +303,22 @@ async function fetchVideoTranscript(yt: any, videoId: string): Promise<{
 
 function parseVTT(vttContent: string): string {
   try {
+    // Validate input
+    if (!vttContent) {
+      console.warn('⚠️ VTT content is empty or null');
+      return '';
+    }
+    
     // Ensure we have a string
     if (typeof vttContent !== 'string') {
       console.warn('⚠️ VTT content is not a string, converting...');
       vttContent = String(vttContent);
+    }
+    
+    // Check for [object Blob] or similar invalid strings
+    if (vttContent === '[object Blob]' || vttContent === '[object Object]') {
+      console.error('❌ VTT content is not properly converted from Blob/Object');
+      return '';
     }
     
     const lines = vttContent.split('\n');
@@ -336,7 +363,12 @@ function parseVTT(vttContent: string): string {
       }
     }
     
-    return textLines.join(' ').replace(/\s+/g, ' ').trim();
+    const finalTranscript = textLines.join(' ').replace(/\s+/g, ' ').trim();
+    
+    // Log success
+    console.log(`✅ Parsed VTT successfully: ${finalTranscript.length} characters`);
+    
+    return finalTranscript;
     
   } catch (error) {
     console.error('Error parsing VTT:', error);
