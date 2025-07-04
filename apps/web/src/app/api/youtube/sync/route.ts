@@ -106,25 +106,48 @@ export async function POST(request: NextRequest) {
       try {
         console.log(`📝 Processing video: ${video.title}`);
         
-        // Fetch transcript for the video
-        let transcript = '';
-        let transcriptFetched = false;
-        let transcriptMethod = 'none';
+        // Check if video already exists in database to preserve transcript data
+        const existingVideoQuery = await videosCollection.where('youtubeId', '==', video.id).get();
+        let existingTranscriptData: any = {};
         
-        try {
-          console.log(`🔍 Attempting to fetch transcript for video: ${video.id}`);
-          const transcriptResult = await transcriptService.fetchTranscript(video.id);
-          
-          if (transcriptResult.success && transcriptResult.transcript) {
-            transcript = transcriptResult.transcript;
-            transcriptFetched = true;
-            transcriptMethod = transcriptResult.method || 'unknown';
-            console.log(`✅ Transcript fetched for video: ${video.id} (method: ${transcriptMethod})`);
-          } else {
-            console.log(`ℹ️ No transcript available for video: ${video.id} - ${transcriptResult.error}`);
+        if (!existingVideoQuery.empty) {
+          const existingVideo = existingVideoQuery.docs[0].data();
+          // Preserve existing transcript data
+          if (existingVideo.transcript && existingVideo.transcriptFetched) {
+            existingTranscriptData = {
+              transcript: existingVideo.transcript,
+              transcriptFetched: existingVideo.transcriptFetched,
+              transcriptMethod: existingVideo.transcriptMethod,
+              transcriptUpdatedAt: existingVideo.transcriptUpdatedAt
+            };
+            console.log(`✅ Preserving existing transcript for video: ${video.id}`);
           }
-        } catch (transcriptError) {
-          console.warn(`⚠️ Could not fetch transcript for video ${video.id}:`, transcriptError);
+        }
+        
+        // Only fetch transcript if we don't already have one
+        let newTranscriptData: any = {};
+        if (!(existingTranscriptData as any).transcript) {
+          console.log(`🔍 No existing transcript found, attempting to fetch for video: ${video.id}`);
+          
+          try {
+            const transcriptResult = await transcriptService.fetchTranscript(video.id);
+            
+            if (transcriptResult.success && transcriptResult.transcript) {
+              newTranscriptData = {
+                transcript: transcriptResult.transcript,
+                transcriptFetched: true,
+                transcriptMethod: transcriptResult.method || 'unknown',
+                transcriptUpdatedAt: new Date().toISOString()
+              };
+              console.log(`✅ New transcript fetched for video: ${video.id} (method: ${transcriptResult.method})`);
+            } else {
+              console.log(`ℹ️ No transcript available for video: ${video.id} - ${transcriptResult.error}`);
+              // Don't set transcript fields if fetch failed - let them remain undefined
+            }
+          } catch (transcriptError) {
+            console.warn(`⚠️ Could not fetch transcript for video ${video.id}:`, transcriptError);
+            // Don't set transcript fields if fetch failed - let them remain undefined
+          }
         }
         
         // Prepare video document with only defined values
@@ -163,10 +186,9 @@ export async function POST(request: NextRequest) {
           embeddable: video.embeddable,
           publicStatsViewable: video.publicStatsViewable,
           
-          // Transcript
-          transcript: transcript,
-          transcriptFetched: transcriptFetched,
-          transcriptMethod: transcriptMethod,
+          // Transcript data (preserve existing or add new)
+          ...existingTranscriptData,
+          ...newTranscriptData,
           
           // Sync metadata
           syncedAt: new Date().toISOString(),
@@ -180,8 +202,10 @@ export async function POST(request: NextRequest) {
         processedVideos.push({
           id: video.id,
           title: video.title,
-          transcriptFetched: transcriptFetched,
-          transcriptMethod: transcriptMethod
+          transcriptFetched: (existingTranscriptData as any).transcriptFetched || (newTranscriptData as any).transcriptFetched || false,
+          transcriptMethod: (existingTranscriptData as any).transcriptMethod || (newTranscriptData as any).transcriptMethod || 'none',
+          transcriptStatus: (existingTranscriptData as any).transcript ? 'preserved' : 
+                          (newTranscriptData as any).transcript ? 'newly_fetched' : 'none'
         });
         
       } catch (videoError) {

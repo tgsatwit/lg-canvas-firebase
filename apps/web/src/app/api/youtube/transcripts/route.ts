@@ -156,18 +156,17 @@ async function processAllVideoTranscripts(yt: any, db: any) {
     // Get all videos without transcripts
     const videosRef = db.collection('videos-youtube');
     
-    // First, get videos where transcriptFetched is not true
+    // Simplified queries without orderBy to avoid composite index requirements
+    // Get videos where transcriptFetched is not true
     const snapshot1 = await videosRef
       .where('transcriptFetched', '!=', true)
-      .orderBy('publishedAt', 'desc')
-      .limit(15)
+      .limit(30)
       .get();
     
     // Also get videos where transcript field is empty or null
     const snapshot2 = await videosRef
       .where('transcript', '==', '')
-      .orderBy('publishedAt', 'desc')
-      .limit(15)
+      .limit(30)
       .get();
     
     // Combine and deduplicate by YouTube ID
@@ -175,13 +174,21 @@ async function processAllVideoTranscripts(yt: any, db: any) {
     [...snapshot1.docs, ...snapshot2.docs].forEach(doc => {
       const data = doc.data();
       if (data.youtubeId && !allDocs.has(data.youtubeId)) {
-        allDocs.set(data.youtubeId, doc);
+        allDocs.set(data.youtubeId, { doc, data });
       }
     });
     
-    const uniqueDocs = Array.from(allDocs.values()).slice(0, 20); // Limit to 20 total
+    // Sort by publishedAt in JavaScript (descending - newest first)
+    const sortedDocs = Array.from(allDocs.values())
+      .sort((a, b) => {
+        const dateA = new Date(a.data.publishedAt || 0);
+        const dateB = new Date(b.data.publishedAt || 0);
+        return dateB.getTime() - dateA.getTime();
+      })
+      .slice(0, 20) // Limit to 20 total
+      .map(item => item.doc);
 
-    console.log(`📚 Found ${uniqueDocs.length} videos without transcripts`);
+    console.log(`📚 Found ${sortedDocs.length} videos without transcripts`);
 
     const results = {
       totalProcessed: 0,
@@ -191,7 +198,7 @@ async function processAllVideoTranscripts(yt: any, db: any) {
     };
 
     // Process each video
-    for (const doc of uniqueDocs) {
+    for (const doc of sortedDocs) {
       const videoData = doc.data();
       const youtubeId = videoData.youtubeId;
       
