@@ -5,27 +5,30 @@ import { getServerUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerUser();
-    
-    if (!session) {
-      return NextResponse.json({ 
-        authenticated: false, 
-        error: "User not logged in" 
-      }, { status: 401 });
-    }
-
+    // Check for YouTube tokens first, regardless of Firebase session
     const cookieStore = await cookies();
     const accessToken = cookieStore.get('youtube_access_token');
     const refreshToken = cookieStore.get('youtube_refresh_token');
-    const tokenExpiry = cookieStore.get('youtube_token_expiry');
-
-    if (!accessToken?.value) {
+    
+    // If no YouTube tokens at all, check Firebase session for proper error
+    if (!accessToken?.value && !refreshToken?.value) {
+      const session = await getServerUser();
+      
+      if (!session) {
+        return NextResponse.json({ 
+          authenticated: false, 
+          error: "User not logged in" 
+        }, { status: 401 });
+      }
+      
       return NextResponse.json({
         authenticated: false,
         error: "No YouTube access token found",
         authUrl: getYouTubeService().getAuthUrl()
       });
     }
+
+    const tokenExpiry = cookieStore.get('youtube_token_expiry');
 
     // Set up the YouTube service with stored tokens
     const youtubeService = getYouTubeService();

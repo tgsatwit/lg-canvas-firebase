@@ -5,6 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   ExternalLink, 
   Calendar, 
@@ -22,7 +25,15 @@ import {
   Copy,
   CheckCircle,
   Download,
-  Loader2
+  Loader2,
+  Save,
+  Upload,
+  Wand2,
+  Instagram,
+  Mail,
+  BookOpen,
+  Youtube,
+  RotateCcw
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { YouTubeVideo } from '@/lib/firebase/youtube-videos-service';
@@ -37,10 +48,35 @@ interface YouTubeVideoModalProps {
 export function YouTubeVideoModal({ open, onOpenChange, video, onVideoUpdate }: YouTubeVideoModalProps) {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [fetchingTranscript, setFetchingTranscript] = useState(false);
+  
+  // Update video form state
+  const [updateForm, setUpdateForm] = useState({
+    title: '',
+    description: '',
+    tags: '',
+    privacyStatus: 'public'
+  });
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [isUpdatingYoutube, setIsUpdatingYoutube] = useState(false);
+  
+  // Generate content form state
+  const [contentType, setContentType] = useState('youtube-post');
+  const [generatedContent, setGeneratedContent] = useState('');
+  const [isGeneratingContent, setIsGeneratingContent] = useState(false);
 
-  // Reset copied field when video changes
+  // Reset forms when video changes
   useEffect(() => {
     setCopiedField(null);
+    if (video) {
+      setUpdateForm({
+        title: video.title || '',
+        description: video.description || '',
+        tags: video.tags?.join(', ') || '',
+        privacyStatus: video.privacyStatus || 'public'
+      });
+    }
+    setGeneratedContent('');
   }, [video?.id]);
 
   if (!video) return null;
@@ -162,28 +198,209 @@ export function YouTubeVideoModal({ open, onOpenChange, video, onVideoUpdate }: 
   const currentTranscript = video?.transcript;
   const hasTranscript = !!(video?.transcript || video?.transcriptFetched);
 
+  // Helper functions for update tab
+  const generateMetadata = async (type: 'title' | 'description' | 'tags') => {
+    if (!video?.transcript) {
+      alert('No transcript available. Please fetch the transcript first.');
+      return;
+    }
+    
+    setIsGenerating(true);
+    try {
+      const response = await fetch('/api/youtube/generate-metadata', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          videoId: video.id,
+          type,
+          transcript: video.transcript,
+          currentTitle: video.title,
+          currentDescription: video.description,
+          currentTags: video.tags
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setUpdateForm(prev => ({
+          ...prev,
+          [type]: data.generated
+        }));
+      } else {
+        const error = await response.json();
+        alert(`Failed to generate ${type}: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error(`Failed to generate ${type}:`, error);
+      alert(`Failed to generate ${type}: ${error instanceof Error ? error.message : 'Network error'}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const saveDraft = async () => {
+    if (!video?.id) return;
+    
+    setIsSavingDraft(true);
+    try {
+      const response = await fetch('/api/youtube/save-draft', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          videoId: video.id,
+          updates: {
+            title: updateForm.title,
+            description: updateForm.description,
+            tags: updateForm.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+            privacyStatus: updateForm.privacyStatus
+          }
+        }),
+      });
+      
+      if (response.ok) {
+        alert('Draft saved successfully!');
+      } else {
+        const error = await response.json();
+        alert(`Failed to save draft: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Failed to save draft:', error);
+      alert(`Failed to save draft: ${error instanceof Error ? error.message : 'Network error'}`);
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
+
+  const updateYouTube = async () => {
+    if (!video?.id) return;
+    
+    setIsUpdatingYoutube(true);
+    try {
+      const response = await fetch('/api/youtube/update-video', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          videoId: video.id,
+          updates: {
+            title: updateForm.title,
+            description: updateForm.description,
+            tags: updateForm.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+            privacyStatus: updateForm.privacyStatus
+          }
+        }),
+      });
+      
+      if (response.ok) {
+        alert('YouTube video updated successfully!');
+        // Update the video in the parent component
+        if (onVideoUpdate) {
+          onVideoUpdate(video.id, {
+            title: updateForm.title,
+            description: updateForm.description,
+            tags: updateForm.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+            privacyStatus: updateForm.privacyStatus
+          });
+        }
+      } else {
+        const error = await response.json();
+        alert(`Failed to update YouTube video: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Failed to update YouTube video:', error);
+      alert(`Failed to update YouTube video: ${error instanceof Error ? error.message : 'Network error'}`);
+    } finally {
+      setIsUpdatingYoutube(false);
+    }
+  };
+
+  const generateContent = async () => {
+    if (!video?.transcript) {
+      alert('No transcript available. Please fetch the transcript first.');
+      return;
+    }
+    
+    setIsGeneratingContent(true);
+    try {
+      const response = await fetch('/api/youtube/generate-content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          videoId: video.id,
+          contentType,
+          transcript: video.transcript,
+          videoTitle: video.title,
+          videoDescription: video.description,
+          videoTags: video.tags
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setGeneratedContent(data.content);
+      } else {
+        const error = await response.json();
+        alert(`Failed to generate content: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Failed to generate content:', error);
+      alert(`Failed to generate content: ${error instanceof Error ? error.message : 'Network error'}`);
+    } finally {
+      setIsGeneratingContent(false);
+    }
+  };
+
+  const resetToOriginalValues = () => {
+    if (video) {
+      setUpdateForm({
+        title: video.title || '',
+        description: video.description || '',
+        tags: video.tags?.join(', ') || '',
+        privacyStatus: video.privacyStatus || 'public'
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold pr-8">
+      <DialogContent className="max-w-5xl w-[95vw] h-[95vh] flex flex-col p-0">
+        <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
+          <DialogTitle className="text-xl font-semibold pr-8 line-clamp-2">
             {video.title}
           </DialogTitle>
         </DialogHeader>
         
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="description">Description</TabsTrigger>
-            <TabsTrigger value="transcript">
-              Transcript
-              {hasTranscript && <Badge variant="secondary" className="ml-2">✓</Badge>}
-            </TabsTrigger>
-            <TabsTrigger value="technical">Technical</TabsTrigger>
-          </TabsList>
+        <Tabs defaultValue="overview" className="flex-1 flex flex-col min-h-0">
+          <div className="px-6 py-2 border-b flex-shrink-0">
+            <TabsList className="grid w-full grid-cols-5 text-xs md:text-sm">
+              <TabsTrigger value="overview" className="text-xs md:text-sm">Overview</TabsTrigger>
+              <TabsTrigger value="description" className="text-xs md:text-sm">Description</TabsTrigger>
+              <TabsTrigger value="transcript" className="text-xs md:text-sm">
+                <span className="hidden sm:inline">Transcript</span>
+                <span className="sm:hidden">Script</span>
+                {hasTranscript && <Badge variant="secondary" className="ml-1 text-xs">✓</Badge>}
+              </TabsTrigger>
+              <TabsTrigger value="update" className="text-xs md:text-sm">
+                <span className="hidden sm:inline">Update Video</span>
+                <span className="sm:hidden">Update</span>
+              </TabsTrigger>
+              <TabsTrigger value="generate" className="text-xs md:text-sm">
+                <span className="hidden sm:inline">Generate Content</span>
+                <span className="sm:hidden">Generate</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-          <ScrollArea className="max-h-[calc(90vh-180px)] mt-4 pr-4">
-            <TabsContent value="overview" className="space-y-6">
+          <div className="flex-1 overflow-hidden">
+            <ScrollArea className="h-full px-6 py-4">
+            <TabsContent value="overview" className="space-y-6 mt-0">
               {/* Video Preview and Basic Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Thumbnail */}
@@ -311,7 +528,7 @@ export function YouTubeVideoModal({ open, onOpenChange, video, onVideoUpdate }: 
               )}
             </TabsContent>
 
-            <TabsContent value="description" className="space-y-4">
+            <TabsContent value="description" className="space-y-4 mt-0">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <FileText className="h-5 w-5" />
@@ -336,7 +553,7 @@ export function YouTubeVideoModal({ open, onOpenChange, video, onVideoUpdate }: 
               </div>
             </TabsContent>
 
-            <TabsContent value="transcript" className="space-y-4">
+            <TabsContent value="transcript" className="space-y-4 mt-0">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <FileText className="h-5 w-5" />
@@ -379,7 +596,7 @@ export function YouTubeVideoModal({ open, onOpenChange, video, onVideoUpdate }: 
 
 
               {/* Transcript Content */}
-              <div className="bg-gray-50 rounded-lg p-4 min-h-[400px] max-h-[600px] overflow-y-auto border">
+              <div className="bg-gray-50 rounded-lg p-4 min-h-[300px] border">
                 <div>
                   {fetchingTranscript ? (
                     <div className="flex items-center justify-center h-[200px]">
@@ -413,89 +630,240 @@ export function YouTubeVideoModal({ open, onOpenChange, video, onVideoUpdate }: 
               </div>
             </TabsContent>
 
-            <TabsContent value="technical" className="space-y-6">
+            <TabsContent value="update" className="space-y-6 mt-0">
               <div>
-                <h3 className="text-lg font-semibold mb-4">Technical Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-gray-900">Video Information</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between py-1">
-                        <span className="text-sm text-gray-600">Video ID:</span>
-                        <span className="text-sm font-mono">{video.youtubeId || video.id}</span>
-                      </div>
-                      <div className="flex justify-between py-1">
-                        <span className="text-sm text-gray-600">Channel ID:</span>
-                        <span className="text-sm font-mono">{video.channelId}</span>
-                      </div>
-                      <div className="flex justify-between py-1">
-                        <span className="text-sm text-gray-600">Channel:</span>
-                        <span className="text-sm">{video.channelTitle}</span>
-                      </div>
-                      <div className="flex justify-between py-1">
-                        <span className="text-sm text-gray-600">Category ID:</span>
-                        <span className="text-sm">{video.categoryId || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between py-1">
-                        <span className="text-sm text-gray-600">Language:</span>
-                        <span className="text-sm">{video.defaultLanguage || 'N/A'}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-gray-900">Video Properties</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between py-1">
-                        <span className="text-sm text-gray-600">Definition:</span>
-                        <span className="text-sm">{video.definition || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between py-1">
-                        <span className="text-sm text-gray-600">Dimension:</span>
-                        <span className="text-sm">{video.dimension || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between py-1">
-                        <span className="text-sm text-gray-600">Captions:</span>
-                        <span className="text-sm">{video.caption || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between py-1">
-                        <span className="text-sm text-gray-600">Embeddable:</span>
-                        <span className="text-sm">{video.embeddable ? 'Yes' : 'No'}</span>
-                      </div>
-                      <div className="flex justify-between py-1">
-                        <span className="text-sm text-gray-600">Public Stats:</span>
-                        <span className="text-sm">{video.publicStatsViewable ? 'Yes' : 'No'}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Wand2 className="h-5 w-5" />
+                  Update Video
+                </h3>
                 
-                {/* Additional Metadata */}
-                <div className="mt-6">
-                  <h4 className="font-medium text-gray-900 mb-3">Sync Information</h4>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex justify-between py-1">
-                        <span className="text-sm text-gray-600">Upload Status:</span>
-                        <span className="text-sm">{video.uploadStatus || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between py-1">
-                        <span className="text-sm text-gray-600">License:</span>
-                        <span className="text-sm">{video.license || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between py-1">
-                        <span className="text-sm text-gray-600">Source:</span>
-                        <span className="text-sm">{video.source || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between py-1">
-                        <span className="text-sm text-gray-600">Transcript Fetched:</span>
-                        <span className="text-sm">{video.transcriptFetched ? 'Yes' : 'No'}</span>
-                      </div>
+                <div className="space-y-4">
+                  {/* Title */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-gray-700">Title</label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => generateMetadata('title')}
+                        disabled={isGenerating}
+                      >
+                        {isGenerating ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Wand2 className="h-4 w-4" />
+                        )}
+                      </Button>
                     </div>
+                    <Input
+                      value={updateForm.title}
+                      onChange={(e) => setUpdateForm(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="Video title"
+                      maxLength={100}
+                    />
+                    <p className="text-xs text-gray-500">{updateForm.title.length}/100 characters</p>
+                  </div>
+                  
+                  {/* Description */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-gray-700">Description</label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => generateMetadata('description')}
+                        disabled={isGenerating}
+                      >
+                        {isGenerating ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Wand2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                    <Textarea
+                      value={updateForm.description}
+                      onChange={(e) => setUpdateForm(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Video description"
+                      rows={6}
+                      maxLength={5000}
+                      className="resize-none"
+                    />
+                    <p className="text-xs text-gray-500">{updateForm.description.length}/5000 characters</p>
+                  </div>
+                  
+                  {/* Tags */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-gray-700">Tags</label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => generateMetadata('tags')}
+                        disabled={isGenerating}
+                      >
+                        {isGenerating ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Wand2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                    <Input
+                      value={updateForm.tags}
+                      onChange={(e) => setUpdateForm(prev => ({ ...prev, tags: e.target.value }))}
+                      placeholder="Comma-separated tags"
+                    />
+                    <p className="text-xs text-gray-500">Separate tags with commas</p>
+                  </div>
+                  
+                  {/* Privacy Status */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Privacy Status</label>
+                    <Select
+                      value={updateForm.privacyStatus}
+                      onValueChange={(value) => setUpdateForm(prev => ({ ...prev, privacyStatus: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="public">Public</SelectItem>
+                        <SelectItem value="private">Private</SelectItem>
+                        <SelectItem value="unlisted">Unlisted</SelectItem>
+                        <SelectItem value="members">Members Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex flex-wrap gap-2 pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={resetToOriginalValues}
+                      className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Reset
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={saveDraft}
+                      disabled={isSavingDraft}
+                    >
+                      {isSavingDraft ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
+                      Save Draft
+                    </Button>
+                    <Button
+                      onClick={updateYouTube}
+                      disabled={isUpdatingYoutube}
+                    >
+                      {isUpdatingYoutube ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4 mr-2" />
+                      )}
+                      Update YouTube
+                    </Button>
                   </div>
                 </div>
               </div>
             </TabsContent>
-          </ScrollArea>
+            
+            <TabsContent value="generate" className="space-y-6 mt-0">
+              <div>
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" />
+                  Generate Content
+                </h3>
+                
+                <div className="space-y-4">
+                  {/* Content Type Selection */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Content Type</label>
+                    <Select value={contentType} onValueChange={setContentType}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="youtube-post">
+                          <div className="flex items-center gap-2">
+                            <Youtube className="h-4 w-4" />
+                            YouTube Post
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="instagram-post">
+                          <div className="flex items-center gap-2">
+                            <Instagram className="h-4 w-4" />
+                            Instagram Post
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="blog-article">
+                          <div className="flex items-center gap-2">
+                            <BookOpen className="h-4 w-4" />
+                            Blog Article
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="email-snippet">
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4" />
+                            Email Snippet
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Generate Button */}
+                  <Button
+                    onClick={generateContent}
+                    disabled={isGeneratingContent}
+                    className="w-full"
+                  >
+                    {isGeneratingContent ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="h-4 w-4 mr-2" />
+                        Generate {contentType.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                      </>
+                    )}
+                  </Button>
+                  
+                  {/* Generated Content */}
+                  {generatedContent && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-gray-700">Generated Content</label>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyToClipboard(generatedContent, 'generated-content')}
+                        >
+                          {copiedField === 'generated-content' ? (
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-4 border">
+                        <p className="text-sm whitespace-pre-wrap">{generatedContent}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+            </ScrollArea>
+          </div>
         </Tabs>
       </DialogContent>
     </Dialog>

@@ -22,7 +22,9 @@ import {
   TrendingDown,
   Minus,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Key,
+  Shield
 } from 'lucide-react';
 import { useYouTubeVideos, useYouTubeStats, useYouTubeChannel, useYouTubeAnalytics } from '@/hooks/use-youtube-videos';
 import { YouTubeVideo } from '@/lib/firebase/youtube-videos-service';
@@ -37,10 +39,95 @@ export function YouTubeLibraryTab() {
   const [selectedPrivacy, setSelectedPrivacy] = useState<Set<string>>(new Set(['all']));
   const [isFetchingTranscripts, setIsFetchingTranscripts] = useState(false);
   const [isSearchCollapsed, setIsSearchCollapsed] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [authStatus, setAuthStatus] = useState<{
+    authenticated: boolean;
+    user?: any;
+    error?: string;
+  } | null>(null);
   const { videos, loading, error, refetch, searchVideos, isSearching, updateVideo, pagination } = useYouTubeVideos(50, true);
   const { stats, loading: statsLoading } = useYouTubeStats();
   const { channel, loading: channelLoading } = useYouTubeChannel();
   const { analytics, loading: analyticsLoading, error: analyticsError } = useYouTubeAnalytics();
+
+  // Check YouTube authentication status on component mount
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      try {
+        const response = await fetch('/api/youtube/auth/status');
+        const data = await response.json();
+        setAuthStatus(data);
+      } catch (error) {
+        console.error('Error checking auth status:', error);
+        setAuthStatus({ authenticated: false, error: 'Failed to check authentication status' });
+      }
+    };
+    
+    checkAuthStatus();
+
+    // Check if we came back from auth (URL contains youtube_auth=success)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('youtube_auth') === 'success') {
+      console.log('🔄 Detected successful YouTube auth callback, refreshing status...');
+      setTimeout(() => {
+        checkAuthStatus();
+        // Clean up the URL
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('youtube_auth');
+        window.history.replaceState({}, '', newUrl.toString());
+      }, 1000);
+    }
+
+    // Listen for focus events (when user returns to this tab)
+    const handleFocus = () => {
+      console.log('🔍 Page gained focus, checking auth status...');
+      checkAuthStatus();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
+
+  const handleAuthenticate = async () => {
+    setIsAuthenticating(true);
+    try {
+      console.log('🔐 Starting YouTube authentication...');
+      
+      // Get authentication URL
+      const response = await fetch('/api/youtube/auth/url');
+      const data = await response.json();
+      
+      if (response.ok && data.authUrl) {
+        console.log('✅ Redirecting to YouTube auth URL:', data.authUrl);
+        // Redirect to authentication URL in the same window
+        window.location.href = data.authUrl;
+      } else {
+        console.error('❌ Failed to get auth URL:', data);
+        alert(`Failed to get authentication URL: ${data.error || 'Unknown error'}`);
+        setIsAuthenticating(false);
+      }
+    } catch (error: unknown) {
+      console.error('💥 Authentication request failed:', error);
+      alert(`Authentication request failed: ${error instanceof Error ? error.message : 'Network error'}`);
+      setIsAuthenticating(false);
+    }
+  };
+
+  const handleReauthenticate = async () => {
+    // Clear current authentication
+    try {
+      await fetch('/api/youtube/auth/status', { method: 'DELETE' });
+      setAuthStatus({ authenticated: false });
+    } catch (error) {
+      console.error('Error clearing auth:', error);
+    }
+    
+    // Then authenticate again
+    await handleAuthenticate();
+  };
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -611,6 +698,26 @@ export function YouTubeLibraryTab() {
               >
                 <FileText className={`h-3 w-3 mr-1 ${isFetchingTranscripts ? 'animate-pulse' : ''}`} />
                 {isFetchingTranscripts ? 'Fetching...' : `Fetch Transcripts (${transcriptStats.withoutTranscripts})`}
+              </Button>
+              
+              <Button 
+                onClick={authStatus?.authenticated ? handleReauthenticate : handleAuthenticate}
+                disabled={isAuthenticating}
+                size="sm"
+                variant="outline"
+                className={`${
+                  authStatus?.authenticated 
+                    ? 'border-green-600 text-green-600 hover:bg-green-50' 
+                    : 'border-orange-600 text-orange-600 hover:bg-orange-50'
+                }`}
+                title={authStatus?.authenticated ? 'Reauthenticate with YouTube' : 'Authenticate with YouTube'}
+              >
+                {authStatus?.authenticated ? (
+                  <Shield className={`h-3 w-3 mr-1 ${isAuthenticating ? 'animate-pulse' : ''}`} />
+                ) : (
+                  <Key className={`h-3 w-3 mr-1 ${isAuthenticating ? 'animate-pulse' : ''}`} />
+                )}
+                {isAuthenticating ? 'Authenticating...' : (authStatus?.authenticated ? 'Reauth' : 'Auth')}
               </Button>
               
               <Button 
