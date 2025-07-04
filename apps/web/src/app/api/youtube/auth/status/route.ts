@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     // Set up the YouTube service with stored tokens
     const youtubeService = getYouTubeService();
     const tokens = {
-      access_token: accessToken.value,
+      access_token: accessToken?.value || '',
       refresh_token: refreshToken?.value,
       expiry_date: tokenExpiry?.value ? parseInt(tokenExpiry.value) : undefined,
       token_type: 'Bearer',
