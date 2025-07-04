@@ -65,6 +65,9 @@ async function generateReplies(
   maxLength: z.infer<typeof RequestSchema>['maxLength']
 ) {
   // Initialize OpenAI client when actually needed
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY environment variable is not set');
+  }
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
