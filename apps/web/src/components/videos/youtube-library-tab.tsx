@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   Play, 
   Clock, 
@@ -24,11 +25,14 @@ import {
   ChevronDown,
   ChevronUp,
   Key,
-  Shield
+  Shield,
+  Link,
+  Check
 } from 'lucide-react';
 import { useYouTubeVideos, useYouTubeStats, useYouTubeChannel, useYouTubeAnalytics } from '@/hooks/use-youtube-videos';
 import { YouTubeVideo } from '@/lib/firebase/youtube-videos-service';
 import { YouTubeVideoModal } from './youtube-video-modal';
+import { useVideos } from '@/hooks/use-videos';
 
 export function YouTubeLibraryTab() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,7 +49,13 @@ export function YouTubeLibraryTab() {
     user?: any;
     error?: string;
   } | null>(null);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [selectedYouTubeVideo, setSelectedYouTubeVideo] = useState<YouTubeVideo | null>(null);
+  const [selectedMasterVideoId, setSelectedMasterVideoId] = useState<string>('');
+  const [isLinking, setIsLinking] = useState(false);
+  
   const { videos, loading, error, refetch, searchVideos, isSearching, updateVideo, pagination } = useYouTubeVideos(50, true);
+  const { videos: masterVideos, loading: masterVideosLoading } = useVideos();
   const { stats, loading: statsLoading } = useYouTubeStats();
   const { channel, loading: channelLoading } = useYouTubeChannel();
   const { analytics, loading: analyticsLoading, error: analyticsError } = useYouTubeAnalytics();
@@ -218,6 +228,46 @@ export function YouTubeLibraryTab() {
       alert(`Bulk transcript fetch failed: ${error instanceof Error ? error.message : 'Network error'}`);
     } finally {
       setIsFetchingTranscripts(false);
+    }
+  };
+
+  const handleLinkToMaster = (youtubeVideo: YouTubeVideo) => {
+    setSelectedYouTubeVideo(youtubeVideo);
+    setSelectedMasterVideoId('');
+    setLinkDialogOpen(true);
+  };
+
+  const handleConfirmLink = async () => {
+    if (!selectedYouTubeVideo || !selectedMasterVideoId) return;
+    
+    setIsLinking(true);
+    try {
+      const response = await fetch(`/api/youtube/videos/${selectedYouTubeVideo.id}/link-to-master`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ masterVideoId: selectedMasterVideoId })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Successfully linked "${selectedYouTubeVideo.title}" to master video!`);
+        
+        // Update the YouTube video to show it's linked
+        updateVideo(selectedYouTubeVideo.id, {
+          ...selectedYouTubeVideo,
+          linkedToMasterVideo: selectedMasterVideoId
+        });
+        
+        setLinkDialogOpen(false);
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to link video: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error('Error linking video:', error);
+      alert('Failed to link video. Please try again.');
+    } finally {
+      setIsLinking(false);
     }
   };
 
@@ -782,6 +832,7 @@ export function YouTubeLibraryTab() {
                     video={video} 
                     onClick={() => handleVideoClick(video)}
                     isShort={isShort(video)}
+                    onLinkToMaster={handleLinkToMaster}
                   />
                 ))}
               </div>
@@ -854,11 +905,80 @@ export function YouTubeLibraryTab() {
         video={selectedVideo}
         onVideoUpdate={updateVideo}
       />
+
+      {/* Link to Master Video Dialog */}
+      <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Link to Master Video</DialogTitle>
+            <DialogDescription>
+              Select a master video to link with "{selectedYouTubeVideo?.title}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="master-video-select" className="text-sm font-medium">
+                Master Video
+              </label>
+              <Select 
+                value={selectedMasterVideoId} 
+                onValueChange={setSelectedMasterVideoId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a master video" />
+                </SelectTrigger>
+                <SelectContent>
+                  {masterVideosLoading ? (
+                    <SelectItem value="" disabled>Loading videos...</SelectItem>
+                  ) : (
+                    masterVideos
+                      .filter(video => !video.youtubeLink && !video.linkedYouTubeVideoId)
+                      .map((video) => (
+                        <SelectItem key={video.id} value={video.id}>
+                          {video.title}
+                        </SelectItem>
+                      ))
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Only showing master videos that aren't already linked to YouTube
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLinkDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleConfirmLink}
+              disabled={!selectedMasterVideoId || isLinking}
+            >
+              {isLinking ? (
+                <>
+                  <Check className="h-4 w-4 mr-2 animate-pulse" />
+                  Linking...
+                </>
+              ) : (
+                <>
+                  <Link className="h-4 w-4 mr-2" />
+                  Link Videos
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function VideoCard({ video, onClick, isShort }: { video: YouTubeVideo; onClick: () => void; isShort?: boolean }) {
+function VideoCard({ video, onClick, isShort, onLinkToMaster }: { 
+  video: YouTubeVideo; 
+  onClick: () => void; 
+  isShort?: boolean;
+  onLinkToMaster?: (video: YouTubeVideo) => void;
+}) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -1035,6 +1155,23 @@ function VideoCard({ video, onClick, isShort }: { video: YouTubeVideo; onClick: 
                 <FileText className="h-4 w-4" />
                 {video.transcriptFetched && <span className="ml-1 text-xs">✓</span>}
               </Button>
+              
+              {/* Link to Master Video Button */}
+              {onLinkToMaster && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onLinkToMaster(video);
+                  }}
+                  title={video.linkedToMasterVideo ? "Already linked to master video" : "Link to master video"}
+                  className={video.linkedToMasterVideo ? "bg-blue-50 border-blue-200 text-blue-700" : ""}
+                >
+                  <Link className="h-4 w-4" />
+                  {video.linkedToMasterVideo && <span className="ml-1 text-xs">✓</span>}
+                </Button>
+              )}
             </div>
           </div>
         </div>

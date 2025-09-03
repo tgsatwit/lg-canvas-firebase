@@ -12,6 +12,24 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 
 import { Input } from "@/components/ui/input";
@@ -173,6 +191,7 @@ type Video = {
     files_href?: string;
     id?: string;
     link?: string;
+    tags?: string[];
   } | null;
   
   // Raw data for debugging
@@ -186,6 +205,7 @@ type Video = {
   youtubeUploadDate?: string;
   youtubeStatus?: string;
   scheduledUploadDate?: string;
+  linkedYouTubeVideoId?: string;
   vimeoTags?: string[];
   vimeoCategories?: string[];
   storageUrl?: string;
@@ -295,6 +315,8 @@ export function YouTubeTable({
         return cn(baseClasses, "bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400");
       case "not scheduled":
         return cn(baseClasses, "bg-gray-50 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400");
+      case "do not upload":
+        return cn(baseClasses, "bg-orange-50 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400");
       default:
         return cn(baseClasses, "bg-gray-50 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400");
     }
@@ -304,11 +326,18 @@ export function YouTubeTable({
     const baseClasses = "inline-flex items-center justify-center rounded-full px-2.5 py-1 text-xs font-medium";
     switch (status?.toLowerCase()) {
       case "published":
+      case "published on youtube":
         return cn(baseClasses, "bg-green-50 text-green-700 dark:bg-green-500/20 dark:text-green-400");
       case "draft":
+      case "preparing for youtube":
         return cn(baseClasses, "bg-yellow-50 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400");
       case "processing":
+      case "ready for youtube":
         return cn(baseClasses, "bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400");
+      case "scheduled for youtube":
+        return cn(baseClasses, "bg-purple-50 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400");
+      case "do not upload":
+        return cn(baseClasses, "bg-orange-50 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400");
       default:
         return cn(baseClasses, "bg-gray-50 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400");
     }
@@ -343,6 +372,8 @@ export function YouTubeTable({
     // Primary logic: Use youtubeStatus field (matching modal logic)
     if (youtubeStatus === 'published on youtube' || hasYoutubeLink) {
       return "Uploaded";
+    } else if (youtubeStatus === 'do not upload') {
+      return "Do Not Upload";
     } else if (youtubeStatus === 'scheduled for youtube' || hasUploadScheduled) {
       return "Scheduled";
     } else if (youtubeStatus === 'ready for youtube') {
@@ -855,6 +886,33 @@ export function YouTubeTable({
             </div>
           </div>
 
+          {/* Bulk Actions */}
+          {table.getSelectedRowModel().rows.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <span>{table.getSelectedRowModel().rows.length} videos selected</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <BulkConfirmDetailsDropdown 
+                    selectedVideos={table.getSelectedRowModel().rows.map(row => row.original)}
+                    onConfirmDetails={() => {
+                      table.toggleAllPageRowsSelected(false);
+                      window.location.reload(); // Refresh the data
+                    }}
+                  />
+                  <BulkStatusUpdateDropdown 
+                    selectedVideos={table.getSelectedRowModel().rows.map(row => row.original)}
+                    onStatusUpdate={() => {
+                      table.toggleAllPageRowsSelected(false);
+                      window.location.reload(); // Refresh the data
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Filter Summary */}
           {columnFilters.length > 0 && (
             <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-800">
@@ -1047,5 +1105,254 @@ export function YouTubeTable({
         </div>
       </div>
     </div>
+  );
+}
+
+// Bulk Confirm Details Component
+interface BulkConfirmDetailsDropdownProps {
+  selectedVideos: Video[];
+  onConfirmDetails: () => void;
+}
+
+function BulkConfirmDetailsDropdown({ selectedVideos, onConfirmDetails }: BulkConfirmDetailsDropdownProps) {
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [globalSettings, setGlobalSettings] = useState({
+    yt_title: '',
+    yt_description: '',
+    yt_tags: [] as string[],
+    yt_privacyStatus: 'private',
+    yt_category: '26'
+  });
+  const [useOttTags, setUseOttTags] = useState(false);
+  const [tagsInput, setTagsInput] = useState('');
+
+  const handleConfirmDetails = async () => {
+    if (selectedVideos.length === 0) return;
+
+    setIsConfirming(true);
+    try {
+      const videoIds = selectedVideos.map(video => video.id);
+      
+      // Prepare the request body
+      const requestBody: any = {
+        videoIds,
+        useOttTags
+      };
+
+      // Only include global settings if they're provided
+      if (globalSettings.yt_title || globalSettings.yt_description || tagsInput || globalSettings.yt_privacyStatus !== 'private') {
+        requestBody.globalSettings = {
+          ...globalSettings,
+          yt_tags: tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(Boolean) : []
+        };
+      }
+
+      const response = await fetch('/api/videos/bulk-confirm-details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Successfully confirmed details for ${result.summary.successful} videos!\n` +
+              `Failed: ${result.summary.failed}`);
+        setIsDialogOpen(false);
+        onConfirmDetails();
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to confirm details: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error('Error confirming details:', error);
+      alert('Failed to confirm details. Please try again.');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  // Check if any selected video has OTT tags
+  const hasOttTags = selectedVideos.some(video => 
+    video.vimeoOttMetadata?.tags && video.vimeoOttMetadata.tags.length > 0
+  );
+
+  return (
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          Confirm Details ({selectedVideos.length})
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Bulk Confirm YouTube Details</DialogTitle>
+          <DialogDescription>
+            Confirm YouTube details for {selectedVideos.length} selected videos. Leave fields empty to use individual video data.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4 py-4">
+          {/* Copy OTT Tags Option */}
+          {hasOttTags && (
+            <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg">
+              <Checkbox
+                id="use-ott-tags"
+                checked={useOttTags}
+                onCheckedChange={(checked) => setUseOttTags(checked as boolean)}
+              />
+              <Label htmlFor="use-ott-tags" className="text-sm font-medium">
+                Copy YouTube tags from OTT metadata
+              </Label>
+            </div>
+          )}
+
+          {/* Global Title */}
+          <div className="space-y-2">
+            <Label htmlFor="global-title" className="text-sm font-medium">
+              Global Title (optional)
+            </Label>
+            <Input
+              id="global-title"
+              placeholder="Leave empty to use individual video titles"
+              value={globalSettings.yt_title}
+              onChange={(e) => setGlobalSettings(prev => ({ ...prev, yt_title: e.target.value }))}
+            />
+          </div>
+
+          {/* Global Description */}
+          <div className="space-y-2">
+            <Label htmlFor="global-description" className="text-sm font-medium">
+              Global Description (optional)
+            </Label>
+            <Textarea
+              id="global-description"
+              placeholder="Leave empty to use individual video descriptions"
+              value={globalSettings.yt_description}
+              onChange={(e) => setGlobalSettings(prev => ({ ...prev, yt_description: e.target.value }))}
+              rows={3}
+            />
+          </div>
+
+          {/* Global Tags */}
+          {!useOttTags && (
+            <div className="space-y-2">
+              <Label htmlFor="global-tags" className="text-sm font-medium">
+                Global Tags (optional)
+              </Label>
+              <Input
+                id="global-tags"
+                placeholder="Comma-separated tags (e.g. tutorial, howto, tips)"
+                value={tagsInput}
+                onChange={(e) => setTagsInput(e.target.value)}
+              />
+            </div>
+          )}
+
+          {/* Privacy Status */}
+          <div className="space-y-2">
+            <Label htmlFor="privacy-status" className="text-sm font-medium">
+              Privacy Status
+            </Label>
+            <Select 
+              value={globalSettings.yt_privacyStatus} 
+              onValueChange={(value) => setGlobalSettings(prev => ({ ...prev, yt_privacyStatus: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="private">Private</SelectItem>
+                <SelectItem value="unlisted">Unlisted</SelectItem>
+                <SelectItem value="public">Public</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmDetails} disabled={isConfirming}>
+            {isConfirming ? 'Confirming...' : `Confirm ${selectedVideos.length} Videos`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Bulk Status Update Component
+interface BulkStatusUpdateDropdownProps {
+  selectedVideos: Video[];
+  onStatusUpdate: () => void;
+}
+
+function BulkStatusUpdateDropdown({ selectedVideos, onStatusUpdate }: BulkStatusUpdateDropdownProps) {
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleStatusUpdate = async (status: string) => {
+    if (selectedVideos.length === 0) return;
+
+    const confirmed = confirm(`Update ${selectedVideos.length} videos to "${status}"?`);
+    if (!confirmed) return;
+
+    setIsUpdating(true);
+    try {
+      const videoIds = selectedVideos.map(video => video.id);
+      const response = await fetch('/api/videos/bulk-update-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoIds, status })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Successfully updated ${result.data.updatedCount} videos to "${status}"`);
+        onStatusUpdate();
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to update videos: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error('Error updating video statuses:', error);
+      alert('Failed to update video statuses. Please try again.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const statusOptions = [
+    { value: 'Preparing for YouTube', label: 'Preparing for YouTube', color: 'bg-yellow-50 text-yellow-700' },
+    { value: 'Ready for YouTube', label: 'Ready for YouTube', color: 'bg-blue-50 text-blue-700' },
+    { value: 'Scheduled for YouTube', label: 'Scheduled for YouTube', color: 'bg-purple-50 text-purple-700' },
+    { value: 'Published on YouTube', label: 'Published on YouTube', color: 'bg-green-50 text-green-700' },
+    { value: 'Do Not Upload', label: 'Do Not Upload', color: 'bg-orange-50 text-orange-700' },
+  ];
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" disabled={isUpdating}>
+          {isUpdating ? 'Updating...' : 'Update Status'}
+          <ChevronDown className="h-4 w-4 ml-2" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel>Update {selectedVideos.length} videos to:</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {statusOptions.map((option) => (
+          <DropdownMenuItem
+            key={option.value}
+            onClick={() => handleStatusUpdate(option.value)}
+            className="flex items-center gap-2"
+          >
+            <div className={`w-3 h-3 rounded-full ${option.color}`} />
+            {option.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 } 

@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Generate UUID using crypto API
 function uuidv4(): string {
@@ -36,8 +37,10 @@ export type Task = {
   priority: "low" | "medium" | "high";
   dueDate?: string;
   createdAt: string;
+  updatedAt: string;
   tags: TaskTag[];
   assignedTo?: string;
+  createdBy: string;
   isRecurring: boolean;
   recurringPattern?: "daily" | "weekly" | "monthly";
   subTasks: SubTask[];
@@ -85,15 +88,19 @@ const initialBoard: Board = {
 interface TaskContextType {
   board: Board;
   tags: TaskTag[];
-  createTask: (task: Omit<Task, "id" | "createdAt">) => void;
-  updateTask: (taskId: string, updates: Partial<Task>) => void;
-  deleteTask: (taskId: string) => void;
+  loading: boolean;
+  filter: "all" | "owned" | "assigned";
+  setFilter: (filter: "all" | "owned" | "assigned") => void;
+  createTask: (task: Omit<Task, "id" | "createdAt" | "updatedAt" | "createdBy">) => Promise<void>;
+  updateTask: (taskId: string, updates: Partial<Task>) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
   createSubTask: (taskId: string, title: string) => void;
   updateSubTask: (taskId: string, subTaskId: string, updates: Partial<SubTask>) => void;
   deleteSubTask: (taskId: string, subTaskId: string) => void;
   createTag: (name: string, color: string) => TaskTag;
   deleteTag: (tagId: string) => void;
-  moveTask: (taskId: string, sourceColumn: string, destinationColumn: string, newIndex: number) => void;
+  moveTask: (taskId: string, sourceColumn: string, destinationColumn: string, newIndex: number) => Promise<void>;
+  refreshTasks: () => Promise<void>;
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
@@ -129,158 +136,159 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     { id: "tag-3", name: "Enhancement", color: "bg-yellow-500" },
     { id: "tag-4", name: "Bug", color: "bg-green-500" },
   ]);
+  const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState<"all" | "owned" | "assigned">("all");
+  const { user } = useAuth();
 
-  // Load data from localStorage on component mount
+  // Helper function to get auth token
+  const getAuthToken = useCallback(async () => {
+    if (!user) throw new Error("User not authenticated");
+    return await user.getIdToken();
+  }, [user]);
+
+  // Function to fetch tasks from API
+  const fetchTasks = useCallback(async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const token = await getAuthToken();
+      const url = new URL("/api/tasks", window.location.origin);
+      url.searchParams.set("filter", filter);
+      
+      const response = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const tasks = await response.json();
+        organizeTasksIntoBoard(tasks);
+      }
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user, filter, getAuthToken]);
+
+  // Function to organize tasks into board structure
+  const organizeTasksIntoBoard = (tasks: Task[]) => {
+    const newBoard: Board = {
+      tasks: {},
+      columns: {
+        "column-1": { id: "column-1", title: "To Do", taskIds: [] },
+        "column-2": { id: "column-2", title: "In Progress", taskIds: [] },
+        "column-3": { id: "column-3", title: "Review", taskIds: [] },
+        "column-4": { id: "column-4", title: "Done", taskIds: [] },
+      },
+      columnOrder: ["column-1", "column-2", "column-3", "column-4"],
+    };
+
+    tasks.forEach((task) => {
+      newBoard.tasks[task.id] = task;
+      const columnId = statusToColumnMap[task.status];
+      newBoard.columns[columnId].taskIds.push(task.id);
+    });
+
+    setBoard(newBoard);
+  };
+
+  // Load data from API when user or filter changes
+  useEffect(() => {
+    fetchTasks();
+  }, [user, filter, fetchTasks]);
+
+  // Load tags from localStorage (keeping this local for now)
   useEffect(() => {
     try {
-      const storedBoard = localStorage.getItem("taskBoard");
       const storedTags = localStorage.getItem("taskTags");
-      
-      if (storedBoard) {
-        setBoard(JSON.parse(storedBoard));
-      }
-      
       if (storedTags) {
         setTags(JSON.parse(storedTags));
       }
     } catch (error) {
-      console.error("Error loading data from localStorage:", error);
+      console.error("Error loading tags from localStorage:", error);
     }
   }, []);
 
-  // Save data to localStorage whenever it changes
+  // Save tags to localStorage whenever they change
   useEffect(() => {
     try {
-      localStorage.setItem("taskBoard", JSON.stringify(board));
       localStorage.setItem("taskTags", JSON.stringify(tags));
     } catch (error) {
-      console.error("Error saving data to localStorage:", error);
+      console.error("Error saving tags to localStorage:", error);
     }
-  }, [board, tags]);
+  }, [tags]);
 
-  const createTask = (taskData: Omit<Task, "id" | "createdAt">) => {
-    const newTaskId = uuidv4();
-    
-    const columnId = statusToColumnMap[taskData.status];
-    
-    const newTask: Task = {
-      id: newTaskId,
-      ...taskData,
-      createdAt: new Date().toISOString(),
-    };
-    
-    setBoard((prev) => {
-      // Add task to tasks object
-      const updatedTasks = {
-        ...prev.tasks,
-        [newTaskId]: newTask,
-      };
+  const createTask = async (taskData: Omit<Task, "id" | "createdAt" | "updatedAt" | "createdBy">) => {
+    try {
+      const token = await getAuthToken();
+      const response = await fetch("/api/tasks", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(taskData),
+      });
       
-      // Add task ID to the appropriate column
-      const updatedColumn = {
-        ...prev.columns[columnId],
-        taskIds: [...prev.columns[columnId].taskIds, newTaskId],
-      };
-      
-      // Update columns object
-      const updatedColumns = {
-        ...prev.columns,
-        [columnId]: updatedColumn,
-      };
-      
-      return {
-        ...prev,
-        tasks: updatedTasks,
-        columns: updatedColumns,
-      };
-    });
-  };
-
-  const updateTask = (taskId: string, updates: Partial<Task>) => {
-    setBoard((prev) => {
-      // Update the task
-      const updatedTask = {
-        ...prev.tasks[taskId],
-        ...updates,
-      };
-      
-      // Update tasks object
-      const updatedTasks = {
-        ...prev.tasks,
-        [taskId]: updatedTask,
-      };
-      
-      // Handle status change by moving task to correct column
-      if (updates.status && updates.status !== prev.tasks[taskId].status) {
-        const oldStatus = prev.tasks[taskId].status;
-        const newStatus = updates.status;
-        
-        const sourceColumnId = statusToColumnMap[oldStatus];
-        const destinationColumnId = statusToColumnMap[newStatus];
-        
-        // Remove from source column
-        const sourceColumn = {
-          ...prev.columns[sourceColumnId],
-          taskIds: prev.columns[sourceColumnId].taskIds.filter((id) => id !== taskId),
-        };
-        
-        // Add to destination column
-        const destinationColumn = {
-          ...prev.columns[destinationColumnId],
-          taskIds: [...prev.columns[destinationColumnId].taskIds, taskId],
-        };
-        
-        // Update columns
-        const updatedColumns = {
-          ...prev.columns,
-          [sourceColumnId]: sourceColumn,
-          [destinationColumnId]: destinationColumn,
-        };
-        
-        return {
-          ...prev,
-          tasks: updatedTasks,
-          columns: updatedColumns,
-        };
+      if (response.ok) {
+        // Refresh tasks to get the updated list
+        await fetchTasks();
+      } else {
+        throw new Error("Failed to create task");
       }
-      
-      return {
-        ...prev,
-        tasks: updatedTasks,
-      };
-    });
+    } catch (error) {
+      console.error("Error creating task:", error);
+      throw error;
+    }
   };
 
-  const deleteTask = (taskId: string) => {
-    setBoard((prev) => {
-      // Find the column containing this task
-      const columnId = Object.keys(prev.columns).find((columnId) =>
-        prev.columns[columnId].taskIds.includes(taskId)
-      );
+  const updateTask = async (taskId: string, updates: Partial<Task>) => {
+    try {
+      const token = await getAuthToken();
+      const response = await fetch("/api/tasks", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ id: taskId, ...updates }),
+      });
       
-      if (!columnId) return prev;
+      if (response.ok) {
+        // Refresh tasks to get the updated list
+        await fetchTasks();
+      } else {
+        throw new Error("Failed to update task");
+      }
+    } catch (error) {
+      console.error("Error updating task:", error);
+      throw error;
+    }
+  };
+
+  const deleteTask = async (taskId: string) => {
+    try {
+      const token = await getAuthToken();
+      const response = await fetch(`/api/tasks?id=${taskId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       
-      // Create new tasks object without the deleted task
-      const { [taskId]: deletedTask, ...remainingTasks } = prev.tasks;
-      
-      // Remove task ID from the column
-      const updatedColumn = {
-        ...prev.columns[columnId],
-        taskIds: prev.columns[columnId].taskIds.filter((id) => id !== taskId),
-      };
-      
-      // Update columns object
-      const updatedColumns = {
-        ...prev.columns,
-        [columnId]: updatedColumn,
-      };
-      
-      return {
-        ...prev,
-        tasks: remainingTasks,
-        columns: updatedColumns,
-      };
-    });
+      if (response.ok) {
+        // Refresh tasks to get the updated list
+        await fetchTasks();
+      } else {
+        throw new Error("Failed to delete task");
+      }
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      throw error;
+    }
   };
 
   const createSubTask = (taskId: string, title: string) => {
@@ -395,63 +403,27 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const moveTask = (
+  const moveTask = async (
     taskId: string,
     sourceColumnId: string,
     destinationColumnId: string,
-    newIndex: number
+    _newIndex: number
   ) => {
-    setBoard((prev) => {
-      // Remove from source column
-      const sourceColumn = prev.columns[sourceColumnId];
-      const newSourceTaskIds = Array.from(sourceColumn.taskIds);
-      const sourceIndex = newSourceTaskIds.indexOf(taskId);
-      newSourceTaskIds.splice(sourceIndex, 1);
-      
-      // Add to destination column
-      const destinationColumn = prev.columns[destinationColumnId];
-      const newDestinationTaskIds = Array.from(destinationColumn.taskIds);
-      newDestinationTaskIds.splice(newIndex, 0, taskId);
-      
-      // Update columns
-      const updatedColumns = {
-        ...prev.columns,
-        [sourceColumnId]: {
-          ...sourceColumn,
-          taskIds: newSourceTaskIds,
-        },
-        [destinationColumnId]: {
-          ...destinationColumn,
-          taskIds: newDestinationTaskIds,
-        },
-      };
-      
-      // Update task status if moving between columns
-      let updatedTasks = { ...prev.tasks };
-      
-      if (sourceColumnId !== destinationColumnId) {
-        const newStatus = columnToStatusMap[destinationColumnId];
-        
-        updatedTasks = {
-          ...updatedTasks,
-          [taskId]: {
-            ...updatedTasks[taskId],
-            status: newStatus,
-          },
-        };
-      }
-      
-      return {
-        ...prev,
-        tasks: updatedTasks,
-        columns: updatedColumns,
-      };
-    });
+    // Update task status if moving between columns
+    if (sourceColumnId !== destinationColumnId) {
+      const newStatus = columnToStatusMap[destinationColumnId];
+      await updateTask(taskId, { status: newStatus });
+    }
+    // If moving within the same column, we don't need to update the server
+    // as the position doesn't affect the task data
   };
 
   const value = {
     board,
     tags,
+    loading,
+    filter,
+    setFilter,
     createTask,
     updateTask,
     deleteTask,
@@ -461,6 +433,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     createTag,
     deleteTag,
     moveTask,
+    refreshTasks: fetchTasks,
   };
 
   return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;

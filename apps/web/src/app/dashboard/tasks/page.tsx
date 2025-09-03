@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { TaskBoard } from "./components/task-board";
 import { TaskProvider } from "./context/task-context";
 import { DashboardShell } from "@/components/dashboard/shell";
+import { TaskFilters } from "./components/task-filters";
 
 
 
@@ -68,7 +69,7 @@ export default function TasksPage() {
               </div>
             </div>
 
-            {/* Search Section */}
+            {/* Search & Filters Section */}
             <div 
               className="p-6 rounded-2xl border mb-6"
               style={{
@@ -86,25 +87,31 @@ export default function TasksPage() {
                 `,
               }}
             >
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                  placeholder="Search tasks..."
-                  className="pl-12 h-12 border-0 text-base rounded-xl"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{
-                    background: `
-                      linear-gradient(135deg, 
-                        rgba(255, 255, 255, 0.3) 0%,
-                        rgba(255, 255, 255, 0.15) 100%
-                      )
-                    `,
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255, 255, 255, 0.3)',
-                    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.4)',
-                  }}
-                />
+              <div className="space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Input
+                    placeholder="Search tasks..."
+                    className="pl-12 h-12 border-0 text-base rounded-xl"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{
+                      background: `
+                        linear-gradient(135deg, 
+                          rgba(255, 255, 255, 0.3) 0%,
+                          rgba(255, 255, 255, 0.15) 100%
+                        )
+                      `,
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255, 255, 255, 0.3)',
+                      boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+                    }}
+                  />
+                </div>
+                
+                <div>
+                  <TaskFilters />
+                </div>
               </div>
             </div>
             

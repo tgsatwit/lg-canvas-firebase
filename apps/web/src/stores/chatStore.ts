@@ -47,6 +47,7 @@ interface ChatStore {
   // System Instructions
   loadUserSystemInstructions: (userId: string) => Promise<void>;
   createSystemInstruction: (userId: string, instruction: Omit<SystemInstruction, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  
 }
 
 export const useChatStore = create<ChatStore>((set, get) => ({
@@ -86,7 +87,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       userId,
       title: data.title || 'New Conversation',
       systemInstructions: data.systemInstructions || 'You are a helpful AI assistant.',
-      model: data.model || 'claude-3-5-sonnet-latest',
+      model: data.model || 'gpt-5',
       messageCount: 0,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -114,10 +115,19 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   setActiveConversation: async (id: string) => {
-    const { conversations, loadConversationMessages } = get();
+    const { conversations, loadConversationMessages, updateConversation } = get();
     const conversation = conversations[id];
     
     if (!conversation) return;
+    
+    // Update old Anthropic model names to OpenAI equivalents
+    if (conversation.model && (conversation.model.includes('claude') || conversation.model.includes('anthropic'))) {
+      try {
+        await updateConversation(id, { model: 'gpt-4o-mini' });
+      } catch (error) {
+        console.error('Failed to update conversation model:', error);
+      }
+    }
     
     set({ 
       activeConversationId: id,
@@ -392,4 +402,5 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       systemInstructions: [...state.systemInstructions, newInstruction]
     }));
   },
+
 })); 

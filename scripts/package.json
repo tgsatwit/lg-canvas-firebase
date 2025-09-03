@@ -1,0 +1,14 @@
+{
+  "name": "pbl-canvas-scripts",
+  "version": "1.0.0",
+  "description": "Utility scripts for PBL Canvas project",
+  "scripts": {
+    "export-videos": "node export-videos-master.js",
+    "test-connection": "node test-connection.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "dotenv": "^16.4.5"
+  },
+  "private": true
+} 

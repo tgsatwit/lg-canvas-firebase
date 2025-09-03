@@ -61,6 +61,7 @@ export type Video = {
     files_href?: string;
     id?: string;
     link?: string;
+    tags?: string[];
   } | null;
   
   // Raw data for debugging
@@ -69,6 +70,7 @@ export type Video = {
   // YouTube specific fields
   youtubeStatus?: string;
   youtubeLink?: string;
+  linkedYouTubeVideoId?: string;
   upload_scheduled?: string;
   upload_time?: string;
   yt_title?: string;

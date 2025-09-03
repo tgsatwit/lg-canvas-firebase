@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Mic, MicOff, Loader2, Search, Paperclip } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Send, Mic, MicOff, Loader2, Search, Paperclip, Video, Mail, Database, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface MessageInputProps {
@@ -15,6 +16,7 @@ interface MessageInputProps {
   transcript?: string;
   placeholder?: string;
   showWebSearch?: boolean;
+  onRagSearch?: (query: string, type: 'video' | 'email') => Promise<any[]>;
 }
 
 export function MessageInput({
@@ -26,8 +28,13 @@ export function MessageInput({
   transcript = '',
   placeholder = "Message PBL Chat...",
   showWebSearch = false,
+  onRagSearch,
 }: MessageInputProps) {
   const [message, setMessage] = useState('');
+  const [ragEnabled, setRagEnabled] = useState(false);
+  const [ragType, setRagType] = useState<'video' | 'email'>('video');
+  const [ragResults, setRagResults] = useState<any[]>([]);
+  const [showRagResults, setShowRagResults] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Update message when transcript changes
@@ -37,11 +44,32 @@ export function MessageInput({
     }
   }, [transcript]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim() && !disabled) {
-      onSendMessage(message.trim());
+      let enhancedMessage = message.trim();
+      
+      // If RAG is enabled, search for relevant content
+      if (ragEnabled && onRagSearch) {
+        try {
+          const results = await onRagSearch(message.trim(), ragType);
+          if (results.length > 0) {
+            const ragContext = results.map((result, index) => 
+              `[${ragType.toUpperCase()} ${index + 1}] ${result.title}: ${result.description || result.transcript?.substring(0, 200) || result.content?.substring(0, 200) || ''}`
+            ).join('\n\n');
+            
+            enhancedMessage = `${message.trim()}\n\n[CONTEXT FROM ${ragType.toUpperCase()} LIBRARY]\n${ragContext}`;
+          }
+        } catch (error) {
+          console.error('RAG search failed:', error);
+          // Continue with original message if RAG fails
+        }
+      }
+      
+      onSendMessage(enhancedMessage);
       setMessage('');
+      setShowRagResults(false);
+      setRagResults([]);
       // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
@@ -56,13 +84,28 @@ export function MessageInput({
     }
   };
 
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setMessage(e.target.value);
+  const handleTextareaChange = async (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newMessage = e.target.value;
+    setMessage(newMessage);
     
     // Auto-resize textarea
     const textarea = e.target;
     textarea.style.height = 'auto';
     textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
+    
+    // Auto-search for RAG results when typing
+    if (ragEnabled && onRagSearch && newMessage.length > 3) {
+      try {
+        const results = await onRagSearch(newMessage, ragType);
+        setRagResults(results);
+        setShowRagResults(results.length > 0);
+      } catch (error) {
+        console.error('RAG search failed:', error);
+      }
+    } else {
+      setRagResults([]);
+      setShowRagResults(false);
+    }
   };
 
   return (
@@ -81,12 +124,70 @@ export function MessageInput({
       <form onSubmit={handleSubmit} className="relative">
         <div className="relative bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 rounded-2xl shadow-lg hover:shadow-xl focus-within:border-pink-500 dark:focus-within:border-pink-400 transition-all duration-200">
           {/* Left action buttons */}
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            {/* RAG Search Toggle */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "h-9 w-9 p-0 rounded-lg transition-colors",
+                    ragEnabled 
+                      ? "text-purple-600 bg-purple-50 hover:bg-purple-100" 
+                      : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                  )}
+                  title="Search knowledge base"
+                >
+                  <Database className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuItem 
+                  onClick={() => {
+                    setRagEnabled(!ragEnabled);
+                    setRagType('video');
+                    if (!ragEnabled) setShowRagResults(false);
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <Video className="h-4 w-4" />
+                  <span>Search Video Library</span>
+                  {ragEnabled && ragType === 'video' && <div className="w-2 h-2 bg-purple-500 rounded-full ml-auto" />}
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => {
+                    setRagEnabled(!ragEnabled);
+                    setRagType('email');
+                    if (!ragEnabled) setShowRagResults(false);
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <Mail className="h-4 w-4" />
+                  <span>Search Email Archive</span>
+                  {ragEnabled && ragType === 'email' && <div className="w-2 h-2 bg-purple-500 rounded-full ml-auto" />}
+                </DropdownMenuItem>
+                {ragEnabled && (
+                  <DropdownMenuItem 
+                    onClick={() => {
+                      setRagEnabled(false);
+                      setShowRagResults(false);
+                      setRagResults([]);
+                    }}
+                    className="flex items-center gap-2 text-red-600"
+                  >
+                    <span>Disable Search</span>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="h-9 w-9 p-0 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              className="h-9 w-9 p-0 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               title="Attach file"
             >
               <Paperclip className="h-4 w-4" />
@@ -102,7 +203,7 @@ export function MessageInput({
             disabled={disabled}
             className={cn(
               "min-h-[56px] max-h-[200px] resize-none border-0 bg-transparent",
-              "pl-16 pr-24 py-4 text-base placeholder:text-gray-400 dark:placeholder:text-gray-500",
+              "pl-20 pr-24 py-4 text-base placeholder:text-gray-400 dark:placeholder:text-gray-500",
               "focus:outline-none focus:ring-0 rounded-2xl",
               "scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600"
             )}
@@ -156,6 +257,35 @@ export function MessageInput({
             </Button>
           </div>
         </div>
+        
+        {/* RAG Results Preview */}
+        {showRagResults && ragResults.length > 0 && (
+          <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+            <div className="p-3 border-b border-gray-100">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-900">
+                {ragType === 'video' ? <Video className="h-4 w-4 text-purple-500" /> : <Mail className="h-4 w-4 text-purple-500" />}
+                <span>Found {ragResults.length} relevant {ragType === 'video' ? 'videos' : 'emails'}</span>
+              </div>
+            </div>
+            <div className="max-h-48 overflow-y-auto">
+              {ragResults.slice(0, 3).map((result, index) => (
+                <div key={result.id} className="p-3 border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                  <div className="text-sm font-medium text-gray-900 mb-1">{result.title || result.subject}</div>
+                  <div className="text-xs text-gray-600 line-clamp-2">
+                    {result.description || result.content?.substring(0, 100) || result.transcript?.substring(0, 100)}...
+                  </div>
+                  {result.matchType && (
+                    <div className="mt-1">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-purple-100 text-purple-700">
+                        {result.matchType}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </form>
 
       {/* Voice transcript display */}
@@ -172,12 +302,20 @@ export function MessageInput({
 
       {/* Status text */}
       <div className="mt-3 text-xs text-gray-500 dark:text-gray-400 text-center space-y-1">
-        {showWebSearch && (
-          <div className="flex items-center justify-center gap-1">
-            <Search className="h-3 w-3" />
-            <span>Web search enabled</span>
-          </div>
-        )}
+        <div className="flex items-center justify-center gap-4">
+          {showWebSearch && (
+            <div className="flex items-center gap-1">
+              <Search className="h-3 w-3" />
+              <span>Web search enabled</span>
+            </div>
+          )}
+          {ragEnabled && (
+            <div className="flex items-center gap-1">
+              {ragType === 'video' ? <Video className="h-3 w-3" /> : <Mail className="h-3 w-3" />}
+              <span>{ragType === 'video' ? 'Video' : 'Email'} search enabled</span>
+            </div>
+          )}
+        </div>
         <div>PBL Chat can make mistakes. Check important info.</div>
       </div>
     </div>

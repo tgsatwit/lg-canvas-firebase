@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { Task, SubTask } from "../context/task-context";
 import { useTaskContext } from "../context/task-context";
 import { Calendar, Tag, Trash2, Plus, Check, AlertCircle } from "lucide-react";
+import { UserSelector } from "./user-selector";
 import {
   Dialog,
   DialogContent,
@@ -56,6 +57,7 @@ export function TaskDetailsDialog({
   const [priority, setPriority] = useState<Task["priority"]>(task.priority);
   const [dueDate, setDueDate] = useState(task.dueDate || "");
   const [selectedTags, setSelectedTags] = useState(task.tags);
+  const [assignedTo, setAssignedTo] = useState(task.assignedTo);
   const [isRecurring, setIsRecurring] = useState(task.isRecurring);
   const [recurringPattern, setRecurringPattern] = useState<RecurringPattern>(
     (task.recurringPattern as RecurringPattern) || "daily"
@@ -67,14 +69,15 @@ export function TaskDetailsDialog({
   const completedSubTasks = task.subTasks.filter((subTask) => subTask.completed).length;
   const progress = totalSubTasks > 0 ? (completedSubTasks / totalSubTasks) * 100 : 0;
   
-  const handleSaveChanges = () => {
-    updateTask(task.id, {
+  const handleSaveChanges = async () => {
+    await updateTask(task.id, {
       title,
       description,
       status,
       priority,
       dueDate: dueDate || undefined,
       tags: selectedTags,
+      assignedTo,
       isRecurring,
       recurringPattern: isRecurring ? recurringPattern : undefined,
     });
@@ -355,6 +358,27 @@ export function TaskDetailsDialog({
                         ))
                       ) : (
                         <span className="text-sm text-slate-400 italic">No tags</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                <div>
+                  <Label>Assigned To</Label>
+                  {isEditing ? (
+                    <div className="mt-1">
+                      <UserSelector
+                        selectedUserId={assignedTo}
+                        onUserSelect={setAssignedTo}
+                        placeholder="Assign to user"
+                      />
+                    </div>
+                  ) : (
+                    <div className="text-sm text-slate-700 mt-1">
+                      {task.assignedTo ? (
+                        <span>Assigned to user</span>
+                      ) : (
+                        <span className="text-slate-400 italic">Unassigned</span>
                       )}
                     </div>
                   )}

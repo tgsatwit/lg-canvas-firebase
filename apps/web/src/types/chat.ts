@@ -17,9 +17,12 @@ export interface Message {
 }
 
 export interface MessageAttachment {
+  id: string;
   name: string;
   type: string;
   size: number;
+  content: string; // base64 encoded content
+  preview?: string; // for images
   url?: string;
 }
 

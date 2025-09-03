@@ -63,6 +63,7 @@ type Video = {
     files_href?: string;
     id?: string;
     link?: string;
+    tags?: string[];
   } | null;
   
   // Raw data for debugging
@@ -76,6 +77,7 @@ type Video = {
   youtubeUploadDate?: string;
   youtubeStatus?: string;
   scheduledUploadDate?: string;
+  linkedYouTubeVideoId?: string;
   vimeoTags?: string[];
   vimeoCategories?: string[];
   storageUrl?: string;

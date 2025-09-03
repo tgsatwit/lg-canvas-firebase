@@ -3,6 +3,7 @@ import {
   doc, 
   addDoc, 
   updateDoc, 
+  setDoc,
   getDocs, 
   getDoc,
   query, 
@@ -67,8 +68,8 @@ export async function saveConversation(conversation: Conversation): Promise<void
     try {
       await updateDoc(docRef, conversationData);
     } catch (updateError) {
-      // Document doesn't exist, create it
-      await addDoc(collection(chatDb, CONVERSATIONS_COLLECTION), {
+      // Document doesn't exist, create it with the specific ID
+      await setDoc(docRef, {
         ...conversationData,
         createdAt: serverTimestamp(),
       });
@@ -180,10 +181,35 @@ export async function saveMessage(message: Message): Promise<void> {
     
     // Save the message
     const messageRef = doc(collection(chatDb, MESSAGES_COLLECTION));
-    const messageData = {
-      ...message,
+    const messageData: any = {
+      id: message.id,
+      role: message.role,
+      content: message.content,
+      timestamp: message.timestamp,
+      conversationId: message.conversationId,
       createdAt: serverTimestamp(),
     };
+
+    // Only add optional fields if they have values (not undefined)
+    if (message.attachments !== undefined) {
+      messageData.attachments = message.attachments;
+    }
+    if (message.isStreaming !== undefined) {
+      messageData.isStreaming = message.isStreaming;
+    }
+    if (message.error !== undefined) {
+      messageData.error = message.error;
+    }
+    if (message.audioUrl !== undefined) {
+      messageData.audioUrl = message.audioUrl;
+    }
+    if (message.parentMessageId !== undefined) {
+      messageData.parentMessageId = message.parentMessageId;
+    }
+    if (message.metadata !== undefined) {
+      messageData.metadata = message.metadata;
+    }
+
     batch.set(messageRef, messageData);
     
     // Update conversation metadata

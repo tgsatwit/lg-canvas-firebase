@@ -100,7 +100,7 @@ export class TranscriptService {
       }
 
       // Find the best caption track (prefer English, then auto-generated)
-      let selectedCaption = captions.find(caption => 
+      const selectedCaption = captions.find(caption => 
         caption.snippet?.language === 'en' && caption.snippet?.trackKind === 'standard'
       ) || captions.find(caption => 
         caption.snippet?.language === 'en'
@@ -210,7 +210,7 @@ export class TranscriptService {
       for (const item of transcriptItems) {
         if (item.text) {
           // Clean up the text
-          let cleanText = item.text
+          const cleanText = item.text
             .replace(/<[^>]*>/g, '') // Remove HTML tags
             .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
             .replace(/&amp;/g, '&') // Replace &amp; with &

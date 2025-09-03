@@ -15,7 +15,7 @@ import {
   Youtube, X, Info, FileVideo, Clock,
   Video, Copy, Check, ExternalLink, Database, 
   ImageIcon, Tag, Calendar, PlayCircle,
-  Zap, Loader2, Upload, Edit
+  Zap, Loader2, Upload, Edit, Link
 } from "lucide-react"
 
 // Define interfaces for our metadata
@@ -159,6 +159,46 @@ const DialogTitle = React.forwardRef<
   />
 ))
 DialogTitle.displayName = DialogPrimitive.Title.displayName
+
+const DialogDescription = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Description>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Description
+    ref={ref}
+    className={cn("text-sm text-muted-foreground", className)}
+    {...props}
+  />
+))
+DialogDescription.displayName = DialogPrimitive.Description.displayName
+
+const DialogHeader = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn(
+      "flex flex-col space-y-1.5 text-center sm:text-left",
+      className
+    )}
+    {...props}
+  />
+)
+DialogHeader.displayName = "DialogHeader"
+
+const DialogFooter = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn(
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+      className
+    )}
+    {...props}
+  />
+)
+DialogFooter.displayName = "DialogFooter"
 
 interface TabData {
   id: string
@@ -1706,7 +1746,8 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
               'preparing for youtube': { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', label: 'Preparing' },
               'ready for youtube': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', label: 'Ready' },
               'scheduled for youtube': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', label: 'Scheduled' },
-              'published on youtube': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', label: 'Published' }
+              'published on youtube': { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', label: 'Published' },
+              'do not upload': { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', label: 'Do Not Upload' }
             };
             const bs = badgeStyles[status] || badgeStyles['preparing for youtube'];
             return (
@@ -1728,6 +1769,134 @@ function YouTubeTabContent({ videoData }: { videoData: VideoData }) {
           </Button>
         )}
       </div>
+      
+      {/* Special Actions Section for YouTube Management */}
+      {videoData.youtubeStatus?.toLowerCase() !== 'published on youtube' && (
+        <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="flex items-start justify-between">
+            <div>
+              <h4 className="text-sm font-medium text-gray-900">Quick Actions</h4>
+              <p className="text-xs text-gray-600 mt-1">Manage this video's YouTube status</p>
+            </div>
+            <div className="flex gap-2">
+              {/* Link Existing YouTube Video */}
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8">
+                    <Link className="h-3 w-3 mr-1" />
+                    Link YouTube Video
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Link Existing YouTube Video</DialogTitle>
+                    <DialogDescription>
+                      Enter the YouTube URL or video ID to link this video with an existing YouTube upload.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="youtube-url">YouTube URL or Video ID</Label>
+                      <Input
+                        id="youtube-url"
+                        placeholder="https://youtube.com/watch?v=... or video ID"
+                        className="col-span-3"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Example: https://youtube.com/watch?v=dQw4w9WgXcQ or dQw4w9WgXcQ
+                      </p>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => {}}>Cancel</Button>
+                    <Button 
+                      onClick={async () => {
+                        const input = (document.getElementById('youtube-url') as HTMLInputElement)?.value;
+                        if (input) {
+                          try {
+                            const response = await fetch(`/api/videos/${videoData.document_id}/link-youtube`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ youtubeUrl: input })
+                            });
+                            if (response.ok) {
+                              window.location.reload();
+                            }
+                          } catch (error) {
+                            console.error('Error linking YouTube video:', error);
+                          }
+                        }
+                      }}
+                    >
+                      Link Video
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Mark as Do Not Upload */}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 text-orange-600 border-orange-300 hover:bg-orange-50"
+                onClick={async () => {
+                  if (confirm('Mark this video as "Do Not Upload"? This will prevent it from being uploaded to YouTube.')) {
+                    try {
+                      const response = await fetch(`/api/videos/${videoData.document_id}/update-youtube-status`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'Do Not Upload' })
+                      });
+                      if (response.ok) {
+                        window.location.reload();
+                      }
+                    } catch (error) {
+                      console.error('Error updating status:', error);
+                    }
+                  }
+                }}
+              >
+                <X className="h-3 w-3 mr-1" />
+                Do Not Upload
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Show special status for Do Not Upload videos */}
+      {videoData.youtubeStatus === 'Do Not Upload' && (
+        <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+          <div className="flex items-center gap-2">
+            <X className="h-4 w-4 text-orange-600" />
+            <span className="font-medium text-orange-800">Do Not Upload</span>
+          </div>
+          <p className="text-sm text-orange-700 mt-1">
+            This video has been marked to not be uploaded to YouTube.
+          </p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="mt-3 h-7 text-xs"
+            onClick={async () => {
+              try {
+                const response = await fetch(`/api/videos/${videoData.document_id}/update-youtube-status`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ status: 'Preparing for YouTube' })
+                });
+                if (response.ok) {
+                  window.location.reload();
+                }
+              } catch (error) {
+                console.error('Error resetting status:', error);
+              }
+            }}
+          >
+            Reset Status
+          </Button>
+        </div>
+      )}
       
       <div className="space-y-4">
         <div className="space-y-2">

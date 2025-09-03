@@ -1,0 +1,162 @@
+{
+  "swarmId": "pbl-canvas-dev-swarm",
+  "sessionId": "session-pbl-canvas-2025-09-03",
+  "topology": "hierarchical",
+  "configuration": {
+    "maxAgents": 10,
+    "enableParallel": true,
+    "autoSpawn": true,
+    "memoryPersistence": true,
+    "crossSessionContext": true
+  },
+  "agents": {
+    "coordinator": {
+      "type": "hierarchical-coordinator",
+      "role": "primary",
+      "level": 0,
+      "description": "Main coordination agent for hierarchical swarm management"
+    },
+    "specialists": {
+      "frontend": {
+        "type": "coder",
+        "role": "frontend-specialist",
+        "level": 1,
+        "description": "Next.js 15, React 18, TypeScript frontend development",
+        "technologies": ["nextjs", "react", "typescript", "tailwind", "radix-ui"]
+      },
+      "backend": {
+        "type": "backend-dev",
+        "role": "backend-specialist", 
+        "level": 1,
+        "description": "API routes, Firebase integration, server-side logic",
+        "technologies": ["nextjs-api", "firebase", "firestore", "authentication"]
+      },
+      "ai-ml": {
+        "type": "ml-developer",
+        "role": "ai-specialist",
+        "level": 1,
+        "description": "LangGraph agents, OpenAI, Anthropic, conversation flows",
+        "technologies": ["langgraph", "langchain", "openai", "anthropic", "streaming"]
+      },
+      "testing": {
+        "type": "tester", 
+        "role": "qa-specialist",
+        "level": 1,
+        "description": "Test automation, quality assurance, TDD workflows",
+        "technologies": ["jest", "cypress", "testing-library", "tdd"]
+      }
+    },
+    "workers": {
+      "researcher": {
+        "type": "researcher",
+        "role": "research-worker",
+        "level": 2,
+        "description": "Code analysis, documentation research, best practices"
+      },
+      "reviewer": {
+        "type": "reviewer",
+        "role": "code-reviewer", 
+        "level": 2,
+        "description": "Code review, quality checks, optimization suggestions"
+      },
+      "optimizer": {
+        "type": "perf-analyzer",
+        "role": "performance-optimizer",
+        "level": 2,
+        "description": "Performance analysis, bundle optimization, monitoring"
+      },
+      "documentation": {
+        "type": "api-docs",
+        "role": "documentation-worker",
+        "level": 2,
+        "description": "API documentation, code comments, user guides"
+      }
+    }
+  },
+  "memoryConfiguration": {
+    "persistence": true,
+    "sessionMemory": true,
+    "sharedContext": true,
+    "memoryNamespaces": {
+      "project": "pbl-canvas-context",
+      "agents": "agent-communication",
+      "tasks": "task-coordination",
+      "performance": "performance-metrics"
+    }
+  },
+  "integrations": {
+    "langgraph": {
+      "enabled": true,
+      "port": 54367,
+      "agents": ["agent", "reflection", "thread_title", "summarizer", "web_search"],
+      "communication": "http-api"
+    },
+    "firebase": {
+      "enabled": true,
+      "services": ["firestore", "auth", "storage"],
+      "database": "pbl-backend"
+    },
+    "aiModels": {
+      "openai": true,
+      "anthropic": true,
+      "google": true,
+      "groq": true
+    }
+  },
+  "workflowPatterns": {
+    "canvas": {
+      "description": "AI-powered document/code editor with artifact generation",
+      "agents": ["ai-ml", "frontend", "backend"],
+      "coordination": "sequential"
+    },
+    "chat": {
+      "description": "Multi-model conversational AI interface",
+      "agents": ["ai-ml", "backend"],
+      "coordination": "parallel"
+    },
+    "tasks": {
+      "description": "Kanban-style project management with drag-and-drop", 
+      "agents": ["frontend", "backend", "testing"],
+      "coordination": "collaborative"
+    },
+    "videos": {
+      "description": "YouTube integration with upload scheduling and analytics",
+      "agents": ["backend", "frontend", "optimizer"],
+      "coordination": "pipeline"
+    },
+    "social": {
+      "description": "Multi-platform social media management and AI responses",
+      "agents": ["ai-ml", "backend", "researcher"],
+      "coordination": "event-driven"
+    }
+  },
+  "coordinationProtocols": {
+    "hierarchical": {
+      "levels": 3,
+      "commandChain": ["coordinator", "specialists", "workers"],
+      "decisionMaking": "top-down",
+      "communication": "broadcast-down-report-up"
+    },
+    "taskDistribution": {
+      "method": "capability-based",
+      "loadBalancing": true,
+      "prioritization": "deadline-aware"
+    },
+    "conflictResolution": {
+      "method": "coordinator-mediated",
+      "escalation": true,
+      "voting": false
+    }
+  },
+  "performance": {
+    "parallelExecution": true,
+    "resourceManagement": "dynamic",
+    "scalingStrategy": "demand-based",
+    "monitoringEnabled": true
+  },
+  "initialization": {
+    "timestamp": "2025-09-03T01:17:00.000Z",
+    "status": "configured",
+    "readyForDeployment": true
+  }
+}

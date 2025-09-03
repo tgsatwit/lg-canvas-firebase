@@ -2,7 +2,6 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { SidebarProvider, DesktopSidebar } from "@/components/ui/sidebar";
-import { SidebarToggle } from "@/components/ui/sidebar-toggle";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { Button } from "@/components/ui/button";
 import { Plus, Search, Filter, Calendar } from "lucide-react";
@@ -162,6 +161,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       };
     }
     
+    if (pathname.includes('/image-studio')) {
+      return {
+        title: 'Image Studio',
+        actions: null
+      };
+    }
+    
     // Default dashboard
     return {
       title: 'Dashboard',
@@ -178,7 +184,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <DashboardSidebar />
         </DesktopSidebar>
         <div className="flex-1 flex flex-col overflow-hidden">
-          <main className="flex-1 overflow-auto">
+          <main className="flex-1 overflow-hidden">
             {children}
           </main>
         </div>

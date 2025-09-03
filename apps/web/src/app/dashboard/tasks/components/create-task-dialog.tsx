@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Task, TaskTag } from "../context/task-context";
 import { useTaskContext } from "../context/task-context";
 import { Tag, Check } from "lucide-react";
+import { UserSelector } from "./user-selector";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +49,7 @@ export function CreateTaskDialog({
   const [priority, setPriority] = useState<Task["priority"]>("medium");
   const [dueDate, setDueDate] = useState("");
   const [selectedTags, setSelectedTags] = useState<TaskTag[]>([]);
+  const [assignedTo, setAssignedTo] = useState<string | undefined>();
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringPattern, setRecurringPattern] = useState<RecurringPattern>("weekly");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,12 +62,13 @@ export function CreateTaskDialog({
     setPriority("medium");
     setDueDate("");
     setSelectedTags([]);
+    setAssignedTo(undefined);
     setIsRecurring(false);
     setRecurringPattern("weekly");
     setErrors({});
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate form
@@ -84,13 +87,14 @@ export function CreateTaskDialog({
     setIsSubmitting(true);
     
     try {
-      createTask({
+      await createTask({
         title,
         description,
         status,
         priority,
         dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
         tags: selectedTags,
+        assignedTo,
         isRecurring,
         recurringPattern: isRecurring ? recurringPattern : undefined,
         subTasks: [],
@@ -219,6 +223,15 @@ export function CreateTaskDialog({
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
+            />
+          </div>
+          
+          <div>
+            <Label>Assign To</Label>
+            <UserSelector
+              selectedUserId={assignedTo}
+              onUserSelect={setAssignedTo}
+              placeholder="Assign to user"
             />
           </div>
           

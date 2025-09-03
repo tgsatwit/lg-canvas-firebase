@@ -239,9 +239,11 @@ export function YouTubeUploaderTab({ videos = [], loading = false, onEditVideo }
   const ORDER_STORAGE_KEY = 'youtube-upload-order';
 
   // Filter videos to show only those with "ready for YouTube" status
+  // Exclude videos marked as "Do Not Upload"
   const readyForYouTubeVideos = useMemo(() => {
     return videos.filter(video => 
-      video.youtubeStatus?.toLowerCase() === 'ready for youtube'
+      video.youtubeStatus?.toLowerCase() === 'ready for youtube' &&
+      video.youtubeStatus?.toLowerCase() !== 'do not upload'
     );
   }, [videos]);
 

@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ChatInterface, ChatSidebar } from '@/components/chat';
-import { LoadingContent } from '@/components/ui/loading-content';
 import { useToast } from '@/hooks/use-toast';
 import { useChatStore } from '@/stores/chatStore';
 
@@ -11,7 +10,7 @@ export default function ChatPage() {
   const { user, loading } = useAuth();
   const { toast } = useToast();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true); // Start collapsed and hidden
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [newConversationId, setNewConversationId] = useState<string | null>(null);
   
   const {
@@ -23,32 +22,42 @@ export default function ChatPage() {
     deleteConversation,
   } = useChatStore();
 
-  // Auto-create a new conversation when the page loads
+  // Load conversations when user is available
   useEffect(() => {
-    if (user?.uid && !activeConversationId && !newConversationId) {
+    if (user?.uid) {
       const initializeChat = async () => {
         try {
           // Load existing conversations first
           await loadConversations(user.uid);
-          
-          // Create a new conversation to start with
+        } catch (error) {
+          console.error('Failed to initialize chat:', error);
+        } finally {
+          // No loading state needed
+        }
+      };
+
+      initializeChat();
+    }
+  }, [user?.uid, loadConversations]);
+
+  // Create a new conversation if none exist after loading
+  useEffect(() => {
+    if (user?.uid && !isLoading && Object.keys(conversations).length === 0 && !newConversationId) {
+      const createInitialConversation = async () => {
+        try {
           const conversationId = await createConversation(user.uid, {
             title: 'New Chat',
           });
           setNewConversationId(conversationId);
           await setActiveConversation(conversationId);
         } catch (error) {
-          console.error('Failed to initialize chat:', error);
-        } finally {
-          setIsLoading(false);
+          console.error('Failed to create initial conversation:', error);
         }
       };
 
-      initializeChat();
-    } else if (user?.uid) {
-      loadConversations(user.uid).finally(() => setIsLoading(false));
+      createInitialConversation();
     }
-  }, [user?.uid, activeConversationId, newConversationId, loadConversations, createConversation, setActiveConversation]);
+  }, [user?.uid, isLoading, conversations, newConversationId, createConversation, setActiveConversation]);
 
   // Handle conversation deletion with proper navigation
   const handleDeleteConversation = async (conversationId: string) => {
@@ -88,59 +97,7 @@ export default function ChatPage() {
     }
   };
 
-  if (loading || isLoading) {
-    return (
-      <div 
-        className="flex h-screen items-center justify-center relative"
-        style={{
-          background: `
-            linear-gradient(135deg, 
-              rgba(148, 163, 184, 0.08) 0%,
-              rgba(203, 213, 225, 0.04) 50%,
-              rgba(148, 163, 184, 0.08) 100%
-            )
-          `,
-        }}
-      >
-        {/* Ambient background layers */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div
-            className="absolute inset-0 opacity-20"
-            style={{
-              background: `
-                radial-gradient(circle at 30% 40%, rgba(148, 163, 184, 0.12) 0%, transparent 50%),
-                radial-gradient(circle at 70% 60%, rgba(203, 213, 225, 0.12) 0%, transparent 50%),
-                radial-gradient(circle at 50% 10%, rgba(156, 163, 175, 0.08) 0%, transparent 40%)
-              `,
-            }}
-          />
-        </div>
-
-        <div 
-          className="relative z-10 p-8 rounded-2xl border"
-          style={{
-            background: `
-              linear-gradient(135deg, 
-                rgba(255, 255, 255, 0.25) 0%,
-                rgba(255, 255, 255, 0.1) 100%
-              )
-            `,
-            backdropFilter: 'blur(20px) saturate(150%)',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
-            boxShadow: `
-              0 8px 32px rgba(0, 0, 0, 0.1),
-              inset 0 1px 0 rgba(255, 255, 255, 0.4)
-            `,
-          }}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-6 h-6 bg-pink-500 rounded-full animate-pulse"></div>
-            <div className="text-gray-800 text-lg">Loading chat...</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Show the chat immediately, no loading screen needed
 
   if (!user) {
     return (
@@ -149,9 +106,9 @@ export default function ChatPage() {
         style={{
           background: `
             linear-gradient(135deg, 
-              rgba(148, 163, 184, 0.08) 0%,
-              rgba(203, 213, 225, 0.04) 50%,
-              rgba(148, 163, 184, 0.08) 100%
+              rgba(236, 72, 153, 0.08) 0%,
+              rgba(139, 92, 246, 0.04) 50%,
+              rgba(236, 72, 153, 0.08) 100%
             )
           `,
         }}
@@ -162,9 +119,9 @@ export default function ChatPage() {
             className="absolute inset-0 opacity-20"
             style={{
               background: `
-                radial-gradient(circle at 30% 40%, rgba(148, 163, 184, 0.12) 0%, transparent 50%),
-                radial-gradient(circle at 70% 60%, rgba(203, 213, 225, 0.12) 0%, transparent 50%),
-                radial-gradient(circle at 50% 10%, rgba(156, 163, 175, 0.08) 0%, transparent 40%)
+                radial-gradient(circle at 30% 40%, rgba(236, 72, 153, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 70% 60%, rgba(139, 92, 246, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 50% 10%, rgba(236, 72, 153, 0.08) 0%, transparent 40%)
               `,
             }}
           />
@@ -194,31 +151,49 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="h-full flex overflow-hidden bg-white dark:bg-gray-900">
-      {/* Chat Sidebar */}
-      <div className={`transition-all duration-300 ${sidebarCollapsed ? 'w-0' : 'w-80'} flex-shrink-0 border-r border-gray-200 dark:border-gray-700`}>
-        <div className={`h-full ${sidebarCollapsed ? 'hidden' : 'block'}`}>
-          <ChatSidebar
-            conversations={conversations}
-            activeConversationId={activeConversationId || newConversationId || ''}
-            onSelectConversation={setActiveConversation}
-            onDeleteConversation={handleDeleteConversation}
-            collapsed={sidebarCollapsed}
-            onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-            userId={user.uid}
-          />
-        </div>
-      </div>
-
+    <div className="h-full flex overflow-hidden bg-white relative">
       {/* Main Chat Area */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 relative">
         <ChatInterface
           conversationId={activeConversationId || newConversationId || ''}
           userId={user.uid}
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onNewChat={async () => {
+            if (!user?.uid) return;
+            try {
+              const conversationId = await createConversation(user.uid, {
+                title: 'New Chat',
+              });
+              setNewConversationId(conversationId);
+              await setActiveConversation(conversationId);
+            } catch (error) {
+              console.error('Failed to create new conversation:', error);
+            }
+          }}
         />
       </div>
+
+      {/* Chat Sidebar - Right Side Overlay */}
+      <div className={`absolute top-0 right-0 h-full transition-transform duration-300 ease-in-out z-50 ${sidebarCollapsed ? 'translate-x-full' : 'translate-x-0'}`}>
+        <ChatSidebar
+          conversations={conversations}
+          activeConversationId={activeConversationId || newConversationId || ''}
+          onSelectConversation={setActiveConversation}
+          onDeleteConversation={handleDeleteConversation}
+          collapsed={false}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          userId={user.uid}
+        />
+      </div>
+
+      {/* Backdrop when sidebar is open */}
+      {!sidebarCollapsed && (
+        <div 
+          className="absolute inset-0 bg-black bg-opacity-20 z-40"
+          onClick={() => setSidebarCollapsed(true)}
+        />
+      )}
     </div>
   );
 }

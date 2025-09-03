@@ -50,6 +50,9 @@ export interface YouTubeVideo {
   syncedAt: string;
   lastModified: string;
   source: string;
+  
+  // Linking metadata
+  linkedToMasterVideo?: string;
 }
 
 export interface YouTubeChannel {

@@ -18,12 +18,21 @@ export interface ServerUser {
 export async function getServerUser(): Promise<ServerUser | null> {
   try {
     console.log('🔍 Starting server-side authentication check...');
+    console.log('🌍 Environment check - FIREBASE_SERVICE_ACCOUNT_JSON exists:', !!process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
     
     const cookieStore = await cookies();
+    console.log('🍪 Cookie store created successfully');
+    
     const sessionCookie = cookieStore.get('__session');
     
     console.log('🍪 Session cookie exists:', !!sessionCookie?.value);
-    console.log('🍪 Cookie value preview:', sessionCookie?.value?.substring(0, 50) + '...');
+    if (sessionCookie?.value) {
+      console.log('🍪 Cookie value preview:', sessionCookie.value.substring(0, 50) + '...');
+    }
+    
+    // Also check for other potential cookie names
+    const allCookies = Array.from(cookieStore.getAll()).map(c => ({ name: c.name, hasValue: !!c.value }));
+    console.log('🍪 All cookies available:', allCookies);
     
     if (!sessionCookie?.value) {
       console.log('❌ No session cookie found');
@@ -34,25 +43,32 @@ export async function getServerUser(): Promise<ServerUser | null> {
     console.log('🔥 Firebase Admin Auth initialized:', !!auth);
     
     if (!auth) {
+      console.log('❌ Firebase Admin Auth is null - initialization failed');
       logger.error('Firebase Admin Auth not initialized');
       return null;
     }
 
     console.log('🔐 Attempting to verify session cookie...');
     
-    // Verify the session cookie
-    const decodedClaims = await auth.verifySessionCookie(sessionCookie.value, true);
+    try {
+      // Verify the session cookie
+      const decodedClaims = await auth.verifySessionCookie(sessionCookie.value, true);
+      
+      console.log('✅ Session verified successfully for user:', decodedClaims.uid);
+      console.log('📧 User email:', decodedClaims.email);
     
-    console.log('✅ Session verified successfully for user:', decodedClaims.uid);
-    
-    return {
-      uid: decodedClaims.uid,
-      email: decodedClaims.email,
-      displayName: decodedClaims.name,
-      photoURL: decodedClaims.picture,
-    };
+      return {
+        uid: decodedClaims.uid,
+        email: decodedClaims.email,
+        displayName: decodedClaims.name,
+        photoURL: decodedClaims.picture,
+      };
+    } catch (verifyError) {
+      console.error('❌ Session cookie verification failed:', verifyError);
+      return null;
+    }
   } catch (error) {
-    console.error('❌ Session verification failed:', error);
+    console.error('❌ Overall authentication error:', error);
     logger.error('Error verifying session:', { error });
     return null;
   }

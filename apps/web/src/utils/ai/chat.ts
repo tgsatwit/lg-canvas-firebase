@@ -17,7 +17,7 @@ export async function generateChatResponse({
   onComplete,
   userId,
   reflections = [],
-  model = 'claude-3-5-sonnet-latest'
+  model = 'gpt-4o-mini'
 }: GenerateChatResponseParams) {
   try {
     // Build enhanced system instructions with reflections
@@ -82,6 +82,7 @@ export async function generateChatResponse({
     onComplete(fullContent);
   } catch (error) {
     console.error('Error generating chat response:', error);
+    console.error('This might be an authentication issue - make sure you are logged in');
     throw error;
   }
 }
@@ -124,5 +125,6 @@ function formatMessagesForAPI(messages: Message[]) {
     role: msg.role,
     content: msg.content,
     timestamp: msg.timestamp,
+    ...(msg.attachments && { attachments: msg.attachments }),
   }));
 } 

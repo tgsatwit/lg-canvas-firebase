@@ -1,0 +1,176 @@
+{
+  "memorySystem": {
+    "version": "2.0",
+    "swarmId": "pbl-canvas-dev-swarm",
+    "persistence": {
+      "enabled": true,
+      "storage": "local-file-system",
+      "backupInterval": "15min",
+      "retentionPeriod": "30days"
+    }
+  },
+  "memoryNamespaces": {
+    "project-context": {
+      "namespace": "pbl-canvas-context",
+      "description": "Global project knowledge and context",
+      "accessLevel": "all-agents",
+      "persistence": "permanent",
+      "schema": {
+        "architecture": "object",
+        "dependencies": "array",
+        "configurations": "object",
+        "codebase-structure": "object",
+        "recent-changes": "array"
+      }
+    },
+    "agent-communication": {
+      "namespace": "agent-communication", 
+      "description": "Inter-agent messaging and coordination",
+      "accessLevel": "authenticated-agents",
+      "persistence": "session",
+      "schema": {
+        "messageQueue": "array",
+        "taskAssignments": "object",
+        "statusUpdates": "array",
+        "conflictResolution": "object"
+      }
+    },
+    "task-coordination": {
+      "namespace": "task-coordination",
+      "description": "Task status, dependencies, and workflow state",
+      "accessLevel": "coordinator-specialists",
+      "persistence": "permanent",
+      "schema": {
+        "activeTasks": "array",
+        "completedTasks": "array",
+        "taskDependencies": "object",
+        "workflowStates": "object",
+        "resourceAllocations": "object"
+      }
+    },
+    "performance-metrics": {
+      "namespace": "performance-metrics",
+      "description": "Performance data and optimization insights",
+      "accessLevel": "coordinator-optimizer",
+      "persistence": "analytics",
+      "schema": {
+        "taskCompletionTimes": "array",
+        "agentUtilization": "object", 
+        "communicationOverhead": "object",
+        "bottleneckAnalysis": "object",
+        "optimizationSuggestions": "array"
+      }
+    },
+    "langgraph-integration": {
+      "namespace": "langgraph-context",
+      "description": "LangGraph agent system integration context",
+      "accessLevel": "ai-specialists",
+      "persistence": "session",
+      "schema": {
+        "availableAgents": "array",
+        "agentCapabilities": "object",
+        "conversationContexts": "object",
+        "streamingStates": "object"
+      }
+    }
+  },
+  "memoryOperations": {
+    "store": {
+      "method": "atomic-write",
+      "validation": "schema-based",
+      "conflict-resolution": "timestamp-priority",
+      "encryption": "agent-scoped"
+    },
+    "retrieve": {
+      "method": "indexed-lookup",
+      "caching": "intelligent",
+      "permissions": "role-based",
+      "filtering": "namespace-scoped"
+    },
+    "sync": {
+      "method": "event-driven",
+      "frequency": "real-time",
+      "consistency": "eventual",
+      "conflict-detection": "vector-clock"
+    }
+  },
+  "crossSessionContext": {
+    "enabled": true,
+    "restoration": {
+      "automatic": true,
+      "selective": "context-relevant",
+      "validation": "integrity-check"
+    },
+    "contextItems": [
+      "project-architecture",
+      "active-development-goals", 
+      "recent-code-changes",
+      "agent-specializations",
+      "workflow-patterns",
+      "performance-baselines",
+      "integration-configurations"
+    ]
+  },
+  "memorySharing": {
+    "betweenAgents": {
+      "method": "publish-subscribe",
+      "channels": [
+        "task-updates",
+        "code-changes", 
+        "performance-alerts",
+        "coordination-requests"
+      ],
+      "filtering": "subscription-based"
+    },
+    "withLangGraph": {
+      "enabled": true,
+      "protocol": "http-api",
+      "endpoint": "http://localhost:54367/memory",
+      "authentication": "api-key",
+      "sync-frequency": "on-demand"
+    }
+  },
+  "dataRetention": {
+    "policies": {
+      "project-context": "permanent",
+      "task-coordination": "6-months",
+      "agent-communication": "30-days",
+      "performance-metrics": "90-days",
+      "langgraph-integration": "session-only"
+    },
+    "cleanup": {
+      "automated": true,
+      "schedule": "daily-midnight",
+      "archival": "compressed-storage"
+    }
+  },
+  "security": {
+    "access-control": {
+      "authentication": "cryptographic-keys",
+      "authorization": "role-based",
+      "audit-logging": "complete"
+    },
+    "encryption": {
+      "at-rest": "AES-256",
+      "in-transit": "TLS-1.3",
+      "key-management": "agent-scoped"
+    },
+    "privacy": {
+      "data-minimization": true,
+      "anonymization": "when-possible",
+      "retention-compliance": "automated"
+    }
+  },
+  "monitoring": {
+    "health-checks": {
+      "frequency": "30-seconds",
+      "metrics": ["availability", "latency", "consistency"],
+      "alerting": "threshold-based"
+    },
+    "performance": {
+      "tracking": ["memory-usage", "query-latency", "sync-overhead"],
+      "optimization": "automatic-tuning",
+      "reporting": "periodic-summaries"
+    }
+  }
+}

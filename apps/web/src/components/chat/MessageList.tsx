@@ -59,8 +59,8 @@ export function MessageList({
   }
 
   return (
-    <ScrollArea className="h-full">
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+    <div className="flex-1 overflow-y-auto">
+      <div className="max-w-4xl mx-auto px-6 py-6 space-y-4">
         {messages.map((message) => (
           <MessageItem
             key={message.id}
@@ -73,7 +73,7 @@ export function MessageList({
           />
         ))}
       </div>
-    </ScrollArea>
+    </div>
   );
 }
 
@@ -95,169 +95,167 @@ function MessageItem({
 }: MessageItemProps) {
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
-  const isSystem = message.role === 'system';
 
-  return (
-    <div className={cn(
-      "group",
-      isAssistant && "bg-gray-50 dark:bg-gray-800/50"
-    )}>
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="flex gap-4 items-start">
-          {/* Modern Avatar */}
+  if (isUser) {
+    // User messages on the left
+    return (
+      <div className="group w-full flex justify-start">
+        <div className="flex gap-3 items-start max-w-2xl">
+          {/* Avatar */}
           <div className="flex-shrink-0">
-            <div className={cn(
-              "w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm",
-              isUser && "bg-gray-500 dark:bg-gray-600",
-              isAssistant && "bg-pink-500",
-              isSystem && "bg-gray-500"
-            )}>
-              {isUser && <User className="h-4 w-4" />}
-              {isAssistant && <Bot className="h-4 w-4" />}
-              {isSystem && "S"}
+            <div className="w-8 h-8 rounded-full bg-gray-500 flex items-center justify-center text-white">
+              <User className="h-4 w-4" />
             </div>
           </div>
 
           {/* Message Content */}
-          <div className="flex-1 space-y-2">
-            {/* Role Label */}
-            <div className={cn(
-              "text-sm font-semibold",
-              isUser && "text-gray-900 dark:text-white",
-              isAssistant && "text-gray-900 dark:text-white",
-              isSystem && "text-gray-600 dark:text-gray-400"
-            )}>
-              {isUser && "You"}
-              {isAssistant && "PBL Chat"}
-              {isSystem && "System"}
-            </div>
+          <div className="space-y-1">
+            {/* Author Name */}
+            <div className="text-sm font-semibold text-gray-900">You</div>
 
-            {/* Message Content */}
-            <div className="prose prose-gray dark:prose-invert max-w-none">
-              {isAssistant ? (
-                <ReactMarkdown
-                  components={{
-                    p: ({ children }) => (
-                      <p className="mb-4 last:mb-0 text-gray-900 dark:text-gray-100 leading-relaxed">
-                        {children}
-                      </p>
-                    ),
-                    code: ({ children, className }) => {
-                      const isInline = !className;
-                      return isInline ? (
-                        <code className="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm font-mono text-gray-900 dark:text-gray-100">
-                          {children}
-                        </code>
-                      ) : (
-                        <div className="my-4 bg-gray-900 dark:bg-black rounded-lg overflow-hidden">
-                          <pre className="p-4 overflow-x-auto">
-                            <code className="text-sm font-mono text-gray-100">{children}</code>
-                          </pre>
-                        </div>
-                      );
-                    },
-                    ul: ({ children }) => <ul className="list-disc list-inside space-y-1 mb-4 text-gray-900 dark:text-gray-100">{children}</ul>,
-                    ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 mb-4 text-gray-900 dark:text-gray-100">{children}</ol>,
-                    li: ({ children }) => <li className="text-gray-900 dark:text-gray-100">{children}</li>,
-                    h1: ({ children }) => <h1 className="text-xl font-semibold mb-3 text-gray-900 dark:text-white">{children}</h1>,
-                    h2: ({ children }) => <h2 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">{children}</h2>,
-                    h3: ({ children }) => <h3 className="text-base font-semibold mb-2 text-gray-900 dark:text-white">{children}</h3>,
-                  }}
-                >
-                  {message.content}
-                </ReactMarkdown>
-              ) : (
-                <p className="text-gray-900 dark:text-gray-100 leading-relaxed whitespace-pre-wrap">
-                  {message.content}
-                </p>
-              )}
+            {/* Message Bubble */}
+            <div className="relative p-4 rounded-2xl bg-gray-100 text-gray-900">
+              <p className="text-gray-900 leading-relaxed whitespace-pre-wrap text-sm">
+                {message.content}
+              </p>
             </div>
-
-            {/* Status indicators */}
-            {message.isStreaming && (
-              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Generating response...</span>
-              </div>
-            )}
-            
-            {message.error && (
-              <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
-                <AlertCircle className="h-4 w-4" />
-                <span>Error generating response</span>
-              </div>
-            )}
 
             {/* Message Actions */}
-            {!message.isStreaming && message.content && (
+            {message.content && (
               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => onCopy(message.content)}
-                  className="h-8 px-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg"
+                  className="h-7 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg text-xs"
                   title="Copy message"
                 >
                   <Copy className="h-3 w-3" />
                 </Button>
-                
-                {speechSupported && isAssistant && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onSpeak(message.content)}
-                    className="h-8 px-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg"
-                    title="Read aloud"
-                  >
-                    <Volume2 className="h-3 w-3" />
-                  </Button>
-                )}
-
-                {onRegenerate && isAssistant && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onRegenerate(message.id)}
-                    className="h-8 px-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg"
-                    title="Regenerate response"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                  </Button>
-                )}
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg"
-                  title="Like"
-                >
-                  <ThumbsUp className="h-3 w-3" />
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg"
-                  title="Dislike"
-                >
-                  <ThumbsDown className="h-3 w-3" />
-                </Button>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg"
-                  title="Share"
-                >
-                  <Share className="h-3 w-3" />
-                </Button>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-            {/* Timestamp */}
-            <div className="text-xs text-gray-500 dark:text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-              {new Date(message.timestamp).toLocaleTimeString()}
+  // Assistant messages on the right
+  return (
+    <div className="group w-full flex justify-end">
+      <div className="flex gap-3 items-start max-w-2xl">
+        {/* Message Content */}
+        <div className="space-y-1">
+          {/* Author Name */}
+          <div className="text-sm font-semibold text-gray-900 text-right">PBL Chat</div>
+
+          {/* Message Bubble */}
+          <div className="relative p-4 rounded-2xl bg-white border border-gray-200 text-gray-900">
+            {/* Message Content */}
+            <div className="prose prose-gray max-w-none text-sm">
+              <ReactMarkdown
+                components={{
+                  p: ({ children }) => (
+                    <p className="mb-3 last:mb-0 text-gray-900 leading-relaxed">
+                      {children}
+                    </p>
+                  ),
+                  code: ({ children, className }) => {
+                    const isInline = !className;
+                    return isInline ? (
+                      <code className="bg-gray-200 px-1.5 py-0.5 rounded text-xs font-mono text-gray-900">
+                        {children}
+                      </code>
+                    ) : (
+                      <div className="my-3 bg-gray-900 rounded-lg overflow-hidden">
+                        <pre className="p-3 overflow-x-auto">
+                          <code className="text-xs font-mono text-gray-100">{children}</code>
+                        </pre>
+                      </div>
+                    );
+                  },
+                  ul: ({ children }) => <ul className="list-disc list-inside space-y-1 mb-3 text-gray-900">{children}</ul>,
+                  ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 mb-3 text-gray-900">{children}</ol>,
+                  li: ({ children }) => <li className="text-gray-900">{children}</li>,
+                  h1: ({ children }) => <h1 className="text-lg font-semibold mb-2 text-gray-900">{children}</h1>,
+                  h2: ({ children }) => <h2 className="text-base font-semibold mb-2 text-gray-900">{children}</h2>,
+                  h3: ({ children }) => <h3 className="text-sm font-semibold mb-2 text-gray-900">{children}</h3>,
+                }}
+              >
+                {message.content}
+              </ReactMarkdown>
             </div>
+
+            {/* Status indicators */}
+            {message.isStreaming && (
+              <div className="flex items-center gap-2 text-sm text-gray-500 mt-3">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span className="text-xs">Generating response...</span>
+              </div>
+            )}
+            
+            {message.error && (
+              <div className="flex items-center gap-2 text-sm text-red-600 mt-3">
+                <AlertCircle className="h-3 w-3" />
+                <span className="text-xs">Error generating response</span>
+              </div>
+            )}
+          </div>
+
+          {/* Message Actions */}
+          {!message.isStreaming && message.content && (
+            <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onCopy(message.content)}
+                className="h-7 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg text-xs"
+                title="Copy message"
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+              
+              {speechSupported && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onSpeak(message.content)}
+                  className="h-7 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg text-xs"
+                  title="Read aloud"
+                >
+                  <Volume2 className="h-3 w-3" />
+                </Button>
+              )}
+
+              {onRegenerate && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onRegenerate(message.id)}
+                  className="h-7 px-2 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded-lg text-xs"
+                  title="Regenerate response"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Avatar */}
+        <div className="flex-shrink-0">
+          <div 
+            className="w-8 h-8 rounded-full flex items-center justify-center"
+            style={{
+              background: `
+                linear-gradient(135deg, 
+                  rgba(236, 72, 153, 0.9) 0%,
+                  rgba(139, 92, 246, 0.9) 100%
+                )
+              `
+            }}
+          >
+            <Bot className="h-4 w-4 text-white" />
           </div>
         </div>
       </div>
