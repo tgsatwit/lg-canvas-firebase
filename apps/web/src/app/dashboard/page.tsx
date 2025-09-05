@@ -72,7 +72,8 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50">
-      <div className="w-full max-w-none">
+      <div className="p-6">
+        <div className="w-full max-w-none">
         {/* Header Section */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
@@ -483,6 +484,7 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>

@@ -15,6 +15,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/auth") || // Allow Firebase auth API routes
     pathname.startsWith("/api/youtube") || // Allow YouTube API routes (they handle their own auth)
     pathname.startsWith("/api/chat") || // Allow chat API route (handles its own auth)
+    pathname.startsWith("/api/vimeo-ott") || // Allow Vimeo OTT API routes
     (pathname.startsWith("/api/debug") && process.env.NODE_ENV === 'development') || // Allow debug endpoints in development
     (pathname.startsWith("/debug") && process.env.NODE_ENV === 'development') // Allow debug pages in development
   ) {

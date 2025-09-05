@@ -1,12 +1,5 @@
-"use client";
-
-import { UserProvider } from "@/contexts/UserContext";
-import { SignupSuccess } from "@/components/auth/signup/success";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return (
-    <UserProvider>
-      <SignupSuccess />
-    </UserProvider>
-  );
+  redirect("/auth/login");
 }

@@ -1,7 +1,7 @@
 import { UserAuthForm } from "./user-auth-form-login";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import Image from "next/image";
+import NextImage from "next/image";
 
 export function Login() {
   const [isError, setIsError] = useState(false);
@@ -40,98 +40,82 @@ export function Login() {
   };
 
   return (
-    <div className="flex h-screen relative overflow-hidden">
-      {/* Enhanced background with Liquid Glass inspiration */}
-      <div className="absolute inset-0">
-        {/* Primary gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-pink-900 via-purple-900 to-indigo-900" />
-        
-        {/* Liquid Glass ambient layers */}
-        <div
+    <div className="flex h-screen bg-gray-50">
+      {/* Left Panel - Firebase Studio Style */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+        {/* Gradient Background */}
+        <div 
           className="absolute inset-0"
           style={{
             background: `
-              radial-gradient(circle at 20% 20%, rgba(236, 72, 153, 0.4) 0%, transparent 50%),
-              radial-gradient(circle at 80% 80%, rgba(147, 51, 234, 0.4) 0%, transparent 50%),
-              radial-gradient(circle at 40% 70%, rgba(219, 39, 119, 0.3) 0%, transparent 50%)
+              linear-gradient(135deg, 
+                rgba(236, 72, 153, 1) 0%,
+                rgba(139, 92, 246, 1) 100%
+              )
             `,
           }}
         />
         
-        {/* Subtle grid pattern for depth */}
+        {/* Pattern Overlay */}
         <div
-          className="absolute inset-0 opacity-20"
+          className="absolute inset-0 opacity-10"
           style={{
             backgroundImage: `
-              linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
+              repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 35px,
+                rgba(255,255,255,.1) 35px,
+                rgba(255,255,255,.1) 70px
+              )
             `,
-            backgroundSize: '60px 60px',
           }}
         />
+        
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-center items-center w-full p-12 text-white">
+          <div className="max-w-md">
+            {/* Logo/Brand */}
+            <div className="mb-8">
+              <div className="w-16 h-16 rounded-2xl backdrop-blur-sm flex items-center justify-center mb-6 overflow-hidden">
+                <NextImage src="/Sqr_logo.png" alt="Logo" width={64} height={64} className="rounded-2xl" />
+              </div>
+              <h1 className="text-4xl font-bold mb-3">Welcome back</h1>
+              <p className="text-white/80 text-lg">
+                Sign in to continue to your AI-powered educational platform
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
       
-      {/* Liquid Glass login container */}
-      <div className="w-full flex flex-col justify-center items-center p-8 relative z-10">
-        <div className="w-full max-w-lg relative">
-          {/* Outer glow effect */}
-          <div 
-            className="absolute inset-0 rounded-3xl opacity-60 blur-xl"
-            style={{
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05))',
-            }}
-          />
+      {/* Right Panel - Login Form */}
+      <div className="flex-1 flex flex-col justify-center items-center p-8 lg:p-12">
+        <div className="w-full max-w-md">
+          {/* Mobile Logo */}
+          <div className="lg:hidden mb-8 text-center">
+            <div className="w-16 h-16 rounded-2xl mx-auto mb-4 overflow-hidden">
+              <NextImage src="/Sqr_logo.png" alt="Logo" width={64} height={64} className="rounded-2xl" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
+            <p className="text-gray-600 mt-1">Sign in to your account</p>
+          </div>
           
-          {/* Main Liquid Glass container */}
-          <div 
-            className="relative rounded-3xl px-12 py-12 mx-auto flex flex-col gap-6 border shadow-2xl" 
-            style={{ 
-              background: `
-                linear-gradient(135deg, 
-                  rgba(255, 255, 255, 0.25) 0%,
-                  rgba(255, 255, 255, 0.1) 50%,
-                  rgba(255, 255, 255, 0.05) 100%
-                )
-              `,
-              backdropFilter: 'blur(20px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-              boxShadow: `
-                0 8px 32px rgba(0, 0, 0, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.4),
-                inset 0 -1px 0 rgba(255, 255, 255, 0.1)
-              `,
-            }}>
+          {/* Desktop Header */}
+          <div className="hidden lg:block mb-8">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Sign in</h2>
+            <p className="text-gray-600">to continue to PBL.ai</p>
+          </div>
+          
+          {/* Form Container */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
+            <UserAuthForm />
             
-            {/* Specular highlight overlay */}
-            <div 
-              className="absolute top-0 left-0 right-0 h-px opacity-60"
-              style={{
-                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)'
-              }}
-            />
-            
-            {/* Logo */}
-            <div className="flex justify-center relative">
-              <Image
-                src="/Sqr_logo.png"
-                alt="PBL.ai Logo"
-                width={80}
-                height={80}
-                className="rounded-xl"
-              />
-            </div>
-        
-            
-            {/* Form container */}
-            <div className="w-full max-w-sm mx-auto">
-              <UserAuthForm />
-              {isError && (
-                <p className="text-red-500 text-sm text-center mt-4">
-                  {errorMessage}
-                </p>
-              )}
-            </div>
+            {isError && (
+              <div className="mt-4 p-3 rounded-lg bg-red-50 border border-red-200">
+                <p className="text-red-600 text-sm">{errorMessage}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

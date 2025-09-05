@@ -168,6 +168,31 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       };
     }
     
+    if (pathname.includes('/vimeo-ott')) {
+      return {
+        title: 'Vimeo OTT',
+        actions: (
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="hidden sm:flex border-gray-300/60 bg-white/60 backdrop-blur-sm text-gray-700 hover:bg-white/80 hover:border-gray-400/60 transition-all duration-300"
+            >
+              <Filter className="h-4 w-4 mr-1" />
+              Export
+            </Button>
+            <Button 
+              size="sm" 
+              className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 text-white border-0 shadow-lg shadow-pink-500/25 backdrop-blur-sm transition-all duration-300 hover:scale-105"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add Member
+            </Button>
+          </div>
+        )
+      };
+    }
+    
     // Default dashboard
     return {
       title: 'Dashboard',
@@ -184,7 +209,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <DashboardSidebar />
         </DesktopSidebar>
         <div className="flex-1 flex flex-col overflow-hidden">
-          <main className="flex-1 overflow-hidden">
+          <main className="flex-1 overflow-y-auto">
             {children}
           </main>
         </div>

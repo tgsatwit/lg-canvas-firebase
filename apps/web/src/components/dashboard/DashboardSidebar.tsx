@@ -180,6 +180,13 @@ export function DashboardSidebar() {
             >
               Image Studio
             </SidebarLink>
+
+            <SidebarLink 
+              href="/dashboard/vimeo-ott" 
+              isActive={pathname === "/dashboard/vimeo-ott"}
+            >
+              Vimeo OTT
+            </SidebarLink>
           </div>
           
           {/* Workflows Section */}
