@@ -161,20 +161,6 @@ export function DashboardSidebar() {
             </SidebarLink>
 
             <SidebarLink 
-              href="/dashboard/chat" 
-              isActive={pathname === "/dashboard/chat"}
-            >
-              AI Chat
-            </SidebarLink>
-
-            <SidebarLink 
-              href="/dashboard/canvas" 
-              isActive={pathname === "/dashboard/canvas"}
-            >
-              Canvas
-            </SidebarLink>
-
-            <SidebarLink 
               href="/dashboard/image-studio" 
               isActive={pathname === "/dashboard/image-studio"}
             >
@@ -182,10 +168,10 @@ export function DashboardSidebar() {
             </SidebarLink>
 
             <SidebarLink 
-              href="/dashboard/vimeo-ott" 
-              isActive={pathname === "/dashboard/vimeo-ott"}
+              href="/dashboard/customers" 
+              isActive={pathname === "/dashboard/customers"}
             >
-              Vimeo OTT
+              Customers
             </SidebarLink>
           </div>
           

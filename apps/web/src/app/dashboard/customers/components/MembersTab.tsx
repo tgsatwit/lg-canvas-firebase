@@ -177,7 +177,7 @@ export function MembersTab({ searchQuery }: MembersTabProps) {
         <div className="text-red-600 font-medium mb-2">Error loading members</div>
         <div className="text-red-600 text-sm mb-4">{error}</div>
         <Button 
-          onClick={fetchMembers}
+          onClick={() => fetchMembers()}
           size="sm"
           className="bg-red-600 hover:bg-red-700 text-white"
         >

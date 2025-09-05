@@ -128,16 +128,57 @@ export default function ImageStudioPage() {
   };
 
   return (
-    <div className="h-full overflow-auto bg-gradient-to-br from-pink-50 via-white to-purple-50">
-      <div className="max-w-6xl mx-auto p-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Image Studio
-          </h1>
-          <p className="text-gray-600">
-            Transform your images with AI-powered editing
-          </p>
-        </div>
+    <div 
+      className="relative min-h-screen"
+      style={{
+        background: `
+          linear-gradient(135deg, 
+            rgba(148, 163, 184, 0.08) 0%,
+            rgba(203, 213, 225, 0.04) 50%,
+            rgba(148, 163, 184, 0.08) 100%
+          )
+        `,
+      }}
+    >
+      {/* Ambient background layers */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div
+          className="absolute inset-0 opacity-20"
+          style={{
+            background: `
+              radial-gradient(circle at 35% 25%, rgba(148, 163, 184, 0.12) 0%, transparent 50%),
+              radial-gradient(circle at 65% 75%, rgba(203, 213, 225, 0.12) 0%, transparent 50%),
+              radial-gradient(circle at 50% 10%, rgba(156, 163, 175, 0.08) 0%, transparent 40%)
+            `,
+          }}
+        />
+      </div>
+
+      <div className="relative z-10 p-6">
+        <div className="w-full max-w-none">
+          {/* Header */}
+          <div 
+            className="p-6 rounded-2xl border mb-8"
+            style={{
+              background: `
+                linear-gradient(135deg, 
+                  rgba(255, 255, 255, 0.25) 0%,
+                  rgba(255, 255, 255, 0.1) 100%
+                )
+              `,
+              backdropFilter: 'blur(20px) saturate(150%)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: `
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4)
+              `,
+            }}
+          >
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Image Studio</h1>
+              <p className="text-gray-600 mt-1">Transform your images with AI-powered editing</p>
+            </div>
+          </div>
 
           <div className="grid lg:grid-cols-2 gap-8">
             <div className="space-y-6">
@@ -407,6 +448,7 @@ export default function ImageStudioPage() {
               </Card>
             </div>
           </div>
+        </div>
       </div>
     </div>
   );

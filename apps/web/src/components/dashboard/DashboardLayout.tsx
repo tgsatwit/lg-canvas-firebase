@@ -168,9 +168,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       };
     }
     
-    if (pathname.includes('/vimeo-ott')) {
+    if (pathname.includes('/customers')) {
       return {
-        title: 'Vimeo OTT',
+        title: 'Customers',
         actions: (
           <div className="flex items-center gap-2">
             <Button 

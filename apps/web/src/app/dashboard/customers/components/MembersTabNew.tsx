@@ -459,7 +459,7 @@ export function MembersTab({ searchQuery, onSearchChange }: MembersTabProps) {
                   key={product}
                   variant={productFilter === product ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setProductFilter(product)}
+                  onClick={() => setProductFilter(product || '')}
                   className={cn(
                     "rounded-xl transition-all duration-200",
                     productFilter === product
@@ -472,7 +472,7 @@ export function MembersTab({ searchQuery, onSearchChange }: MembersTabProps) {
                       : `linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(147, 51, 234, 0.9) 100%)`
                   } : {}}
                 >
-                  {product || 'Unknown'} ({stats.byProduct[product]?.total || 0})
+                  {product || 'Unknown'} ({product ? stats.byProduct[product]?.total || 0 : 0})
                 </Button>
               ))}
             </div>

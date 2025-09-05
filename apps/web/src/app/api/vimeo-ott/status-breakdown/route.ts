@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
     const statusCounts = await Promise.all(statusPromises);
     
     // Convert to object format
-    const breakdown = {};
+    const breakdown: Record<string, number> = {};
     let totalCount = 0;
     
     statusCounts.forEach(({ status, count }) => {

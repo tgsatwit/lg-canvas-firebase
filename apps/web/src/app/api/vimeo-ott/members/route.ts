@@ -45,7 +45,7 @@ interface VimeoOttCustomer {
   id: number;
   email: string;
   name?: string;
-  status?: 'active' | 'inactive' | 'cancelled';
+  status?: 'enabled' | 'cancelled' | 'expired' | 'disabled' | 'paused' | 'refunded' | 'active' | 'inactive';
   created_at: string;
   updated_at: string;
   plan: string;
@@ -67,6 +67,15 @@ interface VimeoOttCustomer {
         product: string;
       };
     };
+  };
+}
+
+interface TransformedVimeoOttCustomer extends Omit<VimeoOttCustomer, 'id' | 'status'> {
+  id: string;
+  status: 'active' | 'cancelled' | 'inactive';
+  product: {
+    name: string;
+    id: string;
   };
 }
 
@@ -92,7 +101,7 @@ export async function GET(request: NextRequest) {
     const timeFilter = searchParams.get('timeFilter'); // 'joined7days' or 'cancelled7days'
     
     // Check cache first
-    const cacheKey = getCacheKey({ status, product, query, timeFilter });
+    const cacheKey = getCacheKey({ status: status || undefined, product: product || undefined, query: query || undefined, timeFilter: timeFilter || undefined });
     const cachedData = getCachedData(cacheKey);
     if (cachedData) {
       return NextResponse.json(cachedData);
@@ -179,7 +188,11 @@ export async function GET(request: NextRequest) {
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     // Map Vimeo OTT statuses to our internal status types
-    const getCustomerStatus = (customer: VimeoOttCustomer): 'active' | 'cancelled' | 'inactive' => {
+    const getCustomerStatus = (customer: VimeoOttCustomer | TransformedVimeoOttCustomer): 'active' | 'cancelled' | 'inactive' => {
+      // If it's already transformed, return the status directly
+      if ('product' in customer) {
+        return customer.status;
+      }
       // Check the actual status from the API response
       if (customer.status === 'enabled') return 'active';
       if (customer.status === 'cancelled' || customer.status === 'expired' || customer.status === 'disabled') return 'cancelled';
@@ -206,7 +219,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Transform customers to include status and product info
-    const transformedCustomers = customers.map(customer => ({
+    const transformedCustomers: TransformedVimeoOttCustomer[] = customers.map(customer => ({
       ...customer,
       id: customer.id.toString(),
       status: getCustomerStatus(customer),
@@ -217,7 +230,7 @@ export async function GET(request: NextRequest) {
     }));
 
     // Apply time-based filtering if requested
-    let filteredCustomers = transformedCustomers;
+    let filteredCustomers: TransformedVimeoOttCustomer[] = transformedCustomers;
     if (timeFilter === 'joined7days') {
       filteredCustomers = transformedCustomers.filter(c => {
         const joinDate = new Date(c.created_at);

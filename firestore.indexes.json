@@ -55,6 +55,98 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "mailchimp-members",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "overall_status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "last_activity_date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "mailchimp-members",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "lists",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "last_activity_date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "mailchimp-members",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "tags",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "last_activity_date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "mailchimp-members",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "lists",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "overall_status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "last_activity_date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "mailchimp-members",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "tags",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "overall_status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "last_activity_date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "mailchimp-members",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "is_vip",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "last_activity_date",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
