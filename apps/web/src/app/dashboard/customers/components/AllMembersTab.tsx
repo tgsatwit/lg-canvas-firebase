@@ -671,9 +671,9 @@ export function AllMembersTab({ searchQuery, onSearchChange }: AllMembersTabProp
           <h3 className="text-lg font-semibold text-gray-900">
             {tagMismatchFilter === 'active-with-cancelled-tag' ? 'Active Members with "Cancelled" Tag' :
              tagMismatchFilter === 'inactive-with-current-tag' ? 'Inactive Members with "Current" Tag' :
-             vimeoStatusFilter === 'pbl-online-active' ? 'PBL Online Active Members' :
              vimeoStatusFilter === 'pbl-online-active' && mailchimpStatusFilter === 'subscribers' ? 'PBL Online Active with MailChimp' :
              vimeoStatusFilter === 'pbl-online-active' && mailchimpStatusFilter === 'never subscribed' ? 'PBL Online Active Missing MailChimp' :
+             vimeoStatusFilter === 'pbl-online-active' ? 'PBL Online Active Members' :
              'All Members'} ({filteredMembers.length})
           </h3>
           <div className="text-sm text-gray-500">

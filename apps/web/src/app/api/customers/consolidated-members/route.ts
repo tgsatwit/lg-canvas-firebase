@@ -45,7 +45,7 @@ interface ConsolidatedMember {
   vimeoPlan?: string;
   vimeoProduct?: string;
   // MailChimp status - null means not a subscriber  
-  mailchimpStatus: 'subscribed' | 'unsubscribed' | 'cleaned' | 'pending' | 'never subscribed' | null;
+  mailchimpStatus: 'subscribed' | 'unsubscribed' | 'cleaned' | 'pending' | 'mixed' | 'never subscribed' | null;
   mailchimpLists?: string[];
   mailchimpTags?: string[];
   mailchimpRating?: number;
