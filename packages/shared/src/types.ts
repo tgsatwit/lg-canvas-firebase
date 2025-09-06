@@ -441,3 +441,58 @@ export interface MailchimpSyncStatus {
   totalMembers?: number;
   error?: string;
 }
+
+// Email Draft Types
+export interface EmailDraft {
+  id: string;
+  title: string;
+  status: 'draft' | 'completed' | 'sent';
+  business: 'pilates' | 'face';
+  targetAudience: 'current' | 'prospective' | 'cancelled';
+  campaignType: 'weekly' | 'custom';
+  
+  // Email content
+  subject?: string;
+  preheader?: string;
+  emailBody?: string;
+  
+  // Campaign data (preserved from the current system)
+  theme?: string;
+  goalType?: string;
+  customGoal?: string;
+  keyMessages?: string[];
+  
+  // Design data for weekly emails
+  emailDesign?: {
+    focus?: string;
+    goal?: string;
+    keyMessages?: string[];
+    selectedSections?: any[];
+    customSections?: any[];
+  };
+  
+  // Campaign analysis data
+  campaignAnalysis?: {
+    analysis?: string;
+    suggestedMessages?: string[];
+    campaignSummaries?: any[];
+    recommendedSections?: any[];
+  };
+  
+  // Metadata
+  createdBy: string; // User ID who created the draft
+  createdByName?: string; // User display name
+  createdAt: string;
+  updatedAt: string;
+  lastEditedBy?: string; // User ID of last editor
+  lastEditedByName?: string; // Display name of last editor
+  
+  // Auto-save tracking
+  lastAutoSave?: string;
+  hasUnsavedChanges?: boolean;
+  
+  // Mailchimp integration
+  mailchimpCampaignId?: string;
+  sentDate?: string;
+  sentToMailchimp?: boolean;
+}

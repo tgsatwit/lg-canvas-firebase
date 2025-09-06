@@ -97,11 +97,13 @@ export function SidebarLink({
   children,
   isActive,
   badge,
+  className,
 }: {
   href: string;
   children: React.ReactNode;
   isActive?: boolean;
   badge?: string | number;
+  className?: string;
 }) {
   const { isOpen } = useSidebar();
   
@@ -113,7 +115,8 @@ export function SidebarLink({
         isOpen ? "px-4 py-2.5 text-sm" : "px-4 py-4 justify-center",
         isActive
           ? "text-white shadow-lg"
-          : "text-gray-700 hover:text-gray-900 hover:bg-pink-50/50"
+          : "text-gray-700 hover:text-gray-900 hover:bg-pink-50/50",
+        className
       )}
       style={isActive ? {
         background: `

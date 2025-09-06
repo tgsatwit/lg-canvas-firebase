@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,10 +9,18 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useUserContext } from '@/contexts/UserContext';
+import { EmailDraft } from '@opencanvas/shared/types';
+import { EmailDraftsTab } from './components/EmailDraftsTab';
 
 export default function EmailMarketingPage() {
   const { user, loading } = useUserContext();
-  const [activeTab, setActiveTab] = useState<'setup' | 'analysis' | 'design' | 'preview'>('setup');
+  const [activeTab, setActiveTab] = useState<'drafts' | 'setup' | 'analysis' | 'design' | 'preview'>('drafts');
+  
+  // Draft management state
+  const [currentDraft, setCurrentDraft] = useState<EmailDraft | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [autoSaving, setAutoSaving] = useState(false);
+  const [lastSaveTime, setLastSaveTime] = useState<number>(0);
   const [emailData, setEmailData] = useState({
     // New fields for business and audience selection
     business: '',
@@ -289,6 +297,151 @@ export default function EmailMarketingPage() {
     }
   };
 
+  // Draft management functions
+  const handleEditDraft = (draft: EmailDraft) => {
+    setCurrentDraft(draft);
+    
+    // Load draft data into campaign form
+    setEmailData({
+      business: draft.business,
+      targetAudience: draft.targetAudience,
+      campaignType: draft.campaignType,
+      theme: draft.theme || '',
+      audience: `${draft.targetAudience} for ${draft.business}`,
+      goalType: draft.goalType || '',
+      customGoal: draft.customGoal || '',
+      keyMessages: draft.keyMessages || [],
+      generatedCopy: draft.emailBody || '',
+      subject: draft.subject || '',
+      preheader: draft.preheader || ''
+    });
+
+    // Load email design data
+    if (draft.emailDesign) {
+      setEmailDesign({
+        focus: draft.emailDesign.focus || '',
+        goal: draft.emailDesign.goal || '',
+        keyMessages: draft.emailDesign.keyMessages || [],
+        selectedSections: draft.emailDesign.selectedSections || [],
+        customSections: draft.emailDesign.customSections || []
+      });
+    }
+
+    // Load campaign analysis
+    if (draft.campaignAnalysis) {
+      setCampaignAnalysis({
+        analysis: draft.campaignAnalysis.analysis || '',
+        suggestedMessages: draft.campaignAnalysis.suggestedMessages || [],
+        campaignSummaries: draft.campaignAnalysis.campaignSummaries || [],
+        recommendedSections: draft.campaignAnalysis.recommendedSections || [],
+        structureAnalysisAvailable: Boolean(draft.campaignAnalysis.analysis)
+      });
+    }
+
+    // Navigate to appropriate tab based on draft progress
+    if (draft.emailBody) {
+      setActiveTab('preview');
+    } else if (draft.campaignType === 'weekly' && draft.emailDesign) {
+      setActiveTab('design');
+    } else if (draft.campaignType === 'weekly' && draft.campaignAnalysis) {
+      setActiveTab('analysis');
+    } else {
+      setActiveTab('setup');
+    }
+  };
+
+  const handleCreateNew = () => {
+    // Reset all form data
+    resetForm();
+    setCurrentDraft(null);
+    setActiveTab('setup');
+  };
+
+  const autoSaveDraft = useCallback(async (partialData: Partial<EmailDraft> = {}) => {
+    if (!user || autoSaving) return;
+    
+    // Only save if we have the minimum required fields
+    if (!emailData.business || !emailData.targetAudience || !emailData.campaignType) {
+      return;
+    }
+    
+    // Rate limiting: don't save more than once every 3 seconds
+    const nowTimestamp = Date.now();
+    if (nowTimestamp - lastSaveTime < 3000) {
+      return;
+    }
+    
+    try {
+      setAutoSaving(true);
+      setLastSaveTime(nowTimestamp);
+      
+      const now = new Date().toISOString();
+      const draftData: EmailDraft = {
+        id: currentDraft?.id || '',
+        title: currentDraft?.title || `${businessTypes.find(b => b.id === emailData.business)?.name || 'New'} - ${audienceTypes.find(a => a.id === emailData.targetAudience)?.name || 'Campaign'} - ${new Date().toLocaleDateString()}`,
+        status: currentDraft?.status || 'draft',
+        business: emailData.business as any,
+        targetAudience: emailData.targetAudience as any,
+        campaignType: emailData.campaignType as any,
+        subject: emailData.subject || '',
+        preheader: emailData.preheader || '',
+        emailBody: emailData.generatedCopy || '',
+        theme: emailData.theme || '',
+        goalType: emailData.goalType || '',
+        customGoal: emailData.customGoal || '',
+        keyMessages: emailData.keyMessages || [],
+        emailDesign: emailDesign,
+        campaignAnalysis: campaignAnalysis
+          ? {
+              analysis: campaignAnalysis.analysis,
+              suggestedMessages: campaignAnalysis.suggestedMessages,
+              campaignSummaries: campaignAnalysis.campaignSummaries,
+              recommendedSections: campaignAnalysis.recommendedSections,
+            }
+          : undefined,
+        createdBy: currentDraft?.createdBy || user.id,
+        createdByName: currentDraft?.createdByName || (user.displayName ?? user.email ?? ''),
+        createdAt: currentDraft?.createdAt || now,
+        updatedAt: now,
+        lastEditedBy: user.id,
+        lastEditedByName: user.displayName ?? user.email ?? '',
+        hasUnsavedChanges: false,
+        ...partialData
+      };
+
+      const url = draftData.id ? `/api/email/drafts/${draftData.id}` : '/api/email/drafts';
+      const method = draftData.id ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(draftData),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.draft) {
+          setCurrentDraft(data.draft);
+        }
+      } else {
+        const errorData = await response.json();
+        console.error('Auto-save failed:', errorData);
+      }
+    } catch (error) {
+      console.error('Auto-save failed:', error);
+    } finally {
+      setAutoSaving(false);
+    }
+  }, [user, autoSaving, currentDraft, emailData, emailDesign, campaignAnalysis, lastSaveTime]);
+
+  const handleBackToDrafts = () => {
+    setCurrentDraft(null);
+    resetForm();
+    setActiveTab('drafts');
+  };
+
   const resetForm = () => {
     setEmailData({
       business: '',
@@ -312,59 +465,109 @@ export default function EmailMarketingPage() {
     });
     setCampaignAnalysis(null);
     setAnalysisError(null);
-    setActiveTab('setup');
+    setActiveTab('drafts');
   };
 
-  // Format the analysis text into proper sections
+  // Auto-save whenever form data changes (debounced)
+  useEffect(() => {
+    // Only auto-save if we're in the campaign workflow (not on drafts tab) and have required fields
+    if (activeTab !== 'drafts' && emailData.business && emailData.targetAudience && emailData.campaignType) {
+      const timeoutId = setTimeout(() => {
+        autoSaveDraft();
+      }, 2000); // Auto-save 2 seconds after user stops making changes
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [emailData, emailDesign, campaignAnalysis, activeTab, autoSaveDraft]);
+
+  // Save when user first completes the required fields
+  useEffect(() => {
+    if (activeTab !== 'drafts' && emailData.business && emailData.targetAudience && emailData.campaignType && user && !currentDraft) {
+      // Small delay to prevent immediate save on page load
+      const timeoutId = setTimeout(() => {
+        autoSaveDraft();
+      }, 500);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [emailData.business, emailData.targetAudience, emailData.campaignType, activeTab, user, currentDraft, autoSaveDraft]);
+
+  // Enhanced navigation functions with auto-save
+  const navigateToAnalysis = async () => {
+    await autoSaveDraft();
+    setActiveTab('analysis');
+    if (!campaignAnalysis && !isAnalyzing) {
+      fetchAndAnalyzeCampaigns();
+    }
+  };
+
+  const navigateToDesign = async () => {
+    await autoSaveDraft();
+    setActiveTab('design');
+  };
+
+  const navigateToPreview = async () => {
+    await autoSaveDraft();
+    setActiveTab('preview');
+  };
+
+  // Format the analysis text into compact, readable sections
   const formatAnalysis = (text: string) => {
     if (!text) return null;
     
     // Split by numbered points or headers
     const sections = text.split(/\n(?=\d+\.|#{1,3}\s)/);
     
-    return sections.map((section, index) => {
-      // Check if it's a numbered point
-      const numberedMatch = section.match(/^(\d+)\.\s*(.+)/);
-      if (numberedMatch) {
-        const [, number, content] = numberedMatch;
-        return (
-          <div key={index} className="mb-4">
-            <div className="flex gap-3">
-              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 text-white text-sm font-medium flex items-center justify-center">
-                {number}
-              </span>
-              <div className="flex-1">
-                {formatTextContent(content.trim())}
+    return (
+      <div className="space-y-4">
+        {sections.map((section, index) => {
+          // Check if it's a numbered point
+          const numberedMatch = section.match(/^(\d+)\.\s*([\s\S]+)/);
+          if (numberedMatch) {
+            const [, number, content] = numberedMatch;
+            
+            return (
+              <div key={index} className="flex gap-3 items-start py-2">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-pink-500 to-purple-500 text-white text-xs font-medium flex items-center justify-center">
+                  {number}
+                </span>
+                <div className="flex-1 text-sm text-gray-700 leading-relaxed">
+                  {formatTextContentCompact(content.trim())}
+                </div>
               </div>
-            </div>
-          </div>
-        );
-      }
-      
-      // Check if it's a header
-      const headerMatch = section.match(/^#{1,3}\s+(.+)/);
-      if (headerMatch) {
-        const [, header] = headerMatch;
-        const remainingContent = section.replace(/^#{1,3}\s+.+\n?/, '');
-        return (
-          <div key={index} className="mb-4">
-            <h4 className="font-semibold text-gray-900 mb-2">{header}</h4>
-            {remainingContent && formatTextContent(remainingContent.trim())}
-          </div>
-        );
-      }
-      
-      // Regular paragraph
-      if (section.trim()) {
-        return (
-          <div key={index} className="mb-3">
-            {formatTextContent(section.trim())}
-          </div>
-        );
-      }
-      
-      return null;
-    }).filter(Boolean);
+            );
+          }
+          
+          // Check if it's a header
+          const headerMatch = section.match(/^#{1,3}\s+(.+)/);
+          if (headerMatch) {
+            const [, header] = headerMatch;
+            const remainingContent = section.replace(/^#{1,3}\s+.+\n?/, '');
+            return (
+              <div key={index} className="mb-3">
+                <h4 className="font-medium text-gray-900 mb-2 text-sm">{header}</h4>
+                {remainingContent && (
+                  <div className="text-sm text-gray-600 leading-relaxed">
+                    {formatTextContentCompact(remainingContent.trim())}
+                  </div>
+                )}
+              </div>
+            );
+          }
+          
+          // Regular paragraph - don't truncate unnecessarily
+          if (section.trim() && section.trim().length > 10) {
+            return (
+              <div key={index} className="text-sm text-gray-600 leading-relaxed">
+                {formatTextContentCompact(section.trim())}
+              </div>
+            );
+          }
+          
+          return null;
+        }).filter(Boolean)}
+      </div>
+    );
   };
 
   // Helper function to format text content with bullet points and bold text
@@ -469,6 +672,25 @@ export default function EmailMarketingPage() {
     return parts.length > 0 ? parts : [text];
   };
 
+  // Compact version for condensed analysis display
+  const formatTextContentCompact = (text: string) => {
+    // Keep structure but make more readable - preserve line breaks for sections
+    const cleanText = text
+      .replace(/^\s*[-•*]\s*/gm, '') // Remove bullet points
+      .replace(/\n{3,}/g, '\n\n') // Reduce excessive line breaks to double
+      .trim();
+    
+    return (
+      <div className="text-gray-700 leading-relaxed space-y-2">
+        {cleanText.split('\n\n').map((paragraph, index) => (
+          <div key={index} className="">
+            {formatInlineText(paragraph.trim())}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -551,83 +773,137 @@ export default function EmailMarketingPage() {
 
           {/* Tab Navigation */}
           <div className="mb-8">
-            <div className="flex items-center gap-2 p-1 bg-gray-100 rounded-2xl w-fit">
-              <Button
-                variant={activeTab === 'setup' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setActiveTab('setup')}
-                className={cn(
-                  "rounded-xl transition-all duration-200 px-6 py-2",
-                  activeTab === 'setup' 
-                    ? "text-white shadow-sm"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                )}
-                style={activeTab === 'setup' ? {
-                  background: `linear-gradient(135deg, rgba(236, 72, 153, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%)`
-                } : {}}
-              >
-                Campaign Setup
-              </Button>
-              {emailData.campaignType === 'weekly' && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 p-1 bg-gray-100 rounded-2xl w-fit">
                 <Button
-                  variant={activeTab === 'analysis' ? 'default' : 'ghost'}
+                  variant={activeTab === 'drafts' ? 'default' : 'ghost'}
                   size="sm"
-                  onClick={() => setActiveTab('analysis')}
-                  disabled={!emailData.business || !emailData.targetAudience || !emailData.campaignType}
+                  onClick={handleBackToDrafts}
                   className={cn(
                     "rounded-xl transition-all duration-200 px-6 py-2",
-                    activeTab === 'analysis' 
+                    activeTab === 'drafts' 
                       ? "text-white shadow-sm"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 disabled:opacity-50"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                   )}
-                  style={activeTab === 'analysis' ? {
+                  style={activeTab === 'drafts' ? {
                     background: `linear-gradient(135deg, rgba(236, 72, 153, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%)`
                   } : {}}
                 >
-                  Campaign Analysis
+                  Email Drafts
                 </Button>
-              )}
-              {emailData.campaignType === 'weekly' && (
-                <Button
-                  variant={activeTab === 'design' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setActiveTab('design')}
-                  disabled={!campaignAnalysis}
-                  className={cn(
-                    "rounded-xl transition-all duration-200 px-6 py-2",
-                    activeTab === 'design' 
-                      ? "text-white shadow-sm"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 disabled:opacity-50"
-                  )}
-                  style={activeTab === 'design' ? {
-                    background: `linear-gradient(135deg, rgba(236, 72, 153, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%)`
-                  } : {}}
-                >
-                  Design Email
-                </Button>
-              )}
-              <Button
-                variant={activeTab === 'preview' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setActiveTab('preview')}
-                disabled={!emailData.generatedCopy}
-                className={cn(
-                  "rounded-xl transition-all duration-200 px-6 py-2",
-                  activeTab === 'preview' 
-                    ? "text-white shadow-sm"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 disabled:opacity-50"
+
+                {/* Show campaign workflow tabs only when not in drafts view */}
+                {activeTab !== 'drafts' && (
+                  <>
+                    <Button
+                      variant={activeTab === 'setup' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setActiveTab('setup')}
+                      className={cn(
+                        "rounded-xl transition-all duration-200 px-6 py-2",
+                        activeTab === 'setup' 
+                          ? "text-white shadow-sm"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                      )}
+                      style={activeTab === 'setup' ? {
+                        background: `linear-gradient(135deg, rgba(236, 72, 153, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%)`
+                      } : {}}
+                    >
+                      Campaign Setup
+                    </Button>
+                    {emailData.campaignType === 'weekly' && (
+                      <Button
+                        variant={activeTab === 'analysis' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={navigateToAnalysis}
+                        disabled={!emailData.business || !emailData.targetAudience || !emailData.campaignType}
+                        className={cn(
+                          "rounded-xl transition-all duration-200 px-6 py-2",
+                          activeTab === 'analysis' 
+                            ? "text-white shadow-sm"
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 disabled:opacity-50"
+                        )}
+                        style={activeTab === 'analysis' ? {
+                          background: `linear-gradient(135deg, rgba(236, 72, 153, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%)`
+                        } : {}}
+                      >
+                        Campaign Analysis
+                      </Button>
+                    )}
+                    {emailData.campaignType === 'weekly' && (
+                      <Button
+                        variant={activeTab === 'design' ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={navigateToDesign}
+                        disabled={!campaignAnalysis}
+                        className={cn(
+                          "rounded-xl transition-all duration-200 px-6 py-2",
+                          activeTab === 'design' 
+                            ? "text-white shadow-sm"
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 disabled:opacity-50"
+                        )}
+                        style={activeTab === 'design' ? {
+                          background: `linear-gradient(135deg, rgba(236, 72, 153, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%)`
+                        } : {}}
+                      >
+                        Design Email
+                      </Button>
+                    )}
+                    <Button
+                      variant={activeTab === 'preview' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={navigateToPreview}
+                      disabled={!emailData.generatedCopy}
+                      className={cn(
+                        "rounded-xl transition-all duration-200 px-6 py-2",
+                        activeTab === 'preview' 
+                          ? "text-white shadow-sm"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50 disabled:opacity-50"
+                      )}
+                      style={activeTab === 'preview' ? {
+                        background: `linear-gradient(135deg, rgba(236, 72, 153, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%)`
+                      } : {}}
+                    >
+                      Preview & Send
+                    </Button>
+                  </>
                 )}
-                style={activeTab === 'preview' ? {
-                  background: `linear-gradient(135deg, rgba(236, 72, 153, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%)`
-                } : {}}
-              >
-                Preview & Send
-              </Button>
+              </div>
+              
+              {/* Current draft info and auto-save indicator */}
+              {activeTab !== 'drafts' && (
+                <div className="flex items-center gap-3">
+                  {autoSaving && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-pink-600"></div>
+                      <span>Saving...</span>
+                    </div>
+                  )}
+                  {currentDraft && (
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        Draft: {currentDraft.title}
+                      </Badge>
+                      <span>Last saved: {new Date(currentDraft.updatedAt).toLocaleTimeString()}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
           {/* Tab Content */}
           <div>
+            {/* Drafts Tab */}
+            {activeTab === 'drafts' && (
+              <EmailDraftsTab
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                onEditDraft={handleEditDraft}
+                onCreateNew={handleCreateNew}
+              />
+            )}
+
             {/* Setup Tab */}
             {activeTab === 'setup' && (
               <div 
@@ -729,13 +1005,9 @@ export default function EmailMarketingPage() {
                   <Button 
                     onClick={() => {
                       if (emailData.campaignType === 'weekly') {
-                        setActiveTab('analysis');
-                        // Trigger analysis when moving to analysis tab
-                        if (!campaignAnalysis && !isAnalyzing) {
-                          fetchAndAnalyzeCampaigns();
-                        }
+                        navigateToAnalysis();
                       } else {
-                        setActiveTab('design');
+                        navigateToPreview();
                       }
                     }}
                     disabled={!emailData.business || !emailData.targetAudience || !emailData.campaignType}
@@ -789,70 +1061,52 @@ export default function EmailMarketingPage() {
                       </div>
                     </div>
                     
-                    {/* Campaign Performance Metrics */}
+                    {/* Campaign Performance Metrics - Compact Two-Column Layout */}
                     {campaignAnalysis.campaignSummaries && campaignAnalysis.campaignSummaries.length > 0 && (
-                      <div className="p-6 rounded-xl bg-white/50 border border-gray-200">
-                        <h4 className="font-semibold text-gray-900 mb-4">Recent Campaign Performance</h4>
-                        <div className="space-y-3">
+                      <div className="p-4 rounded-xl bg-white/50 border border-gray-200">
+                        <h4 className="font-medium text-gray-900 mb-3 text-sm">Recent Campaign Performance</h4>
+                        <div className="grid grid-cols-2 gap-2 text-xs max-h-48 overflow-y-auto">
                           {campaignAnalysis.campaignSummaries.map((campaign, index) => (
-                            <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                              <div className="flex-1">
-                                <p className="font-medium text-gray-900 text-sm">{campaign.subject}</p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  Sent {new Date(campaign.sent_date).toLocaleDateString()} to {campaign.recipients} recipients
+                            <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-gray-50/50 border border-gray-100">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-gray-900 text-xs truncate">{campaign.subject}</p>
+                                <p className="text-[10px] text-gray-500">
+                                  {new Date(campaign.sent_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                 </p>
                               </div>
-                              <div className="flex gap-6 text-sm">
+                              <div className="flex gap-3 text-[10px] ml-2">
                                 <div className="text-center">
-                                  <p className="text-gray-500 text-xs">Open Rate</p>
                                   <p className={cn(
-                                    "font-semibold",
+                                    "font-semibold leading-tight",
                                     campaign.open_rate > 0.25 ? "text-green-600" : 
                                     campaign.open_rate > 0.15 ? "text-yellow-600" : "text-red-600"
                                   )}>
-                                    {(campaign.open_rate * 100).toFixed(1)}%
+                                    {(campaign.open_rate * 100).toFixed(0)}%
                                   </p>
+                                  <p className="text-gray-400">open</p>
                                 </div>
                                 <div className="text-center">
-                                  <p className="text-gray-500 text-xs">Click Rate</p>
                                   <p className={cn(
-                                    "font-semibold",
+                                    "font-semibold leading-tight",
                                     campaign.click_rate > 0.05 ? "text-green-600" : 
                                     campaign.click_rate > 0.02 ? "text-yellow-600" : "text-red-600"
                                   )}>
-                                    {(campaign.click_rate * 100).toFixed(1)}%
+                                    {(campaign.click_rate * 100).toFixed(0)}%
                                   </p>
+                                  <p className="text-gray-400">click</p>
                                 </div>
                               </div>
                             </div>
                           ))}
                         </div>
+                        {campaignAnalysis.campaignSummaries.length > 10 && (
+                          <p className="text-center text-xs text-gray-500 mt-2">
+                            Showing first 10 campaigns • {campaignAnalysis.campaignSummaries.length} total
+                          </p>
+                        )}
                       </div>
                     )}
 
-                    {/* Suggested Messages */}
-                    {campaignAnalysis.suggestedMessages && campaignAnalysis.suggestedMessages.length > 0 && (
-                      <div className="p-6 rounded-xl bg-gradient-to-br from-purple-50/50 to-pink-50/50 border border-purple-200">
-                        <h4 className="font-semibold text-gray-900 mb-4">Suggested Key Messages</h4>
-                        <p className="text-sm text-gray-600 mb-4">These messages have been generated based on your campaign analysis and will be auto-populated in the next step.</p>
-                        <div className="flex flex-wrap gap-2">
-                          {campaignAnalysis.suggestedMessages.map((message, index) => (
-                            <Badge 
-                              key={index} 
-                              variant="secondary" 
-                              className="px-4 py-2 text-sm"
-                              style={{
-                                background: `linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%)`,
-                                color: 'rgb(139, 92, 246)',
-                                border: '1px solid rgba(139, 92, 246, 0.2)'
-                              }}
-                            >
-                              {message}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
 
                     <div className="flex gap-3">
                       <Button 
@@ -873,7 +1127,7 @@ export default function EmailMarketingPage() {
                         Refresh Analysis
                       </Button>
                       <Button 
-                        onClick={() => setActiveTab('design')}
+                        onClick={navigateToDesign}
                         className="flex-1 rounded-xl"
                         style={{
                           background: `linear-gradient(135deg, rgba(236, 72, 153, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%)`
@@ -905,7 +1159,7 @@ export default function EmailMarketingPage() {
                         Try Again
                       </Button>
                       <Button 
-                        onClick={() => setActiveTab('design')}
+                        onClick={navigateToDesign}
                         className="flex-1 rounded-xl"
                         style={{
                           background: `linear-gradient(135deg, rgba(236, 72, 153, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%)`
@@ -951,6 +1205,40 @@ export default function EmailMarketingPage() {
                 }}
               >
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Design Email Structure</h2>
+                
+                {/* Suggested Key Messages from Analysis */}
+                {campaignAnalysis?.suggestedMessages && campaignAnalysis.suggestedMessages.length > 0 && (
+                  <div className="mb-6 p-4 rounded-xl bg-gradient-to-br from-purple-50/50 to-pink-50/50 border border-purple-200">
+                    <h4 className="font-medium text-gray-900 mb-2 text-sm">Suggested Key Messages</h4>
+                    <p className="text-xs text-gray-600 mb-3">Based on your campaign analysis, these messages could be effective for your audience:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {campaignAnalysis.suggestedMessages.map((message, index) => (
+                        <Badge 
+                          key={index} 
+                          variant="secondary" 
+                          className="px-3 py-1 text-xs cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => {
+                            // Add message to key messages if not already there
+                            if (!emailDesign.keyMessages?.includes(message)) {
+                              setEmailDesign(prev => ({ 
+                                ...prev, 
+                                keyMessages: [...(prev.keyMessages || []), message]
+                              }));
+                            }
+                          }}
+                          style={{
+                            background: `linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%)`,
+                            color: 'rgb(139, 92, 246)',
+                            border: '1px solid rgba(139, 92, 246, 0.2)'
+                          }}
+                        >
+                          {message}
+                        </Badge>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">Click on any message to add it to your key messages below</p>
+                  </div>
+                )}
                 
                 <div className="space-y-4">
                   {/* Email Focus/Theme & Goal */}
@@ -1353,7 +1641,7 @@ export default function EmailMarketingPage() {
                               subject: data.subject,
                               preheader: data.preheader
                             }));
-                            setActiveTab('preview');
+                            navigateToPreview();
                           } else {
                             console.error('Failed to generate email');
                           }
@@ -1495,26 +1783,30 @@ export default function EmailMarketingPage() {
 
                   <div className="flex gap-3">
                     <Button 
-                      onClick={() => setActiveTab('design')} 
+                      onClick={() => emailData.campaignType === 'weekly' ? setActiveTab('design') : setActiveTab('setup')} 
                       variant="outline"
                       className="rounded-xl"
                     >
-                      Back to Compose
+                      {emailData.campaignType === 'weekly' ? 'Back to Design' : 'Back to Setup'}
                     </Button>
                     <Button 
-                      onClick={resetForm}
+                      onClick={handleBackToDrafts}
                       variant="outline" 
                       className="rounded-xl"
                     >
-                      Start Over
+                      Back to Drafts
                     </Button>
                     <Button 
+                      onClick={async () => {
+                        await autoSaveDraft({ status: 'completed' });
+                        // TODO: Implement Mailchimp integration
+                      }}
                       className="flex-1 rounded-xl"
                       style={{
                         background: `linear-gradient(135deg, rgba(236, 72, 153, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%)`
                       }}
                     >
-                      Send Campaign
+                      Complete & Save Draft
                     </Button>
                   </div>
                 </div>

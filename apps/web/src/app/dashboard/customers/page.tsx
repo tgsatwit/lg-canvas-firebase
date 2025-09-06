@@ -8,9 +8,10 @@ import { cn } from '@/lib/utils';
 import { AllMembersTab } from './components/AllMembersTab';
 import { MembersTab } from './components/MembersTabNew';
 import { MailchimpTab } from './components/MailchimpTab';
+import { ReconcileTab } from './components/ReconcileTab';
 
 export default function VimeoOttPage() {
-  const [activeTab, setActiveTab] = useState<'all' | 'members' | 'videos' | 'mailchimp'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'members' | 'videos' | 'mailchimp' | 'reconcile'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleSearchChange = (query: string) => {
@@ -121,6 +122,22 @@ export default function VimeoOttPage() {
               >
                 Mailchimp
               </Button>
+              <Button
+                variant={activeTab === 'reconcile' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setActiveTab('reconcile')}
+                className={cn(
+                  "rounded-xl transition-all duration-200 px-6 py-2",
+                  activeTab === 'reconcile' 
+                    ? "text-white shadow-sm"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                )}
+                style={activeTab === 'reconcile' ? {
+                  background: `linear-gradient(135deg, rgba(236, 72, 153, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%)`
+                } : {}}
+              >
+                Reconcile
+              </Button>
             </div>
           </div>
 
@@ -129,6 +146,7 @@ export default function VimeoOttPage() {
             {activeTab === 'all' && <AllMembersTab searchQuery={searchQuery} onSearchChange={handleSearchChange} />}
             {activeTab === 'members' && <MembersTab searchQuery={searchQuery} onSearchChange={handleSearchChange} />}
             {activeTab === 'mailchimp' && <MailchimpTab searchQuery={searchQuery} onSearchChange={handleSearchChange} />}
+            {activeTab === 'reconcile' && <ReconcileTab searchQuery={searchQuery} onSearchChange={handleSearchChange} />}
           </div>
         </div>
       </div>

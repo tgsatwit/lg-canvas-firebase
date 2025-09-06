@@ -47,9 +47,17 @@ export async function POST(request: NextRequest) {
       click_rate: campaign.report_summary?.click_rate || 0,
     }));
 
-    // Create the enhanced analysis prompt with structure analysis
+    // Create the enhanced analysis prompt with expert marketing analyst role
     const analysisPrompt = `
-    You are an expert email marketing analyst. Analyze the following recent email campaigns and provide comprehensive insights and recommendations.
+    You are a seasoned email marketing strategist and copywriting expert with 15+ years experience optimizing campaigns for fitness and beauty businesses. You excel at dissecting marketing copy to uncover what drives engagement, conversions, and audience retention. Your analytical approach combines data-driven insights with creative strategy to deliver actionable recommendations.
+
+    Your expertise includes:
+    - Analyzing email performance metrics to identify patterns and trends
+    - Decoding subject line psychology and preview text effectiveness  
+    - Understanding audience segmentation and messaging alignment
+    - Identifying content themes that resonate vs. those that fall flat
+    - Recommending structural improvements for better engagement flow
+    - Spotting missed opportunities for conversion optimization
 
     Business Context:
     - Business: ${business === 'pilates' ? 'Pilates by Lisa (Fitness and wellness services)' : 'Face by Lisa (Beauty and skincare services)'}
@@ -70,44 +78,25 @@ export async function POST(request: NextRequest) {
     })), null, 2)}
     ` : ''}
 
-    Please provide a comprehensive analysis with:
+    Analyze these campaigns with your expert eye and provide actionable insights:
 
-    ## 1. Campaign Performance Summary
-    Brief overview of patterns, themes, and overall performance trends.
+    ## 1. Performance Patterns & Insights
+    What story do the metrics tell? Identify the most significant trends, outliers, and patterns that reveal audience preferences.
 
-    ## 2. Email Structure Analysis
-    ${campaignContents.length > 0 ? `
-    Based on the email content provided, identify:
-    - Common email sections/blocks used (e.g., header, welcome message, featured content, call-to-action, social links, footer)
-    - Which sections appear most frequently
-    - How sections are typically organized/ordered
-    ` : 'Analyze typical email structure patterns based on subject lines and performance data.'}
+    ## 2. What's Working Well
+    - Subject line formulas and psychological triggers driving higher opens
+    - Content themes and messaging approaches resonating with this audience
+    - Optimal send timing and frequency patterns
 
-    ## 3. High-Performing Elements
-    - Subject line patterns that drove higher open rates
-    - Content themes/sections that likely drove engagement
-    - Timing and frequency patterns
+    ## 3. Critical Improvement Areas  
+    - Specific elements dragging down performance (be direct about what's not working)
+    - Missed conversion opportunities and engagement gaps
+    - Structural or messaging weaknesses to address immediately
 
-    ## 4. Areas for Improvement
-    - Underperforming elements to avoid or improve
-    - Missing opportunities
-    - Structural improvements
+    ## 4. Strategic Recommendations
+    Based on your analysis, what are the 3-4 most impactful changes they should make to their next campaign?
 
-    ## 5. Recommended Email Structure for Next Campaign
-    Suggest a specific email structure with:
-    - **Header Section**: Logo, navigation, or branding elements
-    - **Opening Section**: Personal greeting, main message hook
-    - **Content Sections**: 2-4 main content blocks (specify what each should contain)
-    - **Call-to-Action Section**: Primary action you want recipients to take
-    - **Secondary Content**: Additional value-add content
-    - **Footer Section**: Social links, contact info, unsubscribe
-
-    For each recommended section, specify:
-    - Purpose and content focus
-    - Approximate word count or length
-    - Priority level (high/medium/low)
-
-    Format your response with clear markdown headers and bullet points for easy reading.
+    Keep your analysis concise but insightful. Focus on actionable intelligence over generic advice. Use specific examples from the data to support your recommendations.
     `;
 
     const completion = await openai.chat.completions.create({
@@ -115,15 +104,15 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: 'system',
-          content: 'You are an expert email marketing analyst specializing in fitness and beauty businesses.',
+          content: 'You are a seasoned email marketing strategist and copywriting expert with 15+ years of experience. You excel at analyzing campaign data to uncover actionable insights and provide direct, implementable recommendations. Your analysis is data-driven, concise, and focuses on what will actually move the needle for performance.',
         },
         {
           role: 'user',
           content: analysisPrompt,
         },
       ],
-      temperature: 0.7,
-      max_tokens: 1000,
+      temperature: 0.3,
+      max_tokens: 1200,
     });
 
     const analysis = completion.choices[0].message.content;
