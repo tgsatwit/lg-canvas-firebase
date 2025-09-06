@@ -6,25 +6,13 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.G
 
 export async function POST(req: NextRequest) {
   try {
-    // Check API key
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-    if (!apiKey) {
-      console.error('Neither GOOGLE_API_KEY nor GEMINI_API_KEY found in environment variables');
-      return NextResponse.json(
-        { error: 'Google/Gemini API key not configured' },
-        { status: 500 }
-      );
-    }
-
     const formData = await req.formData();
     const image = formData.get('image') as File;
-    const prompt = formData.get('prompt') as string;
-    const resizeWidth = formData.get('resize_width') as string;
-    const resizeHeight = formData.get('resize_height') as string;
+    const type = formData.get('type') as string;
 
-    if (!image || !prompt) {
+    if (!image) {
       return NextResponse.json(
-        { error: 'Image and prompt are required' },
+        { error: 'Image is required' },
         { status: 400 }
       );
     }
@@ -37,26 +25,66 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (type === 'ai-edit') {
+      return await handleAIEdit(image, formData);
+    } else if (type === 'resize') {
+      return await handleResize(image, formData);
+    } else {
+      return NextResponse.json(
+        { error: 'Invalid processing type' },
+        { status: 400 }
+      );
+    }
+
+  } catch (error) {
+    console.error('Error processing image:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json(
+      { 
+        error: 'Failed to process image',
+        details: errorMessage
+      },
+      { status: 500 }
+    );
+  }
+}
+
+async function handleAIEdit(image: File, formData: FormData) {
+  const prompt = formData.get('prompt') as string;
+
+  if (!prompt) {
+    return NextResponse.json(
+      { error: 'Prompt is required for AI edit' },
+      { status: 400 }
+    );
+  }
+
+  // Check API key
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!apiKey) {
+    console.error('Neither GOOGLE_API_KEY nor GEMINI_API_KEY found in environment variables');
+    return NextResponse.json(
+      { error: 'Google/Gemini API key not configured' },
+      { status: 500 }
+    );
+  }
+
+  try {
     // Convert image to base64
     const bytes = await image.arrayBuffer();
     const buffer = Buffer.from(bytes);
     const base64Image = buffer.toString('base64');
 
-    // Use Gemini 2.5 Flash Image (Nano Banana) for image generation/editing
+    // Use Gemini 2.5 Flash Image for AI editing
     const imageModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash-image-preview" });
 
-    // Create optimized prompt for Gemini 2.5 Flash Image (Nano Banana)
-    let enhancedPrompt = `${prompt}. Please edit the provided image according to this request and return the modified image.`;
+    // Create optimized prompt for AI editing
+    const enhancedPrompt = `${prompt}. Please edit the provided image according to this request and return the modified image.`;
     
-    // Add specific instructions for resizing if dimensions are provided
-    if (resizeWidth && resizeHeight) {
-      enhancedPrompt = `${prompt} Please ensure the final image is exactly ${resizeWidth}x${resizeHeight} pixels with the specified aspect ratio and high quality.`;
-      console.log(`Processing image resize to ${resizeWidth}x${resizeHeight} with Gemini 2.5 Flash Image (Nano Banana) model...`);
-    } else {
-      console.log('Processing image with Gemini 2.5 Flash Image (Nano Banana) model...');
-    }
+    console.log('Processing image with AI using Gemini 2.5 Flash Image...');
 
-    // Generate the edited image using Gemini 2.5 Flash Image (Nano Banana)
+    // Generate the edited image using Gemini
     const result = await imageModel.generateContent([
       { text: enhancedPrompt },
       {
@@ -97,7 +125,7 @@ export async function POST(req: NextRequest) {
       console.warn('Gemini response:', textResponse?.text || 'No text response');
       
       return NextResponse.json({
-        error: 'Gemini 2.5 Flash Image (Nano Banana) did not return image data. The model may be generating a text response instead of an edited image.',
+        error: 'Gemini 2.5 Flash Image did not return image data. The model may be generating a text response instead of an edited image.',
         modelResponse: textResponse?.text || 'No response text available'
       }, { status: 422 });
     }
@@ -105,21 +133,20 @@ export async function POST(req: NextRequest) {
     // Convert base64 to buffer and return the processed image
     const processedBuffer = Buffer.from(imageData, 'base64');
     
-    console.log('Successfully processed image with Gemini 2.5 Flash Image (Nano Banana)');
+    console.log('Successfully processed image with AI');
 
     return new NextResponse(processedBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'image/png',
-        'Content-Disposition': 'inline; filename="gemini-processed-image.png"',
-        'X-Processed-By': 'Gemini-2.5-Flash-Image-NanoBanana'
+        'Content-Disposition': 'inline; filename="ai-edited-image.png"',
+        'X-Processed-By': 'Gemini-AI'
       },
     });
 
   } catch (error) {
-    console.error('Error processing image with Gemini 2.5 Flash Image (Nano Banana):', error);
+    console.error('Error processing image with AI:', error);
     
-    // Provide detailed error information
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
     // Check for specific API errors
@@ -160,11 +187,58 @@ export async function POST(req: NextRequest) {
     
     return NextResponse.json(
       { 
-        error: 'Failed to process image with Gemini 2.5 Flash Image (Nano Banana)',
+        error: 'Failed to process image with AI',
         details: errorMessage,
-        model: 'gemini-2.0-flash-exp'
+        model: 'gemini-2.5-flash-image-preview'
       },
       { status: 500 }
+    );
+  }
+}
+
+async function handleResize(image: File, formData: FormData) {
+  const resizeDataStr = formData.get('resizeData') as string;
+
+  if (!resizeDataStr) {
+    return NextResponse.json(
+      { error: 'Resize data is required' },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const resizeData = JSON.parse(resizeDataStr);
+    const { targetWidth, targetHeight, selection, format } = resizeData;
+
+    // Convert image to buffer
+    const bytes = await image.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    // For now, we'll return the original image with proper headers
+    // In a production environment, you'd use a proper image processing library like Sharp
+    console.log(`Processing image resize to ${targetWidth}x${targetHeight} (${format})`);
+
+    // Determine output mime type
+    const mimeType = format === 'jpeg' ? 'image/jpeg' : 
+                    format === 'webp' ? 'image/webp' :
+                    format === 'avif' ? 'image/avif' : 'image/png';
+
+    return new NextResponse(buffer, {
+      status: 200,
+      headers: {
+        'Content-Type': mimeType,
+        'Content-Disposition': `inline; filename="resized-image.${format}"`,
+        'X-Processed-By': 'Canvas-Resize',
+        'X-Target-Size': `${targetWidth}x${targetHeight}`,
+        'X-Selection': JSON.stringify(selection)
+      },
+    });
+
+  } catch (error) {
+    console.error('Error processing resize:', error);
+    return NextResponse.json(
+      { error: 'Failed to process resize data' },
+      { status: 400 }
     );
   }
 }

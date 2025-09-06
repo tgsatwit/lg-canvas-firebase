@@ -79,142 +79,97 @@ export function DashboardSidebar() {
             </Button>
           </div>
 
-          {/* Quick Actions */}
-          {isOpen && (
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-2 h-2 rounded-full bg-pink-500"></div>
-                <span className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Quick Actions</span>
-              </div>
-              <div className="space-y-1">
-                <a 
-                  href='/dashboard/tasks?action=add'
-                  className="relative flex items-center rounded-2xl transition-all duration-300 font-medium group px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-pink-50/50"
-                >
-                  <div className="flex-1 min-w-0">
-                    New Task
-                  </div>
-                </a>
-                <a 
-                  href='/dashboard/chat'
-                  className="relative flex items-center rounded-2xl transition-all duration-300 font-medium group px-4 py-2.5 text-sm text-gray-700 hover:text-gray-900 hover:bg-pink-50/50 border border-gray-200 hover:border-pink-300"
-                >
-                  <span 
-                    className="w-5 h-5 rounded-lg flex items-center justify-center text-xs font-bold mr-2 text-white"
-                    style={{
-                      background: `
-                        linear-gradient(135deg, 
-                          rgba(236, 72, 153, 0.95) 0%,
-                          rgba(139, 92, 246, 0.95) 100%
-                        )
-                      `
-                    }}
-                  >
-                    AI
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    AI Assistant
-                  </div>
-                </a>
-              </div>
-            </div>
-          )}
-          
-          {/* Main Navigation */}
+          {/* AI Assistant - First Item */}
           <div className="space-y-2">
-            {isOpen && (
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-2 h-2 rounded-full bg-gray-400"></div>
-                <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Navigation</span>
-              </div>
-            )}
-            
+            <SidebarLink 
+              href="/dashboard/chat" 
+              isActive={pathname === "/dashboard/chat"}
+              className="border border-gray-200 hover:border-pink-300"
+            >
+              <span 
+                className="w-5 h-5 rounded-lg flex items-center justify-center text-xs font-bold mr-2 text-white"
+                style={{
+                  background: `
+                    linear-gradient(135deg, 
+                      rgba(236, 72, 153, 0.95) 0%,
+                      rgba(139, 92, 246, 0.95) 100%
+                    )
+                  `
+                }}
+              >
+                AI
+              </span>
+              AI Assistant
+            </SidebarLink>
+
             <SidebarLink 
               href="/dashboard" 
               isActive={pathname === "/dashboard"}
             >
               Dashboard
             </SidebarLink>
-
-            <SidebarLink 
-              href="/dashboard/videos" 
-              isActive={isVideosSection}
-              badge={draftVideos > 0 ? draftVideos : undefined}
-            >
-              Video Library
-            </SidebarLink>
-
-            <SidebarLink 
-              href="/dashboard/tasks" 
-              isActive={pathname === "/dashboard/tasks"}
-              badge={openTasks > 0 ? openTasks : undefined}
-            >
-              Tasks
-            </SidebarLink>
-
-            <SidebarLink 
-              href="/dashboard/social-monitor" 
-              isActive={pathname === "/dashboard/social-monitor"}
-              badge={totalUnansweredComments > 0 ? totalUnansweredComments : undefined}
-            >
-              Social Monitor
-            </SidebarLink>
-
-            <SidebarLink 
-              href="/dashboard/image-studio" 
-              isActive={pathname === "/dashboard/image-studio"}
-            >
-              Image Studio
-            </SidebarLink>
-
-            <SidebarLink 
-              href="/dashboard/customers" 
-              isActive={pathname === "/dashboard/customers"}
-            >
-              Customers
-            </SidebarLink>
-
-            <SidebarLink 
-              href="/dashboard/profile" 
-              isActive={pathname === "/dashboard/profile"}
-            >
-              Profile
-            </SidebarLink>
           </div>
-          
-          {/* Workflows Section */}
+
+          {/* Admin Section */}
+          {isOpen && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-2 h-2 rounded-full bg-pink-500"></div>
+                <span className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Admin</span>
+              </div>
+              
+              <SidebarLink 
+                href="/dashboard/tasks" 
+                isActive={pathname === "/dashboard/tasks"}
+                badge={openTasks > 0 ? openTasks : undefined}
+              >
+                Tasks
+              </SidebarLink>
+
+              <SidebarLink 
+                href="/dashboard/customers" 
+                isActive={pathname === "/dashboard/customers"}
+              >
+                Customers
+              </SidebarLink>
+
+              <SidebarLink 
+                href="/dashboard/email-marketing" 
+                isActive={pathname === "/dashboard/email-marketing"}
+              >
+                Email Marketing
+              </SidebarLink>
+
+              <SidebarLink 
+                href="/dashboard/social-monitor" 
+                isActive={pathname === "/dashboard/social-monitor"}
+                badge={totalUnansweredComments > 0 ? totalUnansweredComments : undefined}
+              >
+                Social Monitor
+              </SidebarLink>
+            </div>
+          )}
+
+          {/* Content Section */}
           {isOpen && (
             <div className="space-y-2">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Workflows</span>
+                <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Content</span>
               </div>
               
               <SidebarLink 
-                href="/dashboard/content-pipeline" 
-                isActive={pathname === "/dashboard/content-pipeline"}
+                href="/dashboard/videos" 
+                isActive={isVideosSection}
+                badge={draftVideos > 0 ? draftVideos : undefined}
               >
-                Content Pipeline
-              </SidebarLink>
-              
-              <SidebarLink 
-                href="/dashboard/playlists" 
-                isActive={pathname === "/dashboard/playlists"}
-              >
-                Playlists
-              </SidebarLink>
-              
-              <SidebarLink 
-                href="/dashboard/campaigns" 
-                isActive={pathname === "/dashboard/campaigns"}
-              >
-                Campaigns
+                Video Library
               </SidebarLink>
             </div>
           )}
         </SidebarBody>
         
-        {/* Profile section */}
+        {/* User section (simplified) */}
         <div className={cn(
           "mt-auto pt-6 border-t border-gray-100",
           isOpen ? "px-6 pb-8" : "px-4 pb-8"
@@ -224,25 +179,22 @@ export function DashboardSidebar() {
             isOpen ? "justify-between" : "justify-center"
           )}>
             {!loading && user ? (
-              <a 
-                href="/dashboard/profile"
-                className={cn(
-                  "flex items-center rounded-xl transition-all duration-200 hover:bg-pink-50 group",
-                  isOpen ? "w-full p-2" : "w-8 h-8 justify-center"
-                )}
-              >
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center text-sm font-bold text-pink-700 group-hover:from-pink-200 group-hover:to-purple-200 transition-all">
+              <div className={cn(
+                "flex items-center",
+                isOpen ? "w-full" : "justify-center"
+              )}>
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center text-sm font-bold text-pink-700">
                   {user.displayName?.charAt(0).toUpperCase() || user.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}
                 </div>
                 {isOpen && (
                   <div className="ml-3 flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-pink-700 transition-colors">
+                    <p className="text-sm font-semibold text-gray-900 truncate">
                       {user.displayName || user.name || user.email?.split('@')[0] || 'User'}
                     </p>
-                    <p className="text-xs text-gray-500">View Profile</p>
+                    <p className="text-xs text-gray-500">Admin User</p>
                   </div>
                 )}
-              </a>
+              </div>
             ) : (
               <a 
                 href="/auth/login" 
