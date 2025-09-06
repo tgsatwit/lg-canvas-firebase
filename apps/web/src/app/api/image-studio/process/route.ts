@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Initialize Gemini client with proper API key
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY!);
-
 export async function POST(req: NextRequest) {
+  // Initialize Gemini client with proper API key
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY!);
   try {
     const formData = await req.formData();
     const image = formData.get('image') as File;
@@ -26,7 +25,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (type === 'ai-edit') {
-      return await handleAIEdit(image, formData);
+      return await handleAIEdit(image, formData, genAI);
     } else if (type === 'resize') {
       return await handleResize(image, formData);
     } else {
@@ -50,7 +49,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function handleAIEdit(image: File, formData: FormData) {
+async function handleAIEdit(image: File, formData: FormData, genAI: any) {
   const prompt = formData.get('prompt') as string;
 
   if (!prompt) {
@@ -121,7 +120,7 @@ async function handleAIEdit(image: File, formData: FormData) {
 
     if (!imageData) {
       // If no image data, fallback to text response explaining the limitation
-      const textResponse = content.parts.find(part => part.text);
+      const textResponse = content.parts.find((part: any) => part.text);
       console.warn('Gemini response:', textResponse?.text || 'No text response');
       
       return NextResponse.json({
