@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { Clock, ArrowRightCircle } from "lucide-react";
+import { Clock, ArrowRightCircle, User } from "lucide-react";
 import { useTaskContext } from "../context/task-context";
 import { Task, SubTask } from "../context/task-context";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TaskDetailsDialog } from "./task-details-dialog";
 
 interface TaskCardProps {
@@ -32,6 +33,22 @@ export function TaskCard({ task }: TaskCardProps) {
   const handleSubTaskToggle = (subTask: SubTask) => {
     updateSubTask(task.id, subTask.id, { completed: !subTask.completed });
   };
+
+  const getUserInitials = (displayName?: string | null, email?: string | null) => {
+    if (displayName) {
+      return displayName
+        .split(" ")
+        .map(n => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+    }
+    return email?.[0]?.toUpperCase() || "U";
+  };
+
+  const getUserDisplayName = (displayName?: string | null, email?: string | null) => {
+    return displayName || email || "Unknown User";
+  };
   
   return (
     <>
@@ -46,6 +63,26 @@ export function TaskCard({ task }: TaskCardProps) {
               {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
             </div>
           </div>
+          
+          {/* Assigned user section */}
+          {task.assignedToUser && (
+            <div className="flex items-center gap-2 text-xs text-slate-600">
+              <Avatar className="h-5 w-5">
+                <AvatarImage src={task.assignedToUser.photoURL || undefined} />
+                <AvatarFallback className="text-xs bg-gradient-to-br from-pink-100 to-purple-100 text-pink-700">
+                  {getUserInitials(task.assignedToUser.displayName, task.assignedToUser.email)}
+                </AvatarFallback>
+              </Avatar>
+              <span>Assigned to {getUserDisplayName(task.assignedToUser.displayName, task.assignedToUser.email)}</span>
+            </div>
+          )}
+          
+          {!task.assignedToUser && (
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <User className="h-4 w-4" />
+              <span>Unassigned</span>
+            </div>
+          )}
           
           {task.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">

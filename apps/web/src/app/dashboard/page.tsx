@@ -79,7 +79,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                {getGreeting()}, {user?.email?.split('@')[0] || 'User'}! 👋
+                {getGreeting()}, {user?.displayName || user?.name || user?.email?.split('@')[0] || 'User'}! 👋
               </h1>
               <p className="text-gray-600">Here's what's happening with your content today</p>
             </div>

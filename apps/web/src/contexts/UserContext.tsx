@@ -4,15 +4,18 @@ import {
   createContext,
   ReactNode,
   useContext,
+  useEffect,
+  useState,
 } from "react";
 import { useAuth } from "./AuthContext";
 
-// Define a simplified user type that matches Firebase User
+// Define a simplified user type that matches Firebase User and Firestore data
 export type UserInfo = {
   id: string;
   name?: string | null;
   email?: string | null;
   image?: string | null;
+  displayName?: string; // From Firestore profile
 };
 
 type UserContextType = {
@@ -23,19 +26,55 @@ type UserContextType = {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: ReactNode }) {
-  const { user: firebaseUser, loading } = useAuth();
+  const { user: firebaseUser, loading: authLoading } = useAuth();
+  const [firestoreProfile, setFirestoreProfile] = useState<any>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
 
-  // Map Firebase User to our UserInfo format
+  // Fetch user profile from Firestore when Firebase user changes
+  useEffect(() => {
+    if (!firebaseUser) {
+      setFirestoreProfile(null);
+      return;
+    }
+
+    const fetchUserProfile = async () => {
+      setProfileLoading(true);
+      try {
+        const token = await firebaseUser.getIdToken();
+        const response = await fetch('/api/users', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        if (response.ok) {
+          const users = await response.json();
+          // Find current user in the users array
+          const currentUserProfile = users.find((u: any) => u.id === firebaseUser.uid);
+          setFirestoreProfile(currentUserProfile || null);
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [firebaseUser]);
+
+  // Map Firebase User + Firestore data to our UserInfo format
   const user: UserInfo | null = firebaseUser ? {
     id: firebaseUser.uid,
     name: firebaseUser.displayName,
     email: firebaseUser.email,
     image: firebaseUser.photoURL,
+    displayName: firestoreProfile?.displayName, // From Firestore
   } : null;
 
   const contextValue: UserContextType = {
     user,
-    loading,
+    loading: authLoading || profileLoading,
   };
 
   return (

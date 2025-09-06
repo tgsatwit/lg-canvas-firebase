@@ -173,6 +173,13 @@ export function DashboardSidebar() {
             >
               Customers
             </SidebarLink>
+
+            <SidebarLink 
+              href="/dashboard/profile" 
+              isActive={pathname === "/dashboard/profile"}
+            >
+              Profile
+            </SidebarLink>
           </div>
           
           {/* Workflows Section */}
@@ -217,19 +224,25 @@ export function DashboardSidebar() {
             isOpen ? "justify-between" : "justify-center"
           )}>
             {!loading && user ? (
-              <>
-                <div className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-700">
-                  {user.email?.charAt(0).toUpperCase() || 'U'}
+              <a 
+                href="/dashboard/profile"
+                className={cn(
+                  "flex items-center rounded-xl transition-all duration-200 hover:bg-pink-50 group",
+                  isOpen ? "w-full p-2" : "w-8 h-8 justify-center"
+                )}
+              >
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center text-sm font-bold text-pink-700 group-hover:from-pink-200 group-hover:to-purple-200 transition-all">
+                  {user.displayName?.charAt(0).toUpperCase() || user.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || 'U'}
                 </div>
                 {isOpen && (
-                  <div className="ml-4 flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">
-                      {user.email?.split('@')[0] || 'User'}
+                  <div className="ml-3 flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-pink-700 transition-colors">
+                      {user.displayName || user.name || user.email?.split('@')[0] || 'User'}
                     </p>
-                    <p className="text-xs text-gray-500">Online</p>
+                    <p className="text-xs text-gray-500">View Profile</p>
                   </div>
                 )}
-              </>
+              </a>
             ) : (
               <a 
                 href="/auth/login" 

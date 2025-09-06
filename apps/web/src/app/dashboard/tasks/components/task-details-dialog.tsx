@@ -375,8 +375,14 @@ export function TaskDetailsDialog({
                     </div>
                   ) : (
                     <div className="text-sm text-slate-700 mt-1">
-                      {task.assignedTo ? (
-                        <span>Assigned to user</span>
+                      {task.assignedToUser ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center text-xs font-bold text-pink-700">
+                            {task.assignedToUser.displayName?.charAt(0).toUpperCase() || 
+                             task.assignedToUser.email?.charAt(0).toUpperCase() || 'U'}
+                          </div>
+                          <span>{task.assignedToUser.displayName || task.assignedToUser.email || 'Unknown User'}</span>
+                        </div>
                       ) : (
                         <span className="text-slate-400 italic">Unassigned</span>
                       )}
@@ -492,10 +498,29 @@ export function TaskDetailsDialog({
               </div>
             </div>
             
-            {task.assignedTo && (
+            {task.assignedToUser && (
               <div>
                 <Label className="text-xs">Assigned To</Label>
-                <div className="text-slate-600 mt-1">{task.assignedTo}</div>
+                <div className="text-slate-600 mt-1 flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center text-xs font-bold text-pink-700">
+                    {task.assignedToUser.displayName?.charAt(0).toUpperCase() || 
+                     task.assignedToUser.email?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  <span className="text-xs">{task.assignedToUser.displayName || task.assignedToUser.email || 'Unknown User'}</span>
+                </div>
+              </div>
+            )}
+            
+            {task.createdByUser && (
+              <div>
+                <Label className="text-xs">Created By</Label>
+                <div className="text-slate-600 mt-1 flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-gradient-to-br from-pink-100 to-purple-100 flex items-center justify-center text-xs font-bold text-pink-700">
+                    {task.createdByUser.displayName?.charAt(0).toUpperCase() || 
+                     task.createdByUser.email?.charAt(0).toUpperCase() || 'U'}
+                  </div>
+                  <span className="text-xs">{task.createdByUser.displayName || task.createdByUser.email || 'Unknown User'}</span>
+                </div>
               </div>
             )}
           </div>

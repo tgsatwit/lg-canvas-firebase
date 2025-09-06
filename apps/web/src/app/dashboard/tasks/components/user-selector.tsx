@@ -12,11 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 
-export interface User {
+export interface UserProfile {
   id: string;
-  name?: string;
-  email?: string;
-  image?: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface UserSelectorProps {
@@ -30,7 +32,7 @@ export function UserSelector({
   onUserSelect,
   placeholder = "Assign to user",
 }: UserSelectorProps) {
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
@@ -86,19 +88,20 @@ export function UserSelector({
     setOpen(false);
   };
 
-  const getUserInitials = (user: User) => {
-    if (user.name) {
-      return user.name
+  const getUserInitials = (user: UserProfile) => {
+    if (user.displayName) {
+      return user.displayName
         .split(" ")
         .map(n => n[0])
         .join("")
-        .toUpperCase();
+        .toUpperCase()
+        .slice(0, 2);
     }
     return user.email?.[0]?.toUpperCase() || "U";
   };
 
-  const getUserDisplayName = (user: User) => {
-    return user.name || user.email || "Unknown User";
+  const getUserDisplayName = (user: UserProfile) => {
+    return user.displayName || user.email || "Unknown User";
   };
 
   return (
@@ -112,7 +115,7 @@ export function UserSelector({
           {selectedUser ? (
             <div className="flex items-center gap-2">
               <Avatar className="h-5 w-5">
-                <AvatarImage src={selectedUser.image || undefined} />
+                <AvatarImage src={selectedUser.photoURL || undefined} />
                 <AvatarFallback className="text-xs">
                   {getUserInitials(selectedUser)}
                 </AvatarFallback>
@@ -170,7 +173,7 @@ export function UserSelector({
                 onClick={() => handleUserSelect(user.id)}
               >
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.image || undefined} />
+                  <AvatarImage src={user.photoURL || undefined} />
                   <AvatarFallback className="text-xs">
                     {getUserInitials(user)}
                   </AvatarFallback>
@@ -179,7 +182,7 @@ export function UserSelector({
                   <div className="text-sm font-medium truncate">
                     {getUserDisplayName(user)}
                   </div>
-                  {user.email && user.name && (
+                  {user.email && user.displayName && (
                     <div className="text-xs text-muted-foreground truncate">
                       {user.email}
                     </div>

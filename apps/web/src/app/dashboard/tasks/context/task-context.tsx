@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserContext } from "@/contexts/UserContext";
 
 // Generate UUID using crypto API
 function uuidv4(): string {
@@ -40,10 +41,19 @@ export type Task = {
   updatedAt: string;
   tags: TaskTag[];
   assignedTo?: string;
+  assignedToUser?: UserInfo; // Populated user info
   createdBy: string;
+  createdByUser?: UserInfo; // Populated user info
   isRecurring: boolean;
   recurringPattern?: "daily" | "weekly" | "monthly";
   subTasks: SubTask[];
+};
+
+export type UserInfo = {
+  id: string;
+  email?: string | null;
+  displayName?: string | null;
+  photoURL?: string | null;
 };
 
 export type Column = {
@@ -88,6 +98,7 @@ const initialBoard: Board = {
 interface TaskContextType {
   board: Board;
   tags: TaskTag[];
+  users: UserInfo[];
   loading: boolean;
   filter: "all" | "owned" | "assigned";
   setFilter: (filter: "all" | "owned" | "assigned") => void;
@@ -101,6 +112,9 @@ interface TaskContextType {
   deleteTag: (tagId: string) => void;
   moveTask: (taskId: string, sourceColumn: string, destinationColumn: string, newIndex: number) => Promise<void>;
   refreshTasks: () => Promise<void>;
+  bulkUpdateTasks: (taskIds: string[], action: string, updates?: any) => Promise<void>;
+  assignTasksToSelf: (taskIds: string[]) => Promise<void>;
+  completeAllTasks: (taskIds: string[]) => Promise<void>;
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
@@ -136,6 +150,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     { id: "tag-3", name: "Enhancement", color: "bg-yellow-500" },
     { id: "tag-4", name: "Bug", color: "bg-green-500" },
   ]);
+  const [users, setUsers] = useState<UserInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<"all" | "owned" | "assigned">("all");
   const { user } = useAuth();
@@ -173,8 +188,38 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     }
   }, [user, filter, getAuthToken]);
 
+  // Function to fetch users
+  const fetchUsers = useCallback(async () => {
+    try {
+      const token = await getAuthToken();
+      const response = await fetch("/api/users", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const fetchedUsers = await response.json();
+        setUsers(fetchedUsers);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  }, [getAuthToken]);
+
+  // Function to populate user information in tasks
+  const populateUserInfo = useCallback((tasks: Task[], users: UserInfo[]): Task[] => {
+    return tasks.map(task => ({
+      ...task,
+      assignedToUser: task.assignedTo ? users.find(u => u.id === task.assignedTo) : undefined,
+      createdByUser: users.find(u => u.id === task.createdBy),
+    }));
+  }, []);
+
   // Function to organize tasks into board structure
-  const organizeTasksIntoBoard = (tasks: Task[]) => {
+  const organizeTasksIntoBoard = useCallback((tasks: Task[]) => {
+    const tasksWithUserInfo = populateUserInfo(tasks, users);
+    
     const newBoard: Board = {
       tasks: {},
       columns: {
@@ -186,19 +231,28 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       columnOrder: ["column-1", "column-2", "column-3", "column-4"],
     };
 
-    tasks.forEach((task) => {
+    tasksWithUserInfo.forEach((task) => {
       newBoard.tasks[task.id] = task;
       const columnId = statusToColumnMap[task.status];
       newBoard.columns[columnId].taskIds.push(task.id);
     });
 
     setBoard(newBoard);
-  };
+  }, [users, populateUserInfo]);
 
-  // Load data from API when user or filter changes
+  // Fetch users on mount
   useEffect(() => {
-    fetchTasks();
-  }, [user, filter, fetchTasks]);
+    if (user) {
+      fetchUsers();
+    }
+  }, [user, fetchUsers]);
+
+  // Use API-based fetching instead of real-time listener for better consistency
+  useEffect(() => {
+    if (user && users.length > 0) {
+      fetchTasks();
+    }
+  }, [user, filter, users, fetchTasks]);
 
   // Load tags from localStorage (keeping this local for now)
   useEffect(() => {
@@ -418,9 +472,42 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     // as the position doesn't affect the task data
   };
 
+  const bulkUpdateTasks = async (taskIds: string[], action: string, updates?: any) => {
+    try {
+      const token = await getAuthToken();
+      const response = await fetch("/api/tasks/bulk", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action, taskIds, updates }),
+      });
+      
+      if (response.ok) {
+        await fetchTasks();
+      } else {
+        throw new Error("Failed to bulk update tasks");
+      }
+    } catch (error) {
+      console.error("Error bulk updating tasks:", error);
+      throw error;
+    }
+  };
+
+  const assignTasksToSelf = async (taskIds: string[]) => {
+    if (!user) return;
+    await bulkUpdateTasks(taskIds, "assign", { assignToUserId: user.uid });
+  };
+
+  const completeAllTasks = async (taskIds: string[]) => {
+    await bulkUpdateTasks(taskIds, "complete");
+  };
+
   const value = {
     board,
     tags,
+    users,
     loading,
     filter,
     setFilter,
@@ -434,6 +521,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     deleteTag,
     moveTask,
     refreshTasks: fetchTasks,
+    bulkUpdateTasks,
+    assignTasksToSelf,
+    completeAllTasks,
   };
 
   return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;

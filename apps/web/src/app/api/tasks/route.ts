@@ -1,18 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { chatDb } from "@/lib/firebase/config";
-import {
-  collection,
-  addDoc,
-  query,
-  where,
-  getDocs,
-  updateDoc,
-  deleteDoc,
-  doc,
-  orderBy,
-  getDoc,
-} from "firebase/firestore";
-import { adminAuth } from "@/lib/firebase/admin";
+import { adminAuth, adminFirestore } from "@/lib/firebase/admin";
+import { FieldValue } from "firebase-admin/firestore";
 
 export interface Task {
   id: string;
@@ -67,59 +55,28 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const filter = searchParams.get("filter"); // "owned", "assigned", or "all"
     
-    const tasksRef = collection(chatDb, "tasks");
-    let q;
+    const firestore = adminFirestore();
+    if (!firestore) {
+      throw new Error("Firestore not initialized");
+    }
+    const tasksRef = firestore.collection("tasks");
+    let query;
     
     if (filter === "owned") {
-      q = query(
-        tasksRef,
-        where("createdBy", "==", userId),
-        orderBy("createdAt", "desc")
-      );
+      query = tasksRef
+        .where("createdBy", "==", userId)
+        .orderBy("createdAt", "desc");
     } else if (filter === "assigned") {
-      q = query(
-        tasksRef,
-        where("assignedTo", "==", userId),
-        orderBy("createdAt", "desc")
-      );
+      query = tasksRef
+        .where("assignedTo", "==", userId)
+        .orderBy("createdAt", "desc");
     } else {
-      // Get all tasks where user is either creator or assignee
-      const ownedQuery = query(
-        tasksRef,
-        where("createdBy", "==", userId),
-        orderBy("createdAt", "desc")
-      );
-      const assignedQuery = query(
-        tasksRef,
-        where("assignedTo", "==", userId),
-        orderBy("createdAt", "desc")
-      );
-      
-      const [ownedSnapshot, assignedSnapshot] = await Promise.all([
-        getDocs(ownedQuery),
-        getDocs(assignedQuery),
-      ]);
-      
-      const ownedTasks = ownedSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
-      const assignedTasks = assignedSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
-      // Combine and deduplicate
-      const allTasks = [...ownedTasks, ...assignedTasks];
-      const uniqueTasks = allTasks.filter((task, index, self) =>
-        index === self.findIndex(t => t.id === task.id)
-      );
-      
-      return NextResponse.json(uniqueTasks);
+      // Get all tasks (for collaborative environment)
+      // Since this is an internal tool, all authenticated users can see all tasks
+      query = tasksRef.orderBy("createdAt", "desc");
     }
     
-    const snapshot = await getDocs(q);
+    const snapshot = await query.get();
     const tasks = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
@@ -143,6 +100,10 @@ export async function POST(request: NextRequest) {
     
     const taskData = await request.json();
     
+    const firestore = adminFirestore();
+    if (!firestore) {
+      throw new Error("Firestore not initialized");
+    }
     const newTask = {
       ...taskData,
       createdBy: userId,
@@ -150,7 +111,7 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date().toISOString(),
     };
     
-    const docRef = await addDoc(collection(chatDb, "tasks"), newTask);
+    const docRef = await firestore.collection("tasks").add(newTask);
     
     return NextResponse.json({
       id: docRef.id,
@@ -180,10 +141,14 @@ export async function PUT(request: NextRequest) {
       );
     }
     
-    const taskRef = doc(chatDb, "tasks", id);
-    const taskDoc = await getDoc(taskRef);
+    const firestore = adminFirestore();
+    if (!firestore) {
+      throw new Error("Firestore not initialized");
+    }
+    const taskRef = firestore.collection("tasks").doc(id);
+    const taskDoc = await taskRef.get();
     
-    if (!taskDoc.exists()) {
+    if (!taskDoc.exists) {
       return NextResponse.json(
         { error: "Task not found" },
         { status: 404 }
@@ -193,14 +158,14 @@ export async function PUT(request: NextRequest) {
     const taskData = taskDoc.data();
     
     // Check if user has permission to update this task
-    if (taskData.createdBy !== userId && taskData.assignedTo !== userId) {
+    if (taskData?.createdBy !== userId && taskData?.assignedTo !== userId) {
       return NextResponse.json(
         { error: "Permission denied" },
         { status: 403 }
       );
     }
     
-    await updateDoc(taskRef, {
+    await taskRef.update({
       ...updates,
       updatedAt: new Date().toISOString(),
     });
@@ -236,10 +201,14 @@ export async function DELETE(request: NextRequest) {
       );
     }
     
-    const taskRef = doc(chatDb, "tasks", id);
-    const taskDoc = await getDoc(taskRef);
+    const firestore = adminFirestore();
+    if (!firestore) {
+      throw new Error("Firestore not initialized");
+    }
+    const taskRef = firestore.collection("tasks").doc(id);
+    const taskDoc = await taskRef.get();
     
-    if (!taskDoc.exists()) {
+    if (!taskDoc.exists) {
       return NextResponse.json(
         { error: "Task not found" },
         { status: 404 }
@@ -249,14 +218,14 @@ export async function DELETE(request: NextRequest) {
     const taskData = taskDoc.data();
     
     // Only creator can delete task
-    if (taskData.createdBy !== userId) {
+    if (taskData?.createdBy !== userId) {
       return NextResponse.json(
         { error: "Permission denied" },
         { status: 403 }
       );
     }
     
-    await deleteDoc(taskRef);
+    await taskRef.delete();
     
     return NextResponse.json({ success: true });
   } catch (error) {

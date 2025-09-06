@@ -193,6 +193,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       };
     }
     
+    if (pathname.includes('/profile')) {
+      return {
+        title: 'User Profile',
+        actions: null
+      };
+    }
+    
     // Default dashboard
     return {
       title: 'Dashboard',
