@@ -85,6 +85,13 @@ export async function POST(request: NextRequest) {
             date: new Date(currentYear, currentMonth - 1, new Date(data.date).getDate()).toISOString().split('T')[0],
             category: data.category,
             frequency: data.frequency,
+            claimable: data.claimable || {
+              type: 'percentage',
+              value: 100,
+              claimableAmount: data.amount
+            },
+            files: [], // Don't copy files - new evidence needed each month
+            // Legacy fields for backward compatibility
             invoiceUrl: null, // Don't copy the actual file URL
             fileName: null, // Don't copy the file name
             uploadedAt: now,

@@ -6,6 +6,24 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
+// File attachment interface
+interface FileAttachment {
+  id: string;
+  url: string;
+  fileName: string;
+  originalName: string;
+  size: number;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
+// Claimable amount interface
+interface ClaimableAmount {
+  type: 'percentage' | 'fixed';
+  value: number; // percentage (0-100) or fixed dollar amount
+  claimableAmount: number; // calculated claimable amount
+}
+
 // Invoice item interface
 interface InvoiceItem {
   id: string;
@@ -14,10 +32,13 @@ interface InvoiceItem {
   date: string;
   category: string;
   frequency: 'monthly' | 'quarterly' | 'annual' | 'adhoc';
-  invoiceUrl?: string;
-  fileName?: string;
+  claimable: ClaimableAmount;
+  files: FileAttachment[];
   uploadedAt?: string;
   uploadedBy?: string;
+  // Legacy fields for backward compatibility
+  invoiceUrl?: string;
+  fileName?: string;
 }
 
 // Category interface
@@ -61,8 +82,13 @@ export function InvoicesTab() {
     category: 'other',
     frequency: 'adhoc' as 'monthly' | 'quarterly' | 'annual' | 'adhoc',
     date: new Date().toISOString().split('T')[0],
+    claimableType: 'percentage' as 'percentage' | 'fixed',
+    claimableValue: 100,
   });
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [existingFiles, setExistingFiles] = useState<FileAttachment[]>([]);
+  const [filesToDelete, setFilesToDelete] = useState<string[]>([]);
+  const [showFileManager, setShowFileManager] = useState<string | null>(null);
   
   // Copy from previous month state
   const [copyingFromPrevious, setCopyingFromPrevious] = useState(false);
@@ -148,6 +174,54 @@ export function InvoicesTab() {
     loadMonthData();
   }, [currentDate]);
 
+  // Handle multiple file uploads
+  const handleFileUploads = async () => {
+    const uploadedFiles: FileAttachment[] = [];
+    
+    for (const file of selectedFiles) {
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+      uploadFormData.append('year', currentDate.getFullYear().toString());
+      uploadFormData.append('month', (currentDate.getMonth() + 1).toString());
+      
+      const uploadResponse = await fetch('/api/invoices/upload', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+      
+      if (uploadResponse.ok) {
+        const uploadResult = await uploadResponse.json();
+        uploadedFiles.push({
+          id: uploadResult.id || Date.now().toString(),
+          url: uploadResult.url,
+          fileName: uploadResult.fileName || file.name,
+          originalName: file.name,
+          size: file.size,
+          uploadedAt: new Date().toISOString(),
+          uploadedBy: 'Current User'
+        });
+      }
+    }
+    
+    return uploadedFiles;
+  };
+
+  // Handle file deletion
+  const handleDeleteFile = async (fileId: string) => {
+    if (editingItem) {
+      // Mark for deletion
+      setFilesToDelete(prev => [...prev, fileId]);
+      setExistingFiles(prev => prev.filter(f => f.id !== fileId));
+    }
+  };
+
+  // Handle file rename
+  const handleRenameFile = (fileId: string, newName: string) => {
+    setExistingFiles(prev => prev.map(f => 
+      f.id === fileId ? { ...f, fileName: newName } : f
+    ));
+  };
+
   // Handle form submission (create or update)
   const handleSubmitInvoiceItem = async () => {
     if (!formData.description || !formData.amount) {
@@ -157,37 +231,30 @@ export function InvoicesTab() {
     try {
       setUploading(editingItem ? editingItem.id : 'item');
       
-      let invoiceUrl = editingItem?.invoiceUrl || '';
-      let fileName = editingItem?.fileName || '';
+      // Upload new files
+      const newUploadedFiles = await handleFileUploads();
       
-      // Upload file if selected
-      if (selectedFile) {
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', selectedFile);
-        uploadFormData.append('year', currentDate.getFullYear().toString());
-        uploadFormData.append('month', (currentDate.getMonth() + 1).toString());
-        
-        const uploadResponse = await fetch('/api/invoices/upload', {
-          method: 'POST',
-          body: uploadFormData,
-        });
-        
-        if (uploadResponse.ok) {
-          const uploadResult = await uploadResponse.json();
-          invoiceUrl = uploadResult.url;
-          fileName = selectedFile.name;
-        }
-      }
+      // Combine existing files with newly uploaded ones
+      const allFiles = [...existingFiles, ...newUploadedFiles];
+
+      // Calculate claimable amount
+      const amount = parseFloat(formData.amount);
+      const claimableAmount = calculateClaimableAmount(amount, formData.claimableType, formData.claimableValue);
 
       // Prepare invoice item data
       const itemData = {
         description: formData.description,
-        amount: parseFloat(formData.amount),
+        amount: amount,
         date: formData.date,
         category: formData.category,
         frequency: formData.frequency,
-        invoiceUrl,
-        fileName,
+        claimable: {
+          type: formData.claimableType,
+          value: formData.claimableValue,
+          claimableAmount: claimableAmount
+        },
+        files: allFiles,
+        filesToDelete: editingItem ? filesToDelete : [],
         uploadedAt: editingItem?.uploadedAt || new Date().toISOString(),
         uploadedBy: editingItem?.uploadedBy || 'Current User'
       };
@@ -240,7 +307,11 @@ export function InvoicesTab() {
       category: item.category,
       frequency: item.frequency,
       date: item.date,
+      claimableType: item.claimable?.type || 'percentage',
+      claimableValue: item.claimable?.value || 100,
     });
+    setExistingFiles(item.files || []);
+    setFilesToDelete([]);
     setEditingItem(item);
     setShowAddForm(true);
   };
@@ -279,8 +350,13 @@ export function InvoicesTab() {
       category: categories.length > 0 ? categories[0].name : 'other',
       frequency: 'adhoc',
       date: new Date().toISOString().split('T')[0],
+      claimableType: 'percentage',
+      claimableValue: 100,
     });
-    setSelectedFile(null);
+    setSelectedFiles([]);
+    setExistingFiles([]);
+    setFilesToDelete([]);
+    setShowFileManager(null);
     setShowAddForm(false);
     setEditingItem(null);
   };
@@ -341,17 +417,25 @@ export function InvoicesTab() {
     return matchesCategory && matchesSearch;
   }) || [];
 
-  // Calculate category summaries
+  // Calculate category summaries (using claimable amounts)
   const categorySummary = categories.map(category => {
     const categoryItems = filteredItems.filter(item => item.category === category.name);
     const count = categoryItems.length;
-    const total = categoryItems.reduce((sum, item) => sum + item.amount, 0);
+    const total = categoryItems.reduce((sum, item) => sum + (item.claimable?.claimableAmount || item.amount), 0);
     return {
       ...category,
       count,
       total,
     };
   }).filter(cat => cat.count > 0 || !selectedCategory);
+  
+  // Calculate claimable amount
+  const calculateClaimableAmount = (amount: number, type: 'percentage' | 'fixed', value: number) => {
+    if (type === 'percentage') {
+      return (amount * value) / 100;
+    }
+    return Math.min(value, amount); // Can't claim more than the invoice amount
+  };
 
   const getFrequencyBadge = (frequency: string) => {
     const colors = {
@@ -384,7 +468,7 @@ export function InvoicesTab() {
               {formatMonthYear(currentDate)}
             </h2>
             <p className="text-sm text-gray-600">
-              {filteredItems.length} items • {formatCurrency(filteredItems.reduce((sum, item) => sum + item.amount, 0))}
+              {filteredItems.length} items • Total: {formatCurrency(filteredItems.reduce((sum, item) => sum + item.amount, 0))} • Claimable: {formatCurrency(filteredItems.reduce((sum, item) => sum + (item.claimable?.claimableAmount || item.amount), 0))}
             </p>
           </div>
           
@@ -511,7 +595,7 @@ export function InvoicesTab() {
             </div>
             
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Amount ($)</label>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Total Amount ($)</label>
               <Input
                 type="number"
                 step="0.01"
@@ -565,20 +649,123 @@ export function InvoicesTab() {
                 className="border-gray-200 rounded-xl"
               />
             </div>
+            
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Claimable Amount</label>
+              <div className="space-y-2">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="claimableType"
+                      value="percentage"
+                      checked={formData.claimableType === 'percentage'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, claimableType: e.target.value as 'percentage' }))}
+                      className="text-pink-500"
+                    />
+                    Percentage
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="claimableType"
+                      value="fixed"
+                      checked={formData.claimableType === 'fixed'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, claimableType: e.target.value as 'fixed' }))}
+                      className="text-pink-500"
+                    />
+                    Fixed Amount
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    step={formData.claimableType === 'percentage' ? '1' : '0.01'}
+                    min={formData.claimableType === 'percentage' ? '0' : '0'}
+                    max={formData.claimableType === 'percentage' ? '100' : undefined}
+                    value={formData.claimableValue}
+                    onChange={(e) => setFormData(prev => ({ ...prev, claimableValue: parseFloat(e.target.value) || 0 }))}
+                    className="border-gray-200 rounded-xl flex-1"
+                    placeholder={formData.claimableType === 'percentage' ? '100' : '0.00'}
+                  />
+                  <span className="text-sm text-gray-600">
+                    {formData.claimableType === 'percentage' ? '%' : '$'}
+                  </span>
+                </div>
+                {formData.amount && (
+                  <p className="text-xs text-gray-600">
+                    Claimable: {formatCurrency(calculateClaimableAmount(parseFloat(formData.amount) || 0, formData.claimableType, formData.claimableValue))}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
           
-          <div className="mb-6">
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Invoice File (Optional)</label>
-            <input
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
-              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-              className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
-            />
-            {selectedFile && (
-              <p className="text-sm text-gray-600 mt-2">
-                Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-              </p>
+          <div className="mb-6 space-y-4">
+            {/* File Upload Section */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Upload New Files (Optional)</label>
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={(e) => setSelectedFiles(Array.from(e.target.files || []))}
+                className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100"
+              />
+              {selectedFiles.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {selectedFiles.map((file, index) => (
+                    <p key={index} className="text-sm text-gray-600">
+                      📎 {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Existing Files Management */}
+            {editingItem && existingFiles.length > 0 && (
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">Current Files</label>
+                <div className="space-y-2 p-3 border border-gray-200 rounded-xl bg-gray-50">
+                  {existingFiles.map((file) => (
+                    <div key={file.id} className="flex items-center justify-between p-2 bg-white rounded-lg">
+                      <div className="flex items-center gap-2 flex-1">
+                        <span className="text-sm">📎</span>
+                        <input
+                          type="text"
+                          value={file.fileName}
+                          onChange={(e) => handleRenameFile(file.id, e.target.value)}
+                          className="flex-1 text-sm border-0 bg-transparent focus:outline-none focus:ring-1 focus:ring-pink-500 rounded px-2 py-1"
+                        />
+                        <span className="text-xs text-gray-500">
+                          ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(file.url, '_blank')}
+                          className="text-xs border-gray-300 text-gray-700 hover:bg-gray-50"
+                        >
+                          View
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteFile(file.id)}
+                          className="text-xs border-red-300 text-red-700 hover:bg-red-50"
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
           
@@ -646,7 +833,13 @@ export function InvoicesTab() {
                           <h4 className="font-medium text-gray-900">{item.description}</h4>
                           <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
                             <span>{formatDate(item.date)}</span>
-                            {item.fileName && (
+                            {item.files && item.files.length > 0 && (
+                              <span className="flex items-center gap-1">
+                                📎 {item.files.length} file{item.files.length > 1 ? 's' : ''}
+                              </span>
+                            )}
+                            {/* Legacy support for old single file format */}
+                            {!item.files?.length && item.fileName && (
                               <span className="flex items-center gap-1">
                                 📎 {item.fileName}
                               </span>
@@ -663,6 +856,14 @@ export function InvoicesTab() {
                           <div className="font-semibold text-gray-900">
                             {formatCurrency(item.amount)}
                           </div>
+                          {item.claimable && (
+                            <div className="text-xs text-gray-600">
+                              Claimable: {formatCurrency(item.claimable.claimableAmount)}
+                              {item.claimable.type === 'percentage' ? 
+                                ` (${item.claimable.value}%)` : 
+                                ` ($${item.claimable.value})`}
+                            </div>
+                          )}
                         </div>
                         
                         <Button
@@ -689,15 +890,57 @@ export function InvoicesTab() {
                           )}
                         </Button>
                         
-                        {item.invoiceUrl && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => window.open(item.invoiceUrl, '_blank')}
-                            className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                          >
-                            View File
-                          </Button>
+                        {/* File download buttons */}
+                        {item.files && item.files.length > 0 ? (
+                          item.files.length === 1 ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(item.files[0].url, '_blank')}
+                              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                            >
+                              View File
+                            </Button>
+                          ) : (
+                            <div className="relative">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setShowFileManager(showFileManager === item.id ? null : item.id)}
+                                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                              >
+                                View Files ({item.files.length})
+                              </Button>
+                              {showFileManager === item.id && (
+                                <div className="absolute right-0 top-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-48">
+                                  <div className="p-2 space-y-1">
+                                    {item.files.map((file) => (
+                                      <button
+                                        key={file.id}
+                                        onClick={() => window.open(file.url, '_blank')}
+                                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded-lg flex items-center gap-2"
+                                      >
+                                        <span>📎</span>
+                                        <span className="truncate">{file.fileName}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        ) : (
+                          // Legacy support for old single file format
+                          item.invoiceUrl && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(item.invoiceUrl, '_blank')}
+                              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                            >
+                              View File
+                            </Button>
+                          )
                         )}
                       </div>
                     </div>

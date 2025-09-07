@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase/admin';
 
+// File attachment interface
+interface FileAttachment {
+  id: string;
+  url: string;
+  fileName: string;
+  originalName: string;
+  size: number;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
+// Claimable amount interface
+interface ClaimableAmount {
+  type: 'percentage' | 'fixed';
+  value: number;
+  claimableAmount: number;
+}
+
 // Invoice item interface
 interface InvoiceItemData {
   description: string;
@@ -8,6 +26,9 @@ interface InvoiceItemData {
   date: string;
   category: string;
   frequency: 'monthly' | 'quarterly' | 'annual' | 'adhoc';
+  claimable: ClaimableAmount;
+  files: FileAttachment[];
+  // Legacy fields for backward compatibility
   invoiceUrl?: string;
   fileName?: string;
   uploadedAt?: string;
@@ -36,6 +57,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate claimable amount structure
+    if (body.claimable) {
+      if (!body.claimable.type || !['percentage', 'fixed'].includes(body.claimable.type)) {
+        return NextResponse.json(
+          { error: 'Invalid claimable amount type' },
+          { status: 400 }
+        );
+      }
+      if (typeof body.claimable.value !== 'number' || body.claimable.value < 0) {
+        return NextResponse.json(
+          { error: 'Invalid claimable amount value' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Validate amount is a positive number
     if (typeof body.amount !== 'number' || body.amount <= 0) {
       return NextResponse.json(
@@ -55,6 +92,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const now = new Date().toISOString();
+    
     // Create the invoice item document
     const invoiceData = {
       description: body.description.trim(),
@@ -62,14 +101,21 @@ export async function POST(request: NextRequest) {
       date: body.date,
       category: body.category,
       frequency: body.frequency,
-      invoiceUrl: body.invoiceUrl || null,
-      fileName: body.fileName || null,
-      uploadedAt: body.uploadedAt || new Date().toISOString(),
+      claimable: body.claimable || {
+        type: 'percentage',
+        value: 100,
+        claimableAmount: body.amount
+      },
+      files: body.files || [],
+      // Legacy fields for backward compatibility
+      invoiceUrl: body.invoiceUrl || (body.files && body.files[0] ? body.files[0].url : null),
+      fileName: body.fileName || (body.files && body.files[0] ? body.files[0].fileName : null),
+      uploadedAt: body.uploadedAt || now,
       uploadedBy: body.uploadedBy || 'Unknown User', // TODO: Get from authenticated user
       year: body.year,
       month: body.month,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
     };
 
     // Add to Firestore

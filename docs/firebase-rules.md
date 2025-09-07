@@ -218,4 +218,4 @@ If you encounter permission errors, check:
 1. User is properly authenticated
 2. Rules syntax is correct  
 3. Required indexes are built
-4. Data structure matches validation functions
+

@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase/admin';
 
+// File attachment interface
+interface FileAttachment {
+  id: string;
+  url: string;
+  fileName: string;
+  originalName: string;
+  size: number;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
+// Claimable amount interface
+interface ClaimableAmount {
+  type: 'percentage' | 'fixed';
+  value: number;
+  claimableAmount: number;
+}
+
 // Invoice item interface (matches frontend)
 interface InvoiceItem {
   id: string;
@@ -9,6 +27,9 @@ interface InvoiceItem {
   date: string;
   category: string;
   frequency: 'monthly' | 'quarterly' | 'annual' | 'adhoc';
+  claimable: ClaimableAmount;
+  files: FileAttachment[];
+  // Legacy fields for backward compatibility
   invoiceUrl?: string;
   fileName?: string;
   uploadedAt?: string;
@@ -71,6 +92,13 @@ export async function GET(request: NextRequest) {
         date: data.date || '',
         category: data.category || 'other',
         frequency: data.frequency || 'adhoc',
+        claimable: data.claimable || {
+          type: 'percentage',
+          value: 100,
+          claimableAmount: data.amount || 0
+        },
+        files: data.files || [],
+        // Legacy fields for backward compatibility
         invoiceUrl: data.invoiceUrl,
         fileName: data.fileName,
         uploadedAt: data.uploadedAt,

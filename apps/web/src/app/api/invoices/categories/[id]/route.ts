@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase/admin';
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const firestore = db();
     if (!firestore) {
@@ -11,7 +11,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       );
     }
     
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const { name, label, color } = body;
 
@@ -85,7 +85,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const firestore = db();
     if (!firestore) {
@@ -95,7 +95,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       );
     }
     
-    const { id } = params;
+    const { id } = await params;
 
     // Check if category exists
     const categoryRef = firestore.collection('invoice-categories').doc(id);
