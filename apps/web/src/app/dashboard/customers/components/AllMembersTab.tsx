@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -24,16 +24,31 @@ interface ConsolidatedMember {
   source: 'vimeo' | 'mailchimp' | 'both';
 }
 
+interface TagFixAction {
+  email: string;
+  action: 'add' | 'remove';
+  tag: string;
+  reason: string;
+}
+
 interface AllMembersTabProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
 }
 
-export function AllMembersTab({ searchQuery, onSearchChange }: AllMembersTabProps) {
+export interface AllMembersTabRef {
+  handleSyncAndFixAll: () => Promise<void>;
+  syncing: boolean;
+  fixing: boolean;
+}
+
+export const AllMembersTab = forwardRef<AllMembersTabRef, AllMembersTabProps>(
+  ({ searchQuery, onSearchChange }, ref) => {
   // Data state
   const [allMembers, setAllMembers] = useState<ConsolidatedMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [fixing, setFixing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   // Filter state - Default to PBL Online Active members
@@ -49,6 +64,13 @@ export function AllMembersTab({ searchQuery, onSearchChange }: AllMembersTabProp
   
   // Sync status
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+
+  // Expose sync function to parent component
+  useImperativeHandle(ref, () => ({
+    handleSyncAndFixAll,
+    syncing,
+    fixing,
+  }));
 
   // Fetch consolidated members on mount
   useEffect(() => {
@@ -118,6 +140,138 @@ export function AllMembersTab({ searchQuery, onSearchChange }: AllMembersTabProp
       setError(err instanceof Error ? err.message : 'Sync failed');
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleSyncAndFixAll = async () => {
+    try {
+      // Step 1: Sync Vimeo OTT members
+      setSyncing(true);
+      setError(null);
+      
+      const vimeoResponse = await fetch('/api/vimeo-ott/sync', { method: 'POST' });
+      if (!vimeoResponse.ok) {
+        throw new Error('Failed to sync Vimeo OTT members');
+      }
+      
+      // Step 2: Sync Mailchimp members
+      const mailchimpResponse = await fetch('/api/mailchimp/lists', { method: 'POST' });
+      if (!mailchimpResponse.ok) {
+        throw new Error('Failed to sync MailChimp members');
+      }
+      
+      setSyncing(false);
+      
+      // Step 3: Refresh consolidated data
+      await fetchConsolidatedMembers();
+      
+      // Step 4: Fix all tag issues
+      setFixing(true);
+      
+      // Find all members with tag issues
+      const membersWithWrongTags = allMembers.filter(m => {
+        const isPblOnlineActive = m.vimeoStatus === 'enabled' && m.vimeoProduct === 'PBL Online Subscription';
+        const hasCancelledTag = m.mailchimpTags?.some(tag => 
+          tag.toLowerCase().includes('cancelled') && tag.toLowerCase().includes('members')
+        ) || false;
+        return isPblOnlineActive && hasCancelledTag;
+      });
+      
+      const membersWithOutdatedTags = allMembers.filter(m => {
+        const isPblOnlineActive = m.vimeoStatus === 'enabled' && m.vimeoProduct === 'PBL Online Subscription';
+        const hasCurrentTag = m.mailchimpTags?.some(tag => 
+          tag.toLowerCase().includes('current') && tag.toLowerCase().includes('members')
+        ) || false;
+        return !isPblOnlineActive && hasCurrentTag;
+      });
+      
+      const actions: TagFixAction[] = [];
+      
+      // Process wrong tags
+      membersWithWrongTags.forEach(member => {
+        const cancelledTags = member.mailchimpTags?.filter(tag => 
+          tag.toLowerCase().includes('cancelled') && tag.toLowerCase().includes('members')
+        ) || [];
+        
+        cancelledTags.forEach(tag => {
+          actions.push({
+            email: member.email,
+            action: 'remove',
+            tag,
+            reason: 'Member is active PBL Online subscriber'
+          });
+        });
+
+        const hasCurrentTag = member.mailchimpTags?.some(tag => 
+          tag.toLowerCase().includes('current') && tag.toLowerCase().includes('members')
+        );
+        
+        if (!hasCurrentTag) {
+          actions.push({
+            email: member.email,
+            action: 'add',
+            tag: 'current members',
+            reason: 'Member is active PBL Online subscriber'
+          });
+        }
+      });
+      
+      // Process outdated tags
+      membersWithOutdatedTags.forEach(member => {
+        const currentTags = member.mailchimpTags?.filter(tag => 
+          tag.toLowerCase().includes('current') && tag.toLowerCase().includes('members')
+        ) || [];
+        
+        currentTags.forEach(tag => {
+          actions.push({
+            email: member.email,
+            action: 'remove',
+            tag,
+            reason: 'Member is not an active PBL Online subscriber'
+          });
+        });
+
+        const hasCancelledTag = member.mailchimpTags?.some(tag => 
+          tag.toLowerCase().includes('cancelled') && tag.toLowerCase().includes('members')
+        );
+        
+        if (!hasCancelledTag) {
+          actions.push({
+            email: member.email,
+            action: 'add',
+            tag: 'cancelled members',
+            reason: 'Member is not an active PBL Online subscriber'
+          });
+        }
+      });
+      
+      if (actions.length > 0) {
+        const fixResponse = await fetch('/api/mailchimp/fix-tags', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ actions }),
+        });
+
+        if (!fixResponse.ok) {
+          throw new Error('Failed to fix tags');
+        }
+      }
+      
+      // Step 5: Re-sync Mailchimp to confirm changes
+      await fetch('/api/mailchimp/lists', { method: 'POST' });
+      
+      // Step 6: Refresh data one final time
+      await fetchConsolidatedMembers();
+      setLastSyncTime(new Date());
+      
+    } catch (err) {
+      console.error('Error in sync and fix:', err);
+      setError(err instanceof Error ? err.message : 'Operation failed');
+    } finally {
+      setSyncing(false);
+      setFixing(false);
     }
   };
 
@@ -354,6 +508,7 @@ export function AllMembersTab({ searchQuery, onSearchChange }: AllMembersTabProp
 
   return (
     <div className="space-y-6">
+
       {/* Stats Tiles */}
       <div className="grid grid-cols-5 gap-4">
         {/* PBL Online Active - Primary Tile */}
@@ -859,4 +1014,6 @@ export function AllMembersTab({ searchQuery, onSearchChange }: AllMembersTabProp
       </div>
     </div>
   );
-}
+});
+
+AllMembersTab.displayName = 'AllMembersTab';

@@ -76,4 +76,9 @@ if (typeof window === 'undefined') {
   }
 }
 
+// Export the services
+export const auth = adminAuth;
+export const db = adminFirestore;
+export const storage = adminStorage;
+
 export { adminAuth, adminFirestore, adminStorage }; 

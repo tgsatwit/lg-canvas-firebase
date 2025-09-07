@@ -86,20 +86,22 @@ export function DashboardSidebar() {
               isActive={pathname === "/dashboard/chat"}
               className="border border-gray-200 hover:border-pink-300"
             >
-              <span 
-                className="w-5 h-5 rounded-lg flex items-center justify-center text-xs font-bold mr-2 text-white"
-                style={{
-                  background: `
-                    linear-gradient(135deg, 
-                      rgba(236, 72, 153, 0.95) 0%,
-                      rgba(139, 92, 246, 0.95) 100%
-                    )
-                  `
-                }}
-              >
-                AI
-              </span>
-              AI Assistant
+              <div className="flex items-center">
+                <span 
+                  className="w-5 h-5 rounded-lg flex items-center justify-center text-xs font-bold mr-2 text-white flex-shrink-0"
+                  style={{
+                    background: `
+                      linear-gradient(135deg, 
+                        rgba(236, 72, 153, 0.95) 0%,
+                        rgba(139, 92, 246, 0.95) 100%
+                      )
+                    `
+                  }}
+                >
+                  AI
+                </span>
+                AI Assistant
+              </div>
             </SidebarLink>
 
             <SidebarLink 
@@ -146,6 +148,13 @@ export function DashboardSidebar() {
                 badge={totalUnansweredComments > 0 ? totalUnansweredComments : undefined}
               >
                 Social Monitor
+              </SidebarLink>
+
+              <SidebarLink 
+                href="/dashboard/invoices" 
+                isActive={pathname === "/dashboard/invoices"}
+              >
+                Invoices & Tax
               </SidebarLink>
             </div>
           )}

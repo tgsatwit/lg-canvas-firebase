@@ -235,6 +235,114 @@ export function ReconcileTab({ searchQuery, onSearchChange }: ReconcileTabProps)
     }
   };
 
+  const handleAutoFixAll = async () => {
+    // Select all members with wrong or outdated tags
+    const allProblematicMembers = new Set([
+      ...membersWithWrongTags.map(m => m.email),
+      ...membersWithOutdatedTags.map(m => m.email)
+    ]);
+    
+    if (allProblematicMembers.size === 0) return;
+    
+    // Set selected members to all problematic ones
+    setSelectedMembers(allProblematicMembers);
+    
+    // Generate fix actions for all problematic members
+    const actions: TagFixAction[] = [];
+    
+    // Process wrong tags (active with cancelled tag)
+    membersWithWrongTags.forEach(member => {
+      const cancelledTags = member.mailchimpTags?.filter(tag => 
+        tag.toLowerCase().includes('cancelled') && tag.toLowerCase().includes('members')
+      ) || [];
+      
+      cancelledTags.forEach(tag => {
+        actions.push({
+          email: member.email,
+          action: 'remove',
+          tag,
+          reason: 'Member is active PBL Online subscriber'
+        });
+      });
+
+      const hasCurrentTag = member.mailchimpTags?.some(tag => 
+        tag.toLowerCase().includes('current') && tag.toLowerCase().includes('members')
+      );
+      
+      if (!hasCurrentTag) {
+        actions.push({
+          email: member.email,
+          action: 'add',
+          tag: 'current members',
+          reason: 'Member is active PBL Online subscriber'
+        });
+      }
+    });
+    
+    // Process outdated tags (inactive with current tag)
+    membersWithOutdatedTags.forEach(member => {
+      const currentTags = member.mailchimpTags?.filter(tag => 
+        tag.toLowerCase().includes('current') && tag.toLowerCase().includes('members')
+      ) || [];
+      
+      currentTags.forEach(tag => {
+        actions.push({
+          email: member.email,
+          action: 'remove',
+          tag,
+          reason: 'Member is not an active PBL Online subscriber'
+        });
+      });
+
+      const hasCancelledTag = member.mailchimpTags?.some(tag => 
+        tag.toLowerCase().includes('cancelled') && tag.toLowerCase().includes('members')
+      );
+      
+      if (!hasCancelledTag) {
+        actions.push({
+          email: member.email,
+          action: 'add',
+          tag: 'cancelled members',
+          reason: 'Member is not an active PBL Online subscriber'
+        });
+      }
+    });
+    
+    setFixActions(actions);
+    
+    try {
+      setFixing(true);
+      setError(null);
+
+      const response = await fetch('/api/mailchimp/fix-tags', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ actions }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fix tags: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        // Refresh data after fixing
+        await fetchMembersForReconcile();
+        setSelectedMembers(new Set());
+        setFixActions([]);
+      } else {
+        throw new Error(result.error || 'Failed to fix tags');
+      }
+    } catch (err) {
+      console.error('Error fixing tags:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fix tags');
+    } finally {
+      setFixing(false);
+    }
+  };
+
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -288,6 +396,49 @@ export function ReconcileTab({ searchQuery, onSearchChange }: ReconcileTabProps)
 
   return (
     <div className="space-y-6">
+      {/* Auto-Fix All Button */}
+      {(membersWithWrongTags.length > 0 || membersWithOutdatedTags.length > 0) && (
+        <div className="bg-gradient-to-r from-pink-50 to-purple-50 border-2 border-pink-200 rounded-2xl p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Automatic Tag Reconciliation
+              </h3>
+              <p className="text-sm text-gray-600">
+                Found {membersWithWrongTags.length + membersWithOutdatedTags.length} members with tag issues.
+                Click to automatically fix all wrong and outdated tags.
+              </p>
+              <div className="mt-3 space-y-1">
+                <div className="text-sm text-gray-700">
+                  • {membersWithWrongTags.length} active members incorrectly tagged as cancelled
+                </div>
+                <div className="text-sm text-gray-700">
+                  • {membersWithOutdatedTags.length} inactive members still tagged as current
+                </div>
+              </div>
+            </div>
+            <Button
+              onClick={handleAutoFixAll}
+              disabled={fixing}
+              className="ml-6 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+              style={{
+                background: `linear-gradient(135deg, rgba(236, 72, 153, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%)`,
+                minWidth: '140px'
+              }}
+            >
+              {fixing ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                  Fixing...
+                </span>
+              ) : (
+                `Fix All (${membersWithWrongTags.length + membersWithOutdatedTags.length})`
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-6">
         <div 

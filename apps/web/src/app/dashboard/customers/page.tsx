@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { AllMembersTab } from './components/AllMembersTab';
+import { AllMembersTab, type AllMembersTabRef } from './components/AllMembersTab';
 import { MembersTab } from './components/MembersTabNew';
 import { MailchimpTab } from './components/MailchimpTab';
 import { ReconcileTab } from './components/ReconcileTab';
@@ -13,9 +13,16 @@ import { ReconcileTab } from './components/ReconcileTab';
 export default function VimeoOttPage() {
   const [activeTab, setActiveTab] = useState<'all' | 'members' | 'videos' | 'mailchimp' | 'reconcile'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const allMembersTabRef = useRef<AllMembersTabRef>(null);
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
+  };
+
+  const handleSyncAndFixAll = async () => {
+    if (allMembersTabRef.current) {
+      await allMembersTabRef.current.handleSyncAndFixAll();
+    }
   };
 
   return (
@@ -72,7 +79,7 @@ export default function VimeoOttPage() {
           </div>
 
           {/* Tab Navigation */}
-          <div className="mb-8">
+          <div className="mb-8 flex items-center justify-between">
             <div className="flex items-center gap-2 p-1 bg-gray-100 rounded-2xl w-fit">
               <Button
                 variant={activeTab === 'all' ? 'default' : 'ghost'}
@@ -139,11 +146,37 @@ export default function VimeoOttPage() {
                 Reconcile
               </Button>
             </div>
+            
+            {/* Sync & Fix Button - Only show on All Members tab */}
+            {activeTab === 'all' && (
+              <Button
+                onClick={handleSyncAndFixAll}
+                disabled={allMembersTabRef.current?.syncing || allMembersTabRef.current?.fixing}
+                className="text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                style={{
+                  background: `linear-gradient(135deg, rgba(236, 72, 153, 0.9) 0%, rgba(139, 92, 246, 0.9) 100%)`
+                }}
+              >
+                {allMembersTabRef.current?.syncing ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    Syncing...
+                  </span>
+                ) : allMembersTabRef.current?.fixing ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    Fixing Tags...
+                  </span>
+                ) : (
+                  'Sync & Fix All'
+                )}
+              </Button>
+            )}
           </div>
 
           {/* Tab Content */}
           <div>
-            {activeTab === 'all' && <AllMembersTab searchQuery={searchQuery} onSearchChange={handleSearchChange} />}
+            {activeTab === 'all' && <AllMembersTab ref={allMembersTabRef} searchQuery={searchQuery} onSearchChange={handleSearchChange} />}
             {activeTab === 'members' && <MembersTab searchQuery={searchQuery} onSearchChange={handleSearchChange} />}
             {activeTab === 'mailchimp' && <MailchimpTab searchQuery={searchQuery} onSearchChange={handleSearchChange} />}
             {activeTab === 'reconcile' && <ReconcileTab searchQuery={searchQuery} onSearchChange={handleSearchChange} />}
