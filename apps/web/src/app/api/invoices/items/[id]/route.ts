@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase/admin';
 
-// Invoice item interface
-interface InvoiceItemData {
+interface InvoiceItemUpdateData {
   description: string;
   amount: number;
   date: string;
@@ -12,11 +11,9 @@ interface InvoiceItemData {
   fileName?: string;
   uploadedAt?: string;
   uploadedBy?: string;
-  year: number;
-  month: number;
 }
 
-export async function POST(request: NextRequest) {
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const firestore = db();
     if (!firestore) {
@@ -26,10 +23,11 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const body: InvoiceItemData = await request.json();
+    const { id } = params;
+    const body: InvoiceItemUpdateData = await request.json();
 
     // Validate required fields
-    if (!body.description || !body.amount || !body.date || !body.category || !body.frequency || !body.year || !body.month) {
+    if (!body.description || !body.amount || !body.date || !body.category || !body.frequency) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -44,6 +42,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if item exists
+    const itemRef = firestore.collection('invoices').doc(id);
+    const itemDoc = await itemRef.get();
+    
+    if (!itemDoc.exists) {
+      return NextResponse.json(
+        { error: 'Invoice item not found' },
+        { status: 404 }
+      );
+    }
+
     // Validate category exists in the categories collection
     const categoriesRef = firestore.collection('invoice-categories');
     const categorySnapshot = await categoriesRef.where('name', '==', body.category).get();
@@ -55,45 +64,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the invoice item document
-    const invoiceData = {
+    // Update the invoice item document
+    const updateData = {
       description: body.description.trim(),
       amount: body.amount,
       date: body.date,
       category: body.category,
       frequency: body.frequency,
-      invoiceUrl: body.invoiceUrl || null,
-      fileName: body.fileName || null,
-      uploadedAt: body.uploadedAt || new Date().toISOString(),
-      uploadedBy: body.uploadedBy || 'Unknown User', // TODO: Get from authenticated user
-      year: body.year,
-      month: body.month,
-      createdAt: new Date().toISOString(),
+      invoiceUrl: body.invoiceUrl || itemDoc.data()?.invoiceUrl || null,
+      fileName: body.fileName || itemDoc.data()?.fileName || null,
+      uploadedAt: body.uploadedAt || itemDoc.data()?.uploadedAt || new Date().toISOString(),
+      uploadedBy: body.uploadedBy || itemDoc.data()?.uploadedBy || 'Unknown User',
       updatedAt: new Date().toISOString(),
     };
 
-    // Add to Firestore
-    const docRef = await firestore.collection('invoices').add(invoiceData);
+    await itemRef.update(updateData);
 
     return NextResponse.json(
       { 
-        success: true, 
-        id: docRef.id,
-        message: 'Invoice item created successfully' 
+        success: true,
+        message: 'Invoice item updated successfully' 
       },
-      { status: 201 }
+      { status: 200 }
     );
 
   } catch (error) {
-    console.error('Error creating invoice item:', error);
+    console.error('Error updating invoice item:', error);
     return NextResponse.json(
-      { error: 'Failed to create invoice item' },
+      { error: 'Failed to update invoice item' },
       { status: 500 }
     );
   }
 }
 
-export async function DELETE(request: NextRequest) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const firestore = db();
     if (!firestore) {
@@ -103,18 +107,21 @@ export async function DELETE(request: NextRequest) {
       );
     }
     
-    const searchParams = request.nextUrl.searchParams;
-    const itemId = searchParams.get('id');
+    const { id } = params;
 
-    if (!itemId) {
+    // Check if item exists
+    const itemRef = firestore.collection('invoices').doc(id);
+    const itemDoc = await itemRef.get();
+    
+    if (!itemDoc.exists) {
       return NextResponse.json(
-        { error: 'Item ID is required' },
-        { status: 400 }
+        { error: 'Invoice item not found' },
+        { status: 404 }
       );
     }
 
     // Delete from Firestore
-    await firestore.collection('invoices').doc(itemId).delete();
+    await itemRef.delete();
 
     return NextResponse.json(
       { success: true, message: 'Invoice item deleted successfully' },

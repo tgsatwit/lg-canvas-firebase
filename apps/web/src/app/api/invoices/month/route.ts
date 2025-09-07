@@ -8,6 +8,7 @@ interface InvoiceItem {
   amount: number;
   date: string;
   category: string;
+  frequency: 'monthly' | 'quarterly' | 'annual' | 'adhoc';
   invoiceUrl?: string;
   fileName?: string;
   uploadedAt?: string;
@@ -69,6 +70,7 @@ export async function GET(request: NextRequest) {
         amount: data.amount || 0,
         date: data.date || '',
         category: data.category || 'other',
+        frequency: data.frequency || 'adhoc',
         invoiceUrl: data.invoiceUrl,
         fileName: data.fileName,
         uploadedAt: data.uploadedAt,
