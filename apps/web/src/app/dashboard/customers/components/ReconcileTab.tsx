@@ -27,6 +27,13 @@ interface TagFixAction {
   reason: string;
 }
 
+interface ListAddAction {
+  email: string;
+  listId: string;
+  listName: string;
+  reason: string;
+}
+
 interface ReconcileTabProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -37,9 +44,10 @@ export function ReconcileTab({ searchQuery, onSearchChange }: ReconcileTabProps)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fixing, setFixing] = useState(false);
-  const [activeSection, setActiveSection] = useState<'wrong' | 'outdated'>('wrong');
+  const [activeSection, setActiveSection] = useState<'wrong' | 'outdated' | 'free-workout'>('wrong');
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
   const [fixActions, setFixActions] = useState<TagFixAction[]>([]);
+  const [listActions, setListActions] = useState<ListAddAction[]>([]);
 
   useEffect(() => {
     fetchMembersForReconcile();
@@ -97,7 +105,21 @@ export function ReconcileTab({ searchQuery, onSearchChange }: ReconcileTabProps)
     });
   }, [members]);
 
-  const currentMembers = activeSection === 'wrong' ? membersWithWrongTags : membersWithOutdatedTags;
+  // Members with 'free workouts' product who need to be added to Free Workout list
+  const membersNeedingFreeWorkoutList = useMemo(() => {
+    return members.filter(m => {
+      const hasFreeWorkoutsProduct = m.vimeoProduct && 
+        m.vimeoProduct.toLowerCase().includes('free workouts');
+      const isInFreeWorkoutList = m.mailchimpLists?.some(list => 
+        list.toLowerCase().includes('free workout')
+      ) || false;
+      return hasFreeWorkoutsProduct && !isInFreeWorkoutList;
+    });
+  }, [members]);
+
+  const currentMembers = activeSection === 'wrong' ? membersWithWrongTags : 
+                         activeSection === 'outdated' ? membersWithOutdatedTags : 
+                         membersNeedingFreeWorkoutList;
 
   // Filter by search query
   const filteredMembers = useMemo(() => {
@@ -163,7 +185,7 @@ export function ReconcileTab({ searchQuery, onSearchChange }: ReconcileTabProps)
             reason: 'Member is active PBL Online subscriber'
           });
         }
-      } else {
+      } else if (activeSection === 'outdated') {
         // Remove "current members" tag and add "cancelled members" tag
         const currentTags = member.mailchimpTags?.filter(tag => 
           tag.toLowerCase().includes('current') && tag.toLowerCase().includes('members')
@@ -191,7 +213,29 @@ export function ReconcileTab({ searchQuery, onSearchChange }: ReconcileTabProps)
           });
         }
       }
+      // Note: free-workout section doesn't use tag actions, it uses list actions
     });
+
+    return actions;
+  };
+
+  const generateListActions = (): ListAddAction[] => {
+    const actions: ListAddAction[] = [];
+    
+    if (activeSection === 'free-workout') {
+      selectedMembers.forEach(email => {
+        const member = members.find(m => m.email === email);
+        if (!member) return;
+
+        // Add to Free Workout list - we'll need to get the actual list ID from Mailchimp
+        actions.push({
+          email,
+          listId: 'FREE_WORKOUT_LIST_ID', // This will be resolved by the API
+          listName: 'Free Workout',
+          reason: 'Member has free workouts product'
+        });
+      });
+    }
 
     return actions;
   };
@@ -199,47 +243,77 @@ export function ReconcileTab({ searchQuery, onSearchChange }: ReconcileTabProps)
   const handleFixTags = async () => {
     if (selectedMembers.size === 0) return;
 
-    const actions = generateFixActions();
-    setFixActions(actions);
-
     try {
       setFixing(true);
       setError(null);
 
-      const response = await fetch('/api/mailchimp/fix-tags', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ actions }),
-      });
+      if (activeSection === 'free-workout') {
+        // Handle list additions for free workout members
+        const listActions = generateListActions();
+        setListActions(listActions);
 
-      if (!response.ok) {
-        throw new Error(`Failed to fix tags: ${response.status}`);
-      }
+        const response = await fetch('/api/mailchimp/add-to-list', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ actions: listActions }),
+        });
 
-      const result = await response.json();
-      if (result.success) {
-        // Refresh data after fixing
-        await fetchMembersForReconcile();
-        setSelectedMembers(new Set());
-        setFixActions([]);
+        if (!response.ok) {
+          throw new Error(`Failed to add to list: ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (result.success) {
+          // Refresh data after fixing
+          await fetchMembersForReconcile();
+          setSelectedMembers(new Set());
+          setListActions([]);
+        } else {
+          throw new Error(result.error || 'Failed to add to list');
+        }
       } else {
-        throw new Error(result.error || 'Failed to fix tags');
+        // Handle tag fixes for wrong/outdated tags
+        const actions = generateFixActions();
+        setFixActions(actions);
+
+        const response = await fetch('/api/mailchimp/fix-tags', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ actions }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fix tags: ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (result.success) {
+          // Refresh data after fixing
+          await fetchMembersForReconcile();
+          setSelectedMembers(new Set());
+          setFixActions([]);
+        } else {
+          throw new Error(result.error || 'Failed to fix tags');
+        }
       }
     } catch (err) {
-      console.error('Error fixing tags:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fix tags');
+      console.error('Error fixing issues:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fix issues');
     } finally {
       setFixing(false);
     }
   };
 
   const handleAutoFixAll = async () => {
-    // Select all members with wrong or outdated tags
+    // Select all members with wrong tags, outdated tags, or needing free workout list
     const allProblematicMembers = new Set([
       ...membersWithWrongTags.map(m => m.email),
-      ...membersWithOutdatedTags.map(m => m.email)
+      ...membersWithOutdatedTags.map(m => m.email),
+      ...membersNeedingFreeWorkoutList.map(m => m.email)
     ]);
     
     if (allProblematicMembers.size === 0) return;
@@ -247,97 +321,137 @@ export function ReconcileTab({ searchQuery, onSearchChange }: ReconcileTabProps)
     // Set selected members to all problematic ones
     setSelectedMembers(allProblematicMembers);
     
-    // Generate fix actions for all problematic members
-    const actions: TagFixAction[] = [];
-    
-    // Process wrong tags (active with cancelled tag)
-    membersWithWrongTags.forEach(member => {
-      const cancelledTags = member.mailchimpTags?.filter(tag => 
-        tag.toLowerCase().includes('cancelled') && tag.toLowerCase().includes('members')
-      ) || [];
-      
-      cancelledTags.forEach(tag => {
-        actions.push({
-          email: member.email,
-          action: 'remove',
-          tag,
-          reason: 'Member is active PBL Online subscriber'
-        });
-      });
-
-      const hasCurrentTag = member.mailchimpTags?.some(tag => 
-        tag.toLowerCase().includes('current') && tag.toLowerCase().includes('members')
-      );
-      
-      if (!hasCurrentTag) {
-        actions.push({
-          email: member.email,
-          action: 'add',
-          tag: 'current members',
-          reason: 'Member is active PBL Online subscriber'
-        });
-      }
-    });
-    
-    // Process outdated tags (inactive with current tag)
-    membersWithOutdatedTags.forEach(member => {
-      const currentTags = member.mailchimpTags?.filter(tag => 
-        tag.toLowerCase().includes('current') && tag.toLowerCase().includes('members')
-      ) || [];
-      
-      currentTags.forEach(tag => {
-        actions.push({
-          email: member.email,
-          action: 'remove',
-          tag,
-          reason: 'Member is not an active PBL Online subscriber'
-        });
-      });
-
-      const hasCancelledTag = member.mailchimpTags?.some(tag => 
-        tag.toLowerCase().includes('cancelled') && tag.toLowerCase().includes('members')
-      );
-      
-      if (!hasCancelledTag) {
-        actions.push({
-          email: member.email,
-          action: 'add',
-          tag: 'cancelled members',
-          reason: 'Member is not an active PBL Online subscriber'
-        });
-      }
-    });
-    
-    setFixActions(actions);
-    
     try {
       setFixing(true);
       setError(null);
 
-      const response = await fetch('/api/mailchimp/fix-tags', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ actions }),
+      // Generate and execute tag fix actions
+      const tagActions: TagFixAction[] = [];
+      
+      // Process wrong tags (active with cancelled tag)
+      membersWithWrongTags.forEach(member => {
+        const cancelledTags = member.mailchimpTags?.filter(tag => 
+          tag.toLowerCase().includes('cancelled') && tag.toLowerCase().includes('members')
+        ) || [];
+        
+        cancelledTags.forEach(tag => {
+          tagActions.push({
+            email: member.email,
+            action: 'remove',
+            tag,
+            reason: 'Member is active PBL Online subscriber'
+          });
+        });
+
+        const hasCurrentTag = member.mailchimpTags?.some(tag => 
+          tag.toLowerCase().includes('current') && tag.toLowerCase().includes('members')
+        );
+        
+        if (!hasCurrentTag) {
+          tagActions.push({
+            email: member.email,
+            action: 'add',
+            tag: 'current members',
+            reason: 'Member is active PBL Online subscriber'
+          });
+        }
+      });
+      
+      // Process outdated tags (inactive with current tag)
+      membersWithOutdatedTags.forEach(member => {
+        const currentTags = member.mailchimpTags?.filter(tag => 
+          tag.toLowerCase().includes('current') && tag.toLowerCase().includes('members')
+        ) || [];
+        
+        currentTags.forEach(tag => {
+          tagActions.push({
+            email: member.email,
+            action: 'remove',
+            tag,
+            reason: 'Member is not an active PBL Online subscriber'
+          });
+        });
+
+        const hasCancelledTag = member.mailchimpTags?.some(tag => 
+          tag.toLowerCase().includes('cancelled') && tag.toLowerCase().includes('members')
+        );
+        
+        if (!hasCancelledTag) {
+          tagActions.push({
+            email: member.email,
+            action: 'add',
+            tag: 'cancelled members',
+            reason: 'Member is not an active PBL Online subscriber'
+          });
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to fix tags: ${response.status}`);
+      // Generate and execute list add actions
+      const listActions: ListAddAction[] = [];
+      
+      // Process members needing free workout list
+      membersNeedingFreeWorkoutList.forEach(member => {
+        listActions.push({
+          email: member.email,
+          listId: 'FREE_WORKOUT_LIST_ID', // This will be resolved by the API
+          listName: 'Free Workout',
+          reason: 'Member has free workouts product'
+        });
+      });
+
+      // Execute tag fixes if any
+      if (tagActions.length > 0) {
+        setFixActions(tagActions);
+        
+        const tagResponse = await fetch('/api/mailchimp/fix-tags', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ actions: tagActions }),
+        });
+
+        if (!tagResponse.ok) {
+          throw new Error(`Failed to fix tags: ${tagResponse.status}`);
+        }
+
+        const tagResult = await tagResponse.json();
+        if (!tagResult.success) {
+          throw new Error(tagResult.error || 'Failed to fix tags');
+        }
       }
 
-      const result = await response.json();
-      if (result.success) {
-        // Refresh data after fixing
-        await fetchMembersForReconcile();
-        setSelectedMembers(new Set());
-        setFixActions([]);
-      } else {
-        throw new Error(result.error || 'Failed to fix tags');
+      // Execute list additions if any
+      if (listActions.length > 0) {
+        setListActions(listActions);
+        
+        const listResponse = await fetch('/api/mailchimp/add-to-list', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ actions: listActions }),
+        });
+
+        if (!listResponse.ok) {
+          throw new Error(`Failed to add to lists: ${listResponse.status}`);
+        }
+
+        const listResult = await listResponse.json();
+        if (!listResult.success) {
+          throw new Error(listResult.error || 'Failed to add to lists');
+        }
       }
+
+      // Refresh data after all fixes
+      await fetchMembersForReconcile();
+      setSelectedMembers(new Set());
+      setFixActions([]);
+      setListActions([]);
+
     } catch (err) {
-      console.error('Error fixing tags:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fix tags');
+      console.error('Error fixing all issues:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fix all issues');
     } finally {
       setFixing(false);
     }
@@ -397,16 +511,16 @@ export function ReconcileTab({ searchQuery, onSearchChange }: ReconcileTabProps)
   return (
     <div className="space-y-6">
       {/* Auto-Fix All Button */}
-      {(membersWithWrongTags.length > 0 || membersWithOutdatedTags.length > 0) && (
+      {(membersWithWrongTags.length > 0 || membersWithOutdatedTags.length > 0 || membersNeedingFreeWorkoutList.length > 0) && (
         <div className="bg-gradient-to-r from-pink-50 to-purple-50 border-2 border-pink-200 rounded-2xl p-6 mb-6">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Automatic Tag Reconciliation
+                Automatic Reconciliation
               </h3>
               <p className="text-sm text-gray-600">
-                Found {membersWithWrongTags.length + membersWithOutdatedTags.length} members with tag issues.
-                Click to automatically fix all wrong and outdated tags.
+                Found {membersWithWrongTags.length + membersWithOutdatedTags.length + membersNeedingFreeWorkoutList.length} members with issues.
+                Click to automatically fix all tag issues and list assignments.
               </p>
               <div className="mt-3 space-y-1">
                 <div className="text-sm text-gray-700">
@@ -414,6 +528,9 @@ export function ReconcileTab({ searchQuery, onSearchChange }: ReconcileTabProps)
                 </div>
                 <div className="text-sm text-gray-700">
                   • {membersWithOutdatedTags.length} inactive members still tagged as current
+                </div>
+                <div className="text-sm text-gray-700">
+                  • {membersNeedingFreeWorkoutList.length} free workout members missing from Free Workout list
                 </div>
               </div>
             </div>
@@ -432,7 +549,7 @@ export function ReconcileTab({ searchQuery, onSearchChange }: ReconcileTabProps)
                   Fixing...
                 </span>
               ) : (
-                `Fix All (${membersWithWrongTags.length + membersWithOutdatedTags.length})`
+                `Fix All (${membersWithWrongTags.length + membersWithOutdatedTags.length + membersNeedingFreeWorkoutList.length})`
               )}
             </Button>
           </div>
@@ -440,7 +557,7 @@ export function ReconcileTab({ searchQuery, onSearchChange }: ReconcileTabProps)
       )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-3 gap-6">
         <div 
           className={cn(
             "bg-white rounded-2xl p-6 shadow-sm border cursor-pointer transition-all duration-200",
@@ -496,6 +613,34 @@ export function ReconcileTab({ searchQuery, onSearchChange }: ReconcileTabProps)
             </p>
           </div>
         </div>
+
+        <div 
+          className={cn(
+            "bg-white rounded-2xl p-6 shadow-sm border cursor-pointer transition-all duration-200",
+            activeSection === 'free-workout' ? "border-blue-200 ring-2 ring-blue-500/20" : "border-gray-100 hover:shadow-md"
+          )}
+          onClick={() => setActiveSection('free-workout')}
+        >
+          <div className="flex items-center gap-4">
+            <div 
+              className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg text-white"
+              style={{
+                background: `linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(37, 99, 235, 0.9) 100%)`
+              }}
+            >
+              {membersNeedingFreeWorkoutList.length}
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{membersNeedingFreeWorkoutList.length}</p>
+              <p className="text-sm text-gray-600">Missing List</p>
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-gray-50">
+            <p className="text-xs text-gray-500">
+              Free workout members not in "Free Workout" list
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Search */}
@@ -516,7 +661,9 @@ export function ReconcileTab({ searchQuery, onSearchChange }: ReconcileTabProps)
             <h3 className="text-lg font-semibold text-gray-900">
               {activeSection === 'wrong' 
                 ? `Members with Wrong Tags (${filteredMembers.length})`
-                : `Members with Outdated Tags (${filteredMembers.length})`
+                : activeSection === 'outdated'
+                ? `Members with Outdated Tags (${filteredMembers.length})`
+                : `Members Missing Free Workout List (${filteredMembers.length})`
               }
             </h3>
             <div className="flex items-center gap-2">
@@ -558,13 +705,21 @@ export function ReconcileTab({ searchQuery, onSearchChange }: ReconcileTabProps)
               Fixing will remove the current tag and add the cancelled members tag.
             </p>
           )}
+
+          {activeSection === 'free-workout' && (
+            <p className="text-sm text-gray-600 mb-2">
+              These members have a "free workouts" product in Vimeo OTT but are not subscribed to the "Free Workout" list in MailChimp.
+              Fixing will add them to the Free Workout list.
+            </p>
+          )}
         </div>
         
         {filteredMembers.length === 0 ? (
           <div className="p-8 text-center text-gray-500">
             {searchQuery ? 'No members found matching your search.' : 
              activeSection === 'wrong' ? 'No members with wrong tags found.' :
-             'No members with outdated tags found.'}
+             activeSection === 'outdated' ? 'No members with outdated tags found.' :
+             'No members missing from Free Workout list found.'}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -654,9 +809,13 @@ export function ReconcileTab({ searchQuery, onSearchChange }: ReconcileTabProps)
                           <div className="text-orange-600">
                             Active subscriber tagged as cancelled
                           </div>
-                        ) : (
+                        ) : activeSection === 'outdated' ? (
                           <div className="text-red-600">
                             Inactive subscriber tagged as current
+                          </div>
+                        ) : (
+                          <div className="text-blue-600">
+                            Free workout member missing from list
                           </div>
                         )}
                       </div>
@@ -681,10 +840,15 @@ export function ReconcileTab({ searchQuery, onSearchChange }: ReconcileTabProps)
                 <li>Remove "cancelled members" tag from MailChimp</li>
                 <li>Add "current members" tag to MailChimp</li>
               </ul>
-            ) : (
+            ) : activeSection === 'outdated' ? (
               <ul className="list-disc list-inside space-y-1">
                 <li>Remove "current members" tag from MailChimp</li>
                 <li>Add "cancelled members" tag to MailChimp</li>
+              </ul>
+            ) : (
+              <ul className="list-disc list-inside space-y-1">
+                <li>Add members to "Free Workout" list in MailChimp</li>
+                <li>Subscribe them with their existing name and email data</li>
               </ul>
             )}
           </div>

@@ -31,6 +31,13 @@ interface TagFixAction {
   reason: string;
 }
 
+interface ListAddAction {
+  email: string;
+  listId: string;
+  listName: string;
+  reason: string;
+}
+
 interface AllMembersTabProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -168,7 +175,7 @@ export const AllMembersTab = forwardRef<AllMembersTabRef, AllMembersTabProps>(
       // Step 4: Fix all tag issues
       setFixing(true);
       
-      // Find all members with tag issues
+      // Find all members with tag issues and list issues
       const membersWithWrongTags = allMembers.filter(m => {
         const isPblOnlineActive = m.vimeoStatus === 'enabled' && m.vimeoProduct === 'PBL Online Subscription';
         const hasCancelledTag = m.mailchimpTags?.some(tag => 
@@ -183,6 +190,16 @@ export const AllMembersTab = forwardRef<AllMembersTabRef, AllMembersTabProps>(
           tag.toLowerCase().includes('current') && tag.toLowerCase().includes('members')
         ) || false;
         return !isPblOnlineActive && hasCurrentTag;
+      });
+
+      // Find members with 'free workouts' product who need to be added to Free Workout list
+      const membersNeedingFreeWorkoutList = allMembers.filter(m => {
+        const hasFreeWorkoutsProduct = m.vimeoProduct && 
+          m.vimeoProduct.toLowerCase().includes('free workouts');
+        const isInFreeWorkoutList = m.mailchimpLists?.some(list => 
+          list.toLowerCase().includes('free workout')
+        ) || false;
+        return hasFreeWorkoutsProduct && !isInFreeWorkoutList;
       });
       
       const actions: TagFixAction[] = [];
@@ -245,6 +262,7 @@ export const AllMembersTab = forwardRef<AllMembersTabRef, AllMembersTabProps>(
         }
       });
       
+      // Execute tag fixes if any
       if (actions.length > 0) {
         const fixResponse = await fetch('/api/mailchimp/fix-tags', {
           method: 'POST',
@@ -256,6 +274,33 @@ export const AllMembersTab = forwardRef<AllMembersTabRef, AllMembersTabProps>(
 
         if (!fixResponse.ok) {
           throw new Error('Failed to fix tags');
+        }
+      }
+
+      // Generate and execute list add actions for free workout members
+      const listActions: ListAddAction[] = [];
+      
+      membersNeedingFreeWorkoutList.forEach(member => {
+        listActions.push({
+          email: member.email,
+          listId: 'FREE_WORKOUT_LIST_ID', // This will be resolved by the API
+          listName: 'Free Workout',
+          reason: 'Member has free workouts product'
+        });
+      });
+
+      // Execute list additions if any
+      if (listActions.length > 0) {
+        const listResponse = await fetch('/api/mailchimp/add-to-list', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ actions: listActions }),
+        });
+
+        if (!listResponse.ok) {
+          throw new Error('Failed to add to lists');
         }
       }
       
