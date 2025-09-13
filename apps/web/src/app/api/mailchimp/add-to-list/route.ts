@@ -173,10 +173,11 @@ export async function POST(request: NextRequest) {
         // Resolve list ID if it's a placeholder
         let actualListId = action.listId;
         if (action.listId === 'FREE_WORKOUT_LIST_ID') {
-          actualListId = await mailchimp.findListByName('Free Workout');
-          if (!actualListId) {
+          const foundListId = await mailchimp.findListByName('Free Workout');
+          if (!foundListId) {
             throw new Error(`Could not find "Free Workout" list in Mailchimp`);
           }
+          actualListId = foundListId;
         }
 
         // Get member's name from Firebase cache if available
